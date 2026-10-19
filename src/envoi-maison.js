@@ -54,16 +54,19 @@ const EnvoiMaison = (() => {
   function ouvre(){
     if(Banc.ROLE==="parents") return;
     const existant=document.getElementById("maison-dialogue");if(existant){existant.focus();return;}
-    const precedent=document.activeElement, voile=el("div",{class:"voile"}), box=el("div",{class:"fenetre",id:"maison-dialogue",role:"dialog","aria-modal":"true","aria-label":"Accès parents et bilans maison",tabindex:"-1"});
-    box.style.cssText="display:block;width:min(960px,calc(100vw - 32px));max-width:100%;min-width:0;justify-items:stretch;overscroll-behavior:contain;text-align:left";
-    let retireVue=()=>{};
-    function ferme(){retireVue();document.removeEventListener("keydown",clavier);voile.remove();if(precedent?.isConnected)precedent.focus();}
+    const precedent=document.activeElement, voile=el("div",{class:"voile maison-voile"}), box=el("div",{class:"fenetre",id:"maison-dialogue",role:"dialog","aria-modal":"true","aria-label":"Accès parents et bilans maison",tabindex:"-1"}), viewport=window.visualViewport;
+    let retireVue=()=>{},cadre=0;
+    function ajusteFenetre(){
+      for(const [cle,valeur] of Object.entries({vtop:viewport?.offsetTop||0,vleft:viewport?.offsetLeft||0,vwidth:viewport?.width||innerWidth,vheight:viewport?.height||innerHeight}))voile.style.setProperty("--maison-"+cle,valeur+"px");
+      cancelAnimationFrame(cadre);cadre=requestAnimationFrame(()=>{const actif=document.activeElement;if(box.contains(actif)&&actif.matches("input,textarea,select"))actif.scrollIntoView({block:"nearest",inline:"nearest"});});
+    }
+    function ferme(){retireVue();cancelAnimationFrame(cadre);document.removeEventListener("keydown",clavier);window.removeEventListener("resize",ajusteFenetre);viewport?.removeEventListener("resize",ajusteFenetre);viewport?.removeEventListener("scroll",ajusteFenetre);voile.remove();if(precedent?.isConnected)precedent.focus({preventScroll:true});}
     function clavier(e){
       if(e.key==="Escape"){e.preventDefault();ferme();}
       if(e.key==="Tab"){const actifs=[...box.querySelectorAll('button:not([disabled]),a[href],input:not([hidden]),select,textarea')].filter(x=>x.offsetParent!==null),premier=actifs[0],dernier=actifs.at(-1);if(!premier)return;
         if(e.shiftKey&&(document.activeElement===premier||document.activeElement===box)){e.preventDefault();dernier.focus();}else if(!e.shiftKey&&(document.activeElement===dernier||document.activeElement===box)){e.preventDefault();premier.focus();}}
     }
-    voile.appendChild(box);document.body.appendChild(voile);retireVue=vue(box,ferme);document.addEventListener("keydown",clavier);box.focus();
+    voile.appendChild(box);document.body.appendChild(voile);retireVue=vue(box,ferme);document.addEventListener("keydown",clavier);window.addEventListener("resize",ajusteFenetre);viewport?.addEventListener("resize",ajusteFenetre);viewport?.addEventListener("scroll",ajusteFenetre);ajusteFenetre();box.focus({preventScroll:true});
   }
   function ajouteBouton(box){
     if(Banc.ROLE==="parents") return;
@@ -73,7 +76,7 @@ const EnvoiMaison = (() => {
   function vue(box,retour){
     if(Banc.ROLE==="parents") return;
     const eleves=Donnees.eleves();
-    box.innerHTML=`<div class="row start"><button class="btn" id="maison-retour">Retour</button><h1 style="font-size:clamp(24px,3vw,36px)">À la maison</h1></div>
+    box.innerHTML=`<div class="row start maison-dialogue-entete"><button class="btn" id="maison-retour">Retour</button><h1 style="font-size:clamp(24px,3vw,36px)">À la maison</h1></div>
       <section class="card" id="maison-cloud" style="margin-top:16px"></section>
       <section class="card" style="margin-top:16px"><h2>Accès de lecture sans lien personnel</h2><p>Ce lien commun permet de lire, d'imprimer les textes et de s'entraîner. Pour recevoir automatiquement les bilans, crée un lien personnel dans l'espace privé ci-dessus.</p>
       <label for="maison-invitation" class="label">Lien commun ou prénom prérempli</label><select class="sel" id="maison-invitation"><option value="">Lien commun, prénom à saisir</option>${eleves.map(e=>`<option value="${esc(e.id)}">${esc(e.nom)}</option>`).join("")}</select>

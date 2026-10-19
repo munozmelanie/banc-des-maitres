@@ -177,11 +177,14 @@ let ok = 0; const vrai = (c, m) => { if (!c) throw new Error("ÉCHEC : " + m); o
     await attends(() => tbi.evaluate(() => Banc.Donnees.essais().length === 2 && Banc.Donnees.eleves()[1].nom === "Test B"), 15000, "récupération");
     vrai(true, "un ordinateur tout neuf relié avec le même code retrouve la classe et les deux essais");
     await tel.click("[data-tab=progres]");
-    await attends(() => tel.evaluate(() => /Test A/.test(document.querySelector("#tab").textContent)), 4000, "progrès sur le téléphone");
+    await attends(() => tel.evaluate(() => /Test A/.test(document.querySelector("#progression-eleves").textContent)), 4000, "liste des élèves dans les progrès sur le téléphone");
     await tel.screenshot({ path: path.join(CAPT, "10-progres-telephone.png"), fullPage: true });
     vrai(true, "les progrès s'affichent aussi sur le téléphone");
-    const suppr = await tel.evaluate(() => Banc.Donnees.essais()[0].id);
-    await tel.evaluate(() => document.querySelector("#tous").open = true);
+    const lectureASupprimer = await tel.evaluate(() => Banc.Donnees.essais()[0]);
+    const suppr = lectureASupprimer.id;
+    await tel.click(`[data-progress-eleve="${lectureASupprimer.eleve}"]`);
+    if(!await tel.locator("#tous").evaluate(e=>e.open))await tel.locator("#tous > summary").click();
+    if(!await tel.locator(`[data-progress-lecture="${suppr}"]`).evaluate(e=>e.open))await tel.locator(`[data-progress-lecture="${suppr}"] > summary`).click();
     await tel.click(`[data-suppr="${suppr}"]`); await tel.click(`[data-suppr="${suppr}"]`);
     await attends(() => tbi.evaluate(() => Banc.Donnees.essais().length === 1), 8000, "suppression recopiée");
     vrai(true, "un essai supprimé sur le téléphone l'est aussi sur l'écran");
@@ -262,11 +265,19 @@ let ok = 0; const vrai = (c, m) => { if (!c) throw new Error("ÉCHEC : " + m); o
       return t.length === 1 && t[0].ep === "T3" && t[0].essai === 1 && t[0].lus === 20 && t[0].erreurs === 1 && e.length === 1 && e[0].id === "test-episode-temoin" && e[0].mclm === 50;
     }), "le défi Tamallette sans audio conserve T3 et son numéro d'essai sans modifier le résultat E1");
     await p2.click("[data-go=progress]");
+    await p2.click('[data-progress-eleve="e1"]');
     vrai(await p2.evaluate(() => {
-      const titres = [...document.querySelectorAll("#tab th")].map(x => x.textContent);
-      const textes = [...document.querySelectorAll("#tab2 tbody tr")].map(x => x.children[2].textContent);
-      return titres.includes("É1") && titres.includes("T3") && textes.includes("É1") && textes.includes("T3") && /T3·1/.test(document.querySelector("#charts").textContent);
-    }), "les tableaux et courbes distinguent É1 et T3");
+      const textes = [...document.querySelectorAll("#progression-texte option")].map(x => x.value);
+      return textes.includes("E1") && textes.includes("T3") && document.querySelectorAll("[data-progress-point]").length===2;
+    }), "le suivi de l'élève propose séparément É1 et T3 et montre les deux lectures");
+    for (const id of ["E1","T3"]){
+      await p2.selectOption("#progression-texte",id);
+      vrai(await p2.evaluate(id => {
+        const points=[...document.querySelectorAll("[data-progress-point]")].map(x=>x.dataset.progressPoint);
+        const lectures=Banc.Donnees.essaisDe("e1",id);
+        return points.length===1 && points[0]===lectures[0].id && document.querySelectorAll("[data-progress-lecture]").length===1;
+      },id), id+" : le filtre garde uniquement sa lecture dans la courbe et la liste");
+    }
     await p2.close(); await ctxP2.close();
 
     console.log("4. Premier lien envoyé depuis le téléphone");

@@ -174,6 +174,10 @@ function installe(o){
       [lienConnexion+"&token="+secretConnexion,"token répété"]
     ];
     const lienInvalide=await ouvre({enseignante:true});
+    for(const fragment of ["parents","parents&prenom=Test%20Famille&famille="+TOKEN_A,"famille="+TOKEN_A]){
+      const refus=await lienInvalide.evaluate(async lien=>{const n=__cloudTest.requetes.length;try{await MaisonCloud.connecteCode("enseignante@example.test",lien);return false;}catch(e){return e.message==="Ce lien est un accès parents. Demande un lien de connexion par e-mail pour ton espace enseignante."&&__cloudTest.requetes.length===n&&!MaisonCloud.connectee();}},S.base+"#"+fragment);
+      vrai(refus,"un lien famille collé à la place du lien e-mail est expliqué sans appel réseau ni ouverture de session");
+    }
     for(const [lien,label] of mauvaisLiens){const refus=await lienInvalide.evaluate(async lien=>{const n=__cloudTest.requetes.length;try{await MaisonCloud.connecteCode("enseignante@example.test",lien);return false;}catch(e){return __cloudTest.requetes.length===n&&!MaisonCloud.connectee();}},lien);vrai(refus,"lien de connexion refusé avant tout appel : "+label);}
     const compteLienRefuse=await ouvre({enseignante:true,permis:false});
     vrai(await compteLienRefuse.evaluate(async lien=>{try{await MaisonCloud.connecteCode("refuse@example.test",lien);return false;}catch(e){return !MaisonCloud.connectee()&&!localStorage.getItem("fluence-cloud-auth-v1");}},lienConnexion),"un lien e-mail valide ne connecte pas un compte non autorisé");

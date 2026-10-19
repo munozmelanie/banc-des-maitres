@@ -184,6 +184,14 @@ details.all summary{cursor:pointer;font-weight:700;min-height:44px;display:flex;
 .fenetre ol{margin:10px 0 0;padding-left:1.3em;font-size:19px}
 .fenetre li+li{margin-top:6px}
 .etat-lien{display:flex;align-items:center;gap:10px;font-weight:700;margin-top:14px}
+/* Le clavier iPhone réduit la zone visible sans toujours réduire la page. */
+.voile.maison-voile{inset:auto;top:var(--maison-vtop,0px);left:var(--maison-vleft,0px);width:var(--maison-vwidth,100%);height:var(--maison-vheight,100%);display:flex;align-items:center;justify-content:center;padding:max(12px,env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) max(12px,env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px))}
+#maison-dialogue{display:block;width:min(960px,100%);max-width:100%;max-height:100%;min-width:0;min-height:0;overflow:auto;overscroll-behavior:contain;text-align:left;overflow-wrap:anywhere;-webkit-overflow-scrolling:touch}
+#maison-dialogue .card,#maison-dialogue .row{min-width:0;max-width:100%}
+#maison-dialogue input,#maison-dialogue select,#maison-dialogue textarea{font-family:inherit;font-size:max(16px,1em);color:inherit;min-width:0;max-width:100%;min-height:48px;border:1.5px solid var(--line);border-radius:10px;background:var(--paper);padding:10px 12px}
+#maison-dialogue textarea{resize:vertical;overflow-wrap:anywhere;line-height:1.45}
+#maison-dialogue .btn{max-width:100%;white-space:normal;line-height:1.3;padding-block:10px}
+#maison-dialogue .maison-dialogue-entete{padding-bottom:8px}
 
 /* ---------- Téléphone : la télécommande de la maîtresse ---------- */
 .tel{height:100%;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px)}
@@ -293,6 +301,118 @@ html[data-role="parents"] .step{padding:0 10px}
   #maison-impression.texte-long p{margin-bottom:3mm}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+/* ---------- Progrès : choix du lieu, de l'élève et du texte ---------- */
+.progression{max-width:1320px;margin:10px auto 28px;min-width:0}
+.progression .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.progression-entete{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:22px}
+.progression-entete h1{font-size:clamp(30px,3vw,44px);line-height:1.12}
+.progression-entete p{margin:6px 0 0}
+.progression-surtitre{font-size:12px;font-weight:700;letter-spacing:.1em;color:var(--green);margin:0 0 7px!important;text-transform:uppercase}
+.progression #acces-parents{font-size:14px;max-width:100%;white-space:normal;line-height:1.3;text-align:center;padding-block:10px}
+.progression-origines{display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:5px;background:var(--line);border-radius:17px;max-width:450px;margin:0 0 24px}
+.progression-origines button{display:flex;align-items:center;justify-content:center;gap:10px;min-height:50px;border:0;border-radius:12px;background:transparent;color:var(--ink-soft);font-size:17px;font-weight:700;cursor:pointer}
+.progression-origines button[aria-pressed=true]{color:var(--green-ink);background:var(--green);box-shadow:0 3px 9px rgb(0 0 0 / .08)}
+.progression-origines svg{display:block;width:23px;height:23px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.progression-contenu{display:grid;grid-template-columns:minmax(240px,290px) minmax(0,1fr);gap:24px;align-items:start}
+.progression-liste,.progression-carte{min-width:0;background:var(--paper);border:1px solid var(--line);border-radius:22px;box-shadow:0 3px 14px rgb(0 0 0 / .025)}
+.progression-liste{padding:18px 10px 10px}
+.progression-liste-titre{display:flex;align-items:center;justify-content:space-between;padding:0 10px 14px}
+.progression-liste-titre h2{font-size:21px!important;margin:0!important}
+.progression-liste-titre>span{display:grid;place-items:center;min-width:30px;height:27px;border-radius:9px;background:var(--green-soft);color:var(--green);font-size:13px;font-weight:700}
+.progression-recherche{display:block;margin:0 7px 12px}
+.progression-recherche input{width:100%;min-width:0;min-height:44px;font-size:16px;border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:9px 11px}
+#progression-eleves{max-height:570px;max-height:min(570px,64vh);overflow:auto;overscroll-behavior:contain}
+.progression-eleve{display:flex;align-items:center;gap:11px;text-align:left;width:100%;min-height:73px;cursor:pointer;padding:11px 10px;border:1px solid transparent;border-radius:13px;background:transparent;margin:2px 0}
+.progression-eleve:hover{background:var(--bg)}
+.progression-eleve[aria-pressed=true]{border-color:var(--green);background:var(--green-soft)}
+.progression-avatar{display:grid;place-items:center;width:38px;height:38px;flex:none;background:var(--bg);border-radius:12px;color:var(--green);font-family:var(--font-display);font-size:20px;font-weight:800}
+.progression-eleve[aria-pressed=true] .progression-avatar{background:var(--green);color:var(--green-ink)}
+.progression-eleve-nom{flex:1;min-width:0;font-weight:700;font-size:16px;overflow-wrap:anywhere}
+.progression-eleve small{display:block;font-size:12px;font-weight:400;color:var(--ink-soft);margin-top:2px}
+.progression-eleve-score{font-size:21px;font-weight:700;text-align:right;flex:none;font-variant-numeric:tabular-nums}
+.progression-eleve-score small{font-size:10px;letter-spacing:.04em}
+.progression-aucun-eleve{font-size:14px;padding:0 10px}
+.progression-detail{min-width:0}
+.progression-carte{padding:24px}
+.progression-fiche-entete{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:22px}
+.progression-fiche-entete>div:first-child{min-width:0}
+.progression-fiche-entete h2{font-size:clamp(28px,2.5vw,36px);line-height:1.15;margin:0;overflow-wrap:anywhere}
+.progression-objectif{border-left:3px solid var(--wood);padding:2px 0 2px 12px;flex:none}
+.progression-objectif>span{display:block;color:var(--ink-soft);font-size:12px}
+.progression-objectif strong{display:block;color:var(--wood);font-size:25px;line-height:1.3;font-variant-numeric:tabular-nums}
+.progression-objectif small{font-size:11px;font-weight:400}
+.progression-objectif .progression-objectif-attente{font-size:13px;max-width:150px;line-height:1.4}
+.progression-filtre{display:flex;align-items:center;gap:14px;margin-bottom:22px;min-width:0}
+.progression-filtre label{font-size:14px;font-weight:700;color:var(--ink-soft)}
+.progression-filtre select{display:block;flex:1;min-width:0;max-width:100%;min-height:46px;font-size:16px;border:1px solid var(--line);background:var(--paper);border-radius:12px;padding:10px 30px 10px 12px;text-overflow:ellipsis}
+.progression-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:0 0 20px}
+.progression-stats>div{border-radius:14px;background:var(--bg);padding:15px 13px;min-width:0}
+.progression-stats>div:first-child{background:var(--green-soft)}
+.progression-stats span{display:block;font-size:12px;line-height:1.35;color:var(--ink-soft);min-height:32px}
+.progression-stats strong{display:block;font-family:var(--font-display);font-size:clamp(28px,3vw,39px);line-height:1.25;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.progression-stats>div:first-child strong,.progression-hausse{color:var(--green)}
+.progression-stats small{display:block;font-size:11px;color:var(--ink-soft)}
+.progression-legende{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;margin:0 0 8px;font-size:12px;color:var(--ink-soft)}
+.progression-legende span{display:flex;align-items:center;gap:7px}
+.progression-legende i{width:15px;height:3px;border-radius:2px;background:var(--green)}
+.progression-legende .progression-tiret{background:none;border-top:2px dashed var(--wood);height:0}
+#progression-graphe{display:block;width:100%;height:auto;overflow:visible}
+#progression-graphe text{font-size:14px;fill:var(--ink-soft);font-family:var(--font-read)}
+.progression-grille{stroke:var(--line);stroke-width:1}
+.progression-trace{fill:none;stroke:var(--green);stroke-width:3;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.progression-ligne-objectif{stroke:var(--wood);stroke-width:1.6;stroke-dasharray:6 6;vector-effect:non-scaling-stroke}
+.progression-point{cursor:pointer;outline:none}
+.progression-point-visible{fill:var(--paper);stroke:var(--green);stroke-width:2.5}
+.progression-point:last-of-type .progression-point-visible{fill:var(--green)}
+.progression-point:hover .progression-point-visible,.progression-point:focus-visible .progression-point-visible{stroke-width:5;fill:var(--green-soft)}
+.progression-note{font-size:12px;line-height:1.5;color:var(--ink-soft);margin:10px 0 0}
+.progression-vide{text-align:center;padding:26px 15px;color:var(--ink-soft)}
+.progression-vide>span{font-size:38px;color:var(--green)}
+.progression-vide h3{color:var(--ink);font-size:21px;margin:5px 0}
+.progression-vide p{font-size:14px;margin:0 auto;max-width:360px}
+.progression-bienvenue{min-height:410px;display:grid;align-content:center;justify-items:center;text-align:center;padding:36px}
+.progression-bienvenue h2{font-size:28px}
+.progression-bienvenue p{color:var(--ink-soft);font-size:16px;line-height:1.6;margin-bottom:0}
+.progression-bienvenue-icone{width:104px;height:104px;padding:12px;background:var(--green-soft);border-radius:30px;margin-bottom:24px;transform:rotate(-4deg)}
+.progression-bienvenue-icone svg{width:100%;height:100%;fill:none;stroke:var(--green);stroke-width:6;stroke-linecap:round;stroke-linejoin:round}
+.progression-bienvenue-icone .progression-fleche{stroke-width:3;stroke:var(--wood)}
+.progression-lectures{margin-top:20px;padding:0 22px}
+.progression-lectures>summary{padding:19px 0;cursor:pointer;font-family:var(--font-display);font-size:21px;font-weight:800}
+.progression-lectures>summary>span{font-family:var(--font-read);font-size:12px;color:var(--ink-soft);font-weight:400;margin-left:8px}
+.progression-lecture{border-top:1px solid var(--line)}
+.progression-lecture>summary{display:flex;align-items:center;gap:16px;cursor:pointer;list-style:none;padding:17px 2px}
+.progression-lecture>summary::-webkit-details-marker{display:none}
+.progression-lecture>summary::after{content:"+";font-size:23px;color:var(--green);flex:none;min-width:18px;text-align:center}
+.progression-lecture[open]>summary::after{content:"−"}
+.progression-lecture-texte{flex:1;min-width:0;overflow-wrap:anywhere;font-size:15px;font-weight:700;line-height:1.4}
+.progression-lecture-texte small{display:block;margin-top:4px;color:var(--ink-soft);font-size:12px;font-weight:400}
+.progression-lecture-score{flex:none;font-weight:700;font-size:25px;text-align:right;font-variant-numeric:tabular-nums}
+.progression-lecture-score small{display:block;font-size:10px;color:var(--ink-soft);font-weight:400}
+.progression-lecture-detail{padding:0 0 18px}
+.progression-lecture-detail dl{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:0 0 14px;background:var(--bg);border-radius:12px;padding:14px}
+.progression-lecture-detail dt{font-size:12px;color:var(--ink-soft)}
+.progression-lecture-detail dd{margin:3px 0 0;font-size:19px;font-weight:700}
+.progression-lecture-detail .hard{margin-bottom:14px}
+.progression-lecture-detail .btn{font-size:13px;min-height:44px;padding:8px 12px;white-space:normal;text-align:left}
+.progression-suppression-info{font-size:13px;margin:8px 0 0}
+.progression-suppression-info:empty{display:none}
+.progression-sauvegarde{margin-top:24px;color:var(--ink-soft);font-size:13px}
+.progression-sauvegarde>summary{cursor:pointer;padding:12px 2px;min-height:44px}
+.progression-sauvegarde .btn{font-size:13px}
+.progression-retour{display:none}
+@media(max-width:900px){.progression-contenu{grid-template-columns:235px minmax(0,1fr);gap:16px}.progression-carte{padding:18px}.progression-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.progression-fiche-entete{align-items:flex-start}.progression-stats span{min-height:0}.progression-lectures{padding:0 18px}}
+@media(max-width:759px){
+  .progression{margin-top:8px}.progression-entete{display:block;margin-bottom:18px}.progression-entete h1{font-size:34px}.progression-entete>.muted,.progression-entete .muted{font-size:14px;margin:6px 0 12px}
+  #progression-acces .btn{font-size:13px;min-height:42px}.progression-origines{max-width:none;margin-bottom:18px}.progression-origines button{font-size:15px;min-height:48px;gap:7px}
+  .progression-contenu{display:block}.progression-selection .progression-liste{display:none}.progression:not(.progression-selection) .progression-detail{display:none}
+  #progression-eleves{max-height:none;overflow:visible}.progression-retour{display:inline-flex;margin:0 0 14px;font-size:13px;min-height:42px;padding:0 12px;background:transparent;border-color:var(--line)}
+  .progression-carte{padding:18px 15px;border-radius:18px}.progression-fiche-entete{gap:10px;margin-bottom:20px}.progression-fiche-entete h2{font-size:29px!important;line-height:1.15}
+  .progression-objectif{padding-left:9px;max-width:46%}.progression-objectif>span{font-size:10px}.progression-objectif strong{font-size:24px}.progression-objectif .progression-objectif-attente{font-size:12px}
+  .progression-filtre{display:block;margin-bottom:16px}.progression-filtre label{display:block;font-size:12px;margin-bottom:5px}.progression-filtre select{width:100%;font-size:16px}
+  .progression-stats{gap:8px;margin-bottom:20px}.progression-stats>div{padding:12px}.progression-stats strong{font-size:32px}.progression-stats span{font-size:11px}
+  .progression-legende{font-size:10px;gap:8px 12px}.progression-note{font-size:11px}.progression-lectures{margin-top:14px;padding:0 15px}.progression-lecture>summary{gap:10px}
+  .progression-lecture-texte{font-size:14px}.progression-lecture-texte small{font-size:11px}.progression-lecture-score{font-size:23px}.progression-sauvegarde{margin-top:16px}
+}
 </style>
 </head>
 <body>

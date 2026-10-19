@@ -189,6 +189,14 @@ details.all summary{cursor:pointer;font-weight:700;min-height:44px;display:flex;
 .fenetre ol{margin:10px 0 0;padding-left:1.3em;font-size:19px}
 .fenetre li+li{margin-top:6px}
 .etat-lien{display:flex;align-items:center;gap:10px;font-weight:700;margin-top:14px}
+/* Le clavier iPhone réduit la zone visible sans toujours réduire la page. */
+.voile.maison-voile{inset:auto;top:var(--maison-vtop,0px);left:var(--maison-vleft,0px);width:var(--maison-vwidth,100%);height:var(--maison-vheight,100%);display:flex;align-items:center;justify-content:center;padding:max(12px,env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) max(12px,env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px))}
+#maison-dialogue{display:block;width:min(960px,100%);max-width:100%;max-height:100%;min-width:0;min-height:0;overflow:auto;overscroll-behavior:contain;text-align:left;overflow-wrap:anywhere;-webkit-overflow-scrolling:touch}
+#maison-dialogue .card,#maison-dialogue .row{min-width:0;max-width:100%}
+#maison-dialogue input,#maison-dialogue select,#maison-dialogue textarea{font-family:inherit;font-size:max(16px,1em);color:inherit;min-width:0;max-width:100%;min-height:48px;border:1.5px solid var(--line);border-radius:10px;background:var(--paper);padding:10px 12px}
+#maison-dialogue textarea{resize:vertical;overflow-wrap:anywhere;line-height:1.45}
+#maison-dialogue .btn{max-width:100%;white-space:normal;line-height:1.3;padding-block:10px}
+#maison-dialogue .maison-dialogue-entete{padding-bottom:8px}
 
 /* ---------- Téléphone : la télécommande de la maîtresse ---------- */
 .tel{height:100%;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px)}
@@ -298,6 +306,118 @@ html[data-role="parents"] .step{padding:0 10px}
   #maison-impression.texte-long p{margin-bottom:3mm}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+/* ---------- Progrès : choix du lieu, de l'élève et du texte ---------- */
+.progression{max-width:1320px;margin:10px auto 28px;min-width:0}
+.progression .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.progression-entete{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:22px}
+.progression-entete h1{font-size:clamp(30px,3vw,44px);line-height:1.12}
+.progression-entete p{margin:6px 0 0}
+.progression-surtitre{font-size:12px;font-weight:700;letter-spacing:.1em;color:var(--green);margin:0 0 7px!important;text-transform:uppercase}
+.progression #acces-parents{font-size:14px;max-width:100%;white-space:normal;line-height:1.3;text-align:center;padding-block:10px}
+.progression-origines{display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:5px;background:var(--line);border-radius:17px;max-width:450px;margin:0 0 24px}
+.progression-origines button{display:flex;align-items:center;justify-content:center;gap:10px;min-height:50px;border:0;border-radius:12px;background:transparent;color:var(--ink-soft);font-size:17px;font-weight:700;cursor:pointer}
+.progression-origines button[aria-pressed=true]{color:var(--green-ink);background:var(--green);box-shadow:0 3px 9px rgb(0 0 0 / .08)}
+.progression-origines svg{display:block;width:23px;height:23px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.progression-contenu{display:grid;grid-template-columns:minmax(240px,290px) minmax(0,1fr);gap:24px;align-items:start}
+.progression-liste,.progression-carte{min-width:0;background:var(--paper);border:1px solid var(--line);border-radius:22px;box-shadow:0 3px 14px rgb(0 0 0 / .025)}
+.progression-liste{padding:18px 10px 10px}
+.progression-liste-titre{display:flex;align-items:center;justify-content:space-between;padding:0 10px 14px}
+.progression-liste-titre h2{font-size:21px!important;margin:0!important}
+.progression-liste-titre>span{display:grid;place-items:center;min-width:30px;height:27px;border-radius:9px;background:var(--green-soft);color:var(--green);font-size:13px;font-weight:700}
+.progression-recherche{display:block;margin:0 7px 12px}
+.progression-recherche input{width:100%;min-width:0;min-height:44px;font-size:16px;border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:9px 11px}
+#progression-eleves{max-height:570px;max-height:min(570px,64vh);overflow:auto;overscroll-behavior:contain}
+.progression-eleve{display:flex;align-items:center;gap:11px;text-align:left;width:100%;min-height:73px;cursor:pointer;padding:11px 10px;border:1px solid transparent;border-radius:13px;background:transparent;margin:2px 0}
+.progression-eleve:hover{background:var(--bg)}
+.progression-eleve[aria-pressed=true]{border-color:var(--green);background:var(--green-soft)}
+.progression-avatar{display:grid;place-items:center;width:38px;height:38px;flex:none;background:var(--bg);border-radius:12px;color:var(--green);font-family:var(--font-display);font-size:20px;font-weight:800}
+.progression-eleve[aria-pressed=true] .progression-avatar{background:var(--green);color:var(--green-ink)}
+.progression-eleve-nom{flex:1;min-width:0;font-weight:700;font-size:16px;overflow-wrap:anywhere}
+.progression-eleve small{display:block;font-size:12px;font-weight:400;color:var(--ink-soft);margin-top:2px}
+.progression-eleve-score{font-size:21px;font-weight:700;text-align:right;flex:none;font-variant-numeric:tabular-nums}
+.progression-eleve-score small{font-size:10px;letter-spacing:.04em}
+.progression-aucun-eleve{font-size:14px;padding:0 10px}
+.progression-detail{min-width:0}
+.progression-carte{padding:24px}
+.progression-fiche-entete{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:22px}
+.progression-fiche-entete>div:first-child{min-width:0}
+.progression-fiche-entete h2{font-size:clamp(28px,2.5vw,36px);line-height:1.15;margin:0;overflow-wrap:anywhere}
+.progression-objectif{border-left:3px solid var(--wood);padding:2px 0 2px 12px;flex:none}
+.progression-objectif>span{display:block;color:var(--ink-soft);font-size:12px}
+.progression-objectif strong{display:block;color:var(--wood);font-size:25px;line-height:1.3;font-variant-numeric:tabular-nums}
+.progression-objectif small{font-size:11px;font-weight:400}
+.progression-objectif .progression-objectif-attente{font-size:13px;max-width:150px;line-height:1.4}
+.progression-filtre{display:flex;align-items:center;gap:14px;margin-bottom:22px;min-width:0}
+.progression-filtre label{font-size:14px;font-weight:700;color:var(--ink-soft)}
+.progression-filtre select{display:block;flex:1;min-width:0;max-width:100%;min-height:46px;font-size:16px;border:1px solid var(--line);background:var(--paper);border-radius:12px;padding:10px 30px 10px 12px;text-overflow:ellipsis}
+.progression-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:0 0 20px}
+.progression-stats>div{border-radius:14px;background:var(--bg);padding:15px 13px;min-width:0}
+.progression-stats>div:first-child{background:var(--green-soft)}
+.progression-stats span{display:block;font-size:12px;line-height:1.35;color:var(--ink-soft);min-height:32px}
+.progression-stats strong{display:block;font-family:var(--font-display);font-size:clamp(28px,3vw,39px);line-height:1.25;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.progression-stats>div:first-child strong,.progression-hausse{color:var(--green)}
+.progression-stats small{display:block;font-size:11px;color:var(--ink-soft)}
+.progression-legende{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;margin:0 0 8px;font-size:12px;color:var(--ink-soft)}
+.progression-legende span{display:flex;align-items:center;gap:7px}
+.progression-legende i{width:15px;height:3px;border-radius:2px;background:var(--green)}
+.progression-legende .progression-tiret{background:none;border-top:2px dashed var(--wood);height:0}
+#progression-graphe{display:block;width:100%;height:auto;overflow:visible}
+#progression-graphe text{font-size:14px;fill:var(--ink-soft);font-family:var(--font-read)}
+.progression-grille{stroke:var(--line);stroke-width:1}
+.progression-trace{fill:none;stroke:var(--green);stroke-width:3;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.progression-ligne-objectif{stroke:var(--wood);stroke-width:1.6;stroke-dasharray:6 6;vector-effect:non-scaling-stroke}
+.progression-point{cursor:pointer;outline:none}
+.progression-point-visible{fill:var(--paper);stroke:var(--green);stroke-width:2.5}
+.progression-point:last-of-type .progression-point-visible{fill:var(--green)}
+.progression-point:hover .progression-point-visible,.progression-point:focus-visible .progression-point-visible{stroke-width:5;fill:var(--green-soft)}
+.progression-note{font-size:12px;line-height:1.5;color:var(--ink-soft);margin:10px 0 0}
+.progression-vide{text-align:center;padding:26px 15px;color:var(--ink-soft)}
+.progression-vide>span{font-size:38px;color:var(--green)}
+.progression-vide h3{color:var(--ink);font-size:21px;margin:5px 0}
+.progression-vide p{font-size:14px;margin:0 auto;max-width:360px}
+.progression-bienvenue{min-height:410px;display:grid;align-content:center;justify-items:center;text-align:center;padding:36px}
+.progression-bienvenue h2{font-size:28px}
+.progression-bienvenue p{color:var(--ink-soft);font-size:16px;line-height:1.6;margin-bottom:0}
+.progression-bienvenue-icone{width:104px;height:104px;padding:12px;background:var(--green-soft);border-radius:30px;margin-bottom:24px;transform:rotate(-4deg)}
+.progression-bienvenue-icone svg{width:100%;height:100%;fill:none;stroke:var(--green);stroke-width:6;stroke-linecap:round;stroke-linejoin:round}
+.progression-bienvenue-icone .progression-fleche{stroke-width:3;stroke:var(--wood)}
+.progression-lectures{margin-top:20px;padding:0 22px}
+.progression-lectures>summary{padding:19px 0;cursor:pointer;font-family:var(--font-display);font-size:21px;font-weight:800}
+.progression-lectures>summary>span{font-family:var(--font-read);font-size:12px;color:var(--ink-soft);font-weight:400;margin-left:8px}
+.progression-lecture{border-top:1px solid var(--line)}
+.progression-lecture>summary{display:flex;align-items:center;gap:16px;cursor:pointer;list-style:none;padding:17px 2px}
+.progression-lecture>summary::-webkit-details-marker{display:none}
+.progression-lecture>summary::after{content:"+";font-size:23px;color:var(--green);flex:none;min-width:18px;text-align:center}
+.progression-lecture[open]>summary::after{content:"−"}
+.progression-lecture-texte{flex:1;min-width:0;overflow-wrap:anywhere;font-size:15px;font-weight:700;line-height:1.4}
+.progression-lecture-texte small{display:block;margin-top:4px;color:var(--ink-soft);font-size:12px;font-weight:400}
+.progression-lecture-score{flex:none;font-weight:700;font-size:25px;text-align:right;font-variant-numeric:tabular-nums}
+.progression-lecture-score small{display:block;font-size:10px;color:var(--ink-soft);font-weight:400}
+.progression-lecture-detail{padding:0 0 18px}
+.progression-lecture-detail dl{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:0 0 14px;background:var(--bg);border-radius:12px;padding:14px}
+.progression-lecture-detail dt{font-size:12px;color:var(--ink-soft)}
+.progression-lecture-detail dd{margin:3px 0 0;font-size:19px;font-weight:700}
+.progression-lecture-detail .hard{margin-bottom:14px}
+.progression-lecture-detail .btn{font-size:13px;min-height:44px;padding:8px 12px;white-space:normal;text-align:left}
+.progression-suppression-info{font-size:13px;margin:8px 0 0}
+.progression-suppression-info:empty{display:none}
+.progression-sauvegarde{margin-top:24px;color:var(--ink-soft);font-size:13px}
+.progression-sauvegarde>summary{cursor:pointer;padding:12px 2px;min-height:44px}
+.progression-sauvegarde .btn{font-size:13px}
+.progression-retour{display:none}
+@media(max-width:900px){.progression-contenu{grid-template-columns:235px minmax(0,1fr);gap:16px}.progression-carte{padding:18px}.progression-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.progression-fiche-entete{align-items:flex-start}.progression-stats span{min-height:0}.progression-lectures{padding:0 18px}}
+@media(max-width:759px){
+  .progression{margin-top:8px}.progression-entete{display:block;margin-bottom:18px}.progression-entete h1{font-size:34px}.progression-entete>.muted,.progression-entete .muted{font-size:14px;margin:6px 0 12px}
+  #progression-acces .btn{font-size:13px;min-height:42px}.progression-origines{max-width:none;margin-bottom:18px}.progression-origines button{font-size:15px;min-height:48px;gap:7px}
+  .progression-contenu{display:block}.progression-selection .progression-liste{display:none}.progression:not(.progression-selection) .progression-detail{display:none}
+  #progression-eleves{max-height:none;overflow:visible}.progression-retour{display:inline-flex;margin:0 0 14px;font-size:13px;min-height:42px;padding:0 12px;background:transparent;border-color:var(--line)}
+  .progression-carte{padding:18px 15px;border-radius:18px}.progression-fiche-entete{gap:10px;margin-bottom:20px}.progression-fiche-entete h2{font-size:29px!important;line-height:1.15}
+  .progression-objectif{padding-left:9px;max-width:46%}.progression-objectif>span{font-size:10px}.progression-objectif strong{font-size:24px}.progression-objectif .progression-objectif-attente{font-size:12px}
+  .progression-filtre{display:block;margin-bottom:16px}.progression-filtre label{display:block;font-size:12px;margin-bottom:5px}.progression-filtre select{width:100%;font-size:16px}
+  .progression-stats{gap:8px;margin-bottom:20px}.progression-stats>div{padding:12px}.progression-stats strong{font-size:32px}.progression-stats span{font-size:11px}
+  .progression-legende{font-size:10px;gap:8px 12px}.progression-note{font-size:11px}.progression-lectures{margin-top:14px;padding:0 15px}.progression-lecture>summary{gap:10px}
+  .progression-lecture-texte{font-size:14px}.progression-lecture-texte small{font-size:11px}.progression-lecture-score{font-size:23px}.progression-sauvegarde{margin-top:16px}
+}
 </style>
 </head>
 <body>
@@ -906,6 +1026,19 @@ const Banc = (() => {
       const n = {};
       return vivants().slice().sort((a,b)=>String(a.date).localeCompare(String(b.date))).map(r=>{ const k = r.eleve+"|"+r.ep; n[k] = (n[k]||0)+1; return Object.assign({essai:n[k]}, r); });
     }
+    /* La vue Progrès ne mélange jamais les lectures de classe et de maison.
+       L'objectif, lui, reste celui de l'élève, toutes origines confondues. */
+    function progres(eleve, origine="classe", texte=""){
+      const temps = r => Number.isFinite(Date.parse(r.date)) ? Date.parse(r.date) : Number.MAX_SAFE_INTEGER;
+      const n = Object.create(null);
+      const lectures = valides().filter(r=>r.eleve===eleve && (origine==="maison" ? r.origine==="maison" : r.origine==null || r.origine==="classe"))
+        .sort((a,b)=>temps(a)-temps(b) || (String(a.id)<String(b.id)?-1:String(a.id)>String(b.id)?1:0))
+        .map(r=>({...r,essai:n[r.ep]=(n[r.ep]||0)+1})).filter(r=>!texte || r.ep===texte);
+      const mesures = lectures.filter(r=>Number.isSafeInteger(r.mclm) && r.mclm>=0 && Number.isFinite(Date.parse(r.date)));
+      return {lectures,mesures,nombre:lectures.length,dernier:mesures.length?mesures[mesures.length-1].mclm:null,
+        meilleur:mesures.length?Math.max(...mesures.map(r=>r.mclm)):null,
+        evolution:mesures.length>1?mesures[mesures.length-1].mclm-mesures[0].mclm:null,objectif:objectifInfo(eleve)};
+    }
     async function ecritResultats(suivants=resultats){
       try {
         await docs.r.set(suivants);
@@ -914,7 +1047,7 @@ const Banc = (() => {
         return true;
       } catch(e){ return false; }
     }
-    return { init, objectifInfo, objectif:id=>objectifInfo(id).valeur,
+    return { init, progres, objectifInfo, objectif:id=>objectifInfo(id).valeur,
       eleves:()=>classe.eleves, eleve:id=>classe.eleves.find(e=>e.id===id)||null,
       nom:id=>{ const e = classe.eleves.find(x=>x.id===id); return e ? e.nom : "Élève"; },
       async enregistreEleves(liste){ const nouvelle = {eleves:liste, maj:Date.now()}; try { await docs.c.set(nouvelle); classe = nouvelle; signale("classe"); return true; } catch(e){ return false; } },
@@ -1011,37 +1144,76 @@ const Banc = (() => {
   }
 
   /* ---------- vues partagées : progrès, élèves ---------- */
+  const etatsProgres = new WeakMap();
+  const dateProgres = (date, courte=false) => Number.isFinite(Date.parse(date)) ? new Date(date).toLocaleDateString("fr-FR",courte?{day:"numeric",month:"numeric"}:{day:"numeric",month:"long",year:"numeric"}) : "Date non précisée";
+  const titreProgres = r => ep(r.ep)?.titre || r.ep;
+  function grapheProgres(rs, objectif, petit){
+    const W=petit?360:760,H=petit?250:285,L=42,R=24,T=24,B=42;
+    const plafond=Math.max(20,Number.isFinite(objectif)?objectif:0,...rs.map(r=>r.mclm));
+    const pas=Math.max(5,Math.ceil(plafond/4/5)*5),max=pas*4;
+    const x=i=>rs.length<2?L+(W-L-R)/2:L+i*(W-L-R)/(rs.length-1),y=v=>H-B-(H-B-T)*v/max;
+    let h=`<svg id="progression-graphe" viewBox="0 0 ${W} ${H}" role="group" aria-label="Progression en mots lus correctement par minute, dans l’ordre des lectures"><defs><linearGradient id="progression-degrade" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="var(--green)" stop-opacity=".22"/><stop offset="100%" stop-color="var(--green)" stop-opacity=".015"/></linearGradient></defs>`;
+    for(let i=0;i<=4;i++){const v=i*pas;h+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" class="progression-grille"/><text x="${L-10}" y="${y(v)+5}" text-anchor="end">${v}</text>`;}
+    if(Number.isFinite(objectif))h+=`<line x1="${L}" x2="${W-R}" y1="${y(objectif)}" y2="${y(objectif)}" class="progression-ligne-objectif"/>`;
+    if(rs.length){
+      const points=rs.map((r,i)=>`${x(i)},${y(r.mclm)}`).join(" ");
+      if(rs.length>1)h+=`<polygon points="${x(0)},${H-B} ${points} ${x(rs.length-1)},${H-B}" fill="url(#progression-degrade)"/><polyline points="${points}" class="progression-trace"/>`;
+      const intervalles=Math.min(rs.length-1,petit?3:5),etiquettes=new Set(Array.from({length:intervalles+1},(_,i)=>intervalles?Math.round(i*(rs.length-1)/intervalles):0));
+      rs.forEach((r,i)=>{
+        const label=`${dateProgres(r.date)} · ${titreProgres(r)} · ${r.mclm} MCLM`;
+        h+=`<g class="progression-point" role="button" tabindex="0" data-progress-point="${esc(r.id)}" aria-label="${esc(label+". Consulter cette lecture.")}"><title>${esc(label)}</title><circle cx="${x(i)}" cy="${y(r.mclm)}" r="20" fill="transparent"/><circle class="progression-point-visible" cx="${x(i)}" cy="${y(r.mclm)}" r="${i===rs.length-1?6:4.5}"/></g>`;
+        if(etiquettes.has(i))h+=`<text x="${x(i)}" y="${H-14}" text-anchor="${i===0&&rs.length>1?"start":i===rs.length-1&&rs.length>1?"end":"middle"}">${esc(dateProgres(r.date,true))}</text>`;
+      });
+    }
+    return h+"</svg>";
+  }
   function vueProgres(box, compacte){
-    const es = Donnees.essais(), eleves = Donnees.eleves();
-    box.innerHTML = `<h1 style="font-size:clamp(24px,3vw,40px)">Les progrès</h1><p class="lead">Le meilleur résultat de chaque élève au défi d'une minute, texte par texte (en mots lus correctement par minute). É : feuilleton · T : Tamallette P2.</p>
-      <div class="tablewrap card" style="margin-top:16px"><table class="t" id="tab"></table></div><div class="grid2" id="charts"></div>
-      <details class="all card" id="tous"><summary>Tous les essais (${es.length})</summary><div class="tablewrap"><table class="t" id="tab2"></table></div></details>
-      <div class="row start" style="margin-top:18px"><button class="btn" id="exp">Exporter une sauvegarde</button><label class="btn" for="imp">Importer une sauvegarde</label><input type="file" id="imp" accept="application/json,.json" hidden><span class="muted" id="ioinfo"></span></div>
-      <p class="muted" style="margin-top:10px">Les résultats sont enregistrés sur cet appareil${ROLE==="ecran"?" et recopiés dans le téléphone relié":" et recopiés sur l'écran de la classe relié"}. La sauvegarde est un fichier à garder en lieu sûr (clé USB, Drive).</p>`;
-    const epsVus = EPS.filter(e=>!compacte || es.some(r=>r.ep===e.id));
-    let h = `<thead><tr><th>Élève</th>${epsVus.map(e=>`<th class="n" title="${esc(libelleEpisode(e)+" — "+e.titre)}">${esc(codeEpisode(e.id))}</th>`).join("")}<th class="n">Objectif</th></tr></thead><tbody>`;
-    eleves.forEach(st=>{ h += `<tr><td>${esc(st.nom)}</td>`+epsVus.map(e=>{ const rs = es.filter(r=>r.eleve===st.id && r.ep===e.id); return `<td class="n">${rs.length?Math.max(...rs.map(r=>r.mclm)):"—"}</td>`; }).join("")+`<td class="n">${Donnees.objectif(st.id)===null?"—":esc(Donnees.objectif(st.id))}</td></tr>`; });
-    box.querySelector("#tab").innerHTML = h+"</tbody>";
-    eleves.forEach(st=>{
-      const rs = es.filter(r=>r.eleve===st.id), c = el("div",{class:"card chart"});
-      c.innerHTML = `<h3 style="font-size:20px">${esc(st.nom)}</h3><p class="muted" style="margin:2px 0 6px">Tous les défis, dans l'ordre</p>`+courbe(rs.map(r=>({v:r.mclm, l:codeEpisode(r.ep)+"·"+r.essai})), Donnees.objectif(st.id), `Progrès de ${st.nom}`);
-      box.querySelector("#charts").appendChild(c);
+    if(ROLE==="parents")return;
+    const ancien=box.querySelector("#progression"),scroller=box.closest("main"),scroll=scroller?.scrollTop||0;
+    const actif=box.contains(document.activeElement)?document.activeElement:null;
+    const focus=actif&&["progression-recherche","progression-texte"].includes(actif.id)?{id:actif.id,debut:actif.selectionStart,fin:actif.selectionEnd}:null;
+    const etat=etatsProgres.get(box)||{origine:"classe",eleve:"",texte:"",recherche:"",ouverts:new Set(),tous:true};
+    if(ancien){etat.ouverts=new Set([...box.querySelectorAll("[data-progress-lecture][open]")].map(d=>d.dataset.progressLecture));etat.tous=box.querySelector("#tous")?.open??etat.tous;}
+    etatsProgres.set(box,etat);
+    const eleves=Donnees.eleves(),st=eleves.find(e=>e.id===etat.eleve);
+    if(!st)etat.eleve="";
+    const foyer=etat.origine==="maison",lieu=foyer?"À la maison":"En classe",p=st?Donnees.progres(st.id,etat.origine,etat.texte):null;
+    const lettres=nom=>Array.from(String(nom).trim()).slice(0,1).join("").toLocaleUpperCase("fr");
+    const score=v=>v===null?"—":String(v);
+    const normalise=t=>String(t).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase("fr");
+    box.innerHTML=`<section id="progression" class="progression${st?" progression-selection":""}">
+      <div class="progression-entete"><div><p class="progression-surtitre">SUIVI DES LECTURES</p><h1>Les progrès</h1><p class="muted">La progression de chaque élève, lecture après lecture.</p></div><div id="progression-acces"></div></div>
+      <div class="progression-origines" role="group" aria-label="Lieu de lecture"><button type="button" data-progress-origine="classe" aria-pressed="${!foyer}"><span aria-hidden="true">${'<svg viewBox="0 0 24 24"><path d="M3 9 12 3l9 6M5 8v12h14V8M9 20v-6h6v6M10 9h4"/>'}</svg></span>En classe</button><button type="button" data-progress-origine="maison" aria-pressed="${foyer}"><span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m3 11 9-8 9 8M5 9v12h14V9M9 21v-7h6v7"/></svg></span>À la maison</button></div>
+      <div class="progression-contenu"><aside class="progression-liste"><div class="progression-liste-titre"><h2>Les élèves</h2><span>${eleves.length}</span></div><label class="progression-recherche" for="progression-recherche"><span class="sr-only">Rechercher un élève</span><input id="progression-recherche" type="search" autocomplete="off" placeholder="Rechercher un élève" value="${esc(etat.recherche)}"></label><div id="progression-eleves">
+      ${eleves.map(e=>{const a=Donnees.progres(e.id,etat.origine);return `<button type="button" class="progression-eleve" data-progress-eleve="${esc(e.id)}" aria-pressed="${etat.eleve===e.id}"${normalise(e.nom).includes(normalise(etat.recherche))?"":" hidden"}><span class="progression-avatar" aria-hidden="true">${esc(lettres(e.nom))}</span><span class="progression-eleve-nom">${esc(e.nom)}<small>${a.nombre?`${a.nombre} lecture${a.nombre>1?"s":""}`:"Aucune lecture"}</small></span><span class="progression-eleve-score">${score(a.dernier)}${a.dernier!==null?"<small>MCLM</small>":""}</span></button>`;}).join("")}
+      </div><p class="muted progression-aucun-eleve" id="progression-recherche-vide" hidden>Aucun élève trouvé.</p>${!eleves.length?'<p class="muted">Ajoute les élèves depuis l’onglet Élèves.</p>':""}</aside>
+      <div class="progression-detail" id="progression-detail">${st?`<button class="btn progression-retour" id="progression-retour" type="button">← Tous les élèves</button><section class="progression-carte"><div class="progression-fiche-entete"><div><p class="progression-surtitre">${lieu}</p><h2 id="progression-titre" tabindex="-1">${esc(st.nom)}</h2></div><div class="progression-objectif" id="progression-objectif">${p.objectif.valeur!==null?`<span>Objectif${p.objectif.mode==="automatique"?" automatique":" manuel"}</span><strong><span data-progress-objectif-valeur>${esc(p.objectif.valeur)}</span> <small>MCLM</small></strong>`:"<span>Objectif automatique</span><strong class=\"progression-objectif-attente\">Après la première lecture</strong>"}</div></div>
+      <div class="progression-filtre"><label for="progression-texte">Texte</label><select id="progression-texte"><option value="">Tous les textes</option>${EPS.map(e=>`<option value="${esc(e.id)}"${etat.texte===e.id?" selected":""}>${esc(e.titre)}</option>`).join("")}</select></div>
+      <div class="progression-stats"><div><span>Dernière lecture</span><strong data-progress-stat="dernier">${score(p.dernier)}</strong><small>MCLM</small></div><div><span>Meilleur résultat</span><strong data-progress-stat="meilleur">${score(p.meilleur)}</strong><small>MCLM</small></div><div><span>Depuis la première</span><strong data-progress-stat="evolution" class="${p.evolution>0?"progression-hausse":""}">${p.evolution===null?"—":(p.evolution>0?"+":"")+p.evolution}</strong><small>MCLM</small></div><div><span>Lectures</span><strong data-progress-stat="lectures">${p.nombre}</strong><small>${lieu.toLocaleLowerCase("fr")}</small></div></div>
+      <div class="progression-graphique"><div class="progression-legende"><span><i></i> Mots corrects par minute</span>${p.objectif.valeur!==null?'<span><i class="progression-tiret"></i> Objectif</span>':""}</div>${p.mesures.length?grapheProgres(p.mesures,p.objectif.valeur,compacte||innerWidth<680):`<div class="progression-vide"><span aria-hidden="true">↗</span><h3>${p.nombre?"Pas encore de mesure à tracer":"Pas encore de lecture"}</h3><p>${etat.texte?"Aucune lecture pour ce texte":"Les lectures "+(foyer?"faites à la maison":"faites en classe")} ${p.nombre?"avec un score et une date valides.":etat.texte?" "+lieu.toLocaleLowerCase("fr")+".":"apparaîtront ici."}</p></div>`}</div><p class="progression-note">${etat.texte?"Lectures de ce texte, dans l’ordre chronologique.":"Plusieurs textes peuvent avoir des difficultés différentes. Choisis un texte pour comparer ses lectures."}${foyer?" Bilans déclarés par la famille.":""}</p>
+      </section><details class="progression-carte progression-lectures" id="tous"${etat.tous?" open":""}><summary>Les lectures <span>${p.nombre}</span></summary><div id="progression-lectures">${p.lectures.length?p.lectures.slice().reverse().map(r=>{const durs=motsDifficiles(r);return `<details class="progression-lecture" data-progress-lecture="${esc(r.id)}"${etat.ouverts.has(r.id)?" open":""}><summary><span class="progression-lecture-texte">${esc(titreProgres(r))}<small>${esc(dateProgres(r.date))} · lecture ${r.essai}</small></span><span class="progression-lecture-score">${Number.isSafeInteger(r.mclm)&&r.mclm>=0?r.mclm:"—"}<small>MCLM</small></span></summary><div class="progression-lecture-detail"><dl><div><dt>Mots lus</dt><dd>${esc(r.lus??"—")}</dd></div><div><dt>Erreurs</dt><dd>${esc(r.erreurs??"—")}</dd></div><div><dt>Temps</dt><dd>${esc(r.secondes??"—")} s</dd></div></dl>${durs.length?`<p class="label">Mots à retravailler</p><div class="hard">${durs.map(m=>`<span>${esc(m)}</span>`).join("")}</div>`:""}<button type="button" class="btn danger" data-suppr="${esc(r.id)}">Supprimer cette lecture</button><p class="muted progression-suppression-info" role="status"></p></div></details>`;}).join(""):'<p class="muted">Les prochaines lectures seront consultables ici.</p>'}</div></details>`:`<section class="progression-carte progression-bienvenue"><div class="progression-bienvenue-icone" aria-hidden="true"><svg viewBox="0 0 80 80"><path d="M14 60h54M18 54V38m18 16V27m18 27V15"/><path class="progression-fleche" d="m17 28 18-13 15 3 17-12m-10 0h10v10"/></svg></div><h2>Choisis un élève</h2><p>Retrouve ses lectures ${foyer?"à la maison":"en classe"},<br>ses progrès et son objectif.</p></section>`}</div></div>
+      <details class="progression-sauvegarde"><summary>Sauvegarder ou restaurer les données</summary><div class="row start"><button class="btn" id="exp" type="button">Exporter une sauvegarde</button><button class="btn" id="progression-importer" type="button">Importer une sauvegarde</button><input type="file" id="imp" accept="application/json,.json" hidden></div><p class="muted" id="ioinfo" role="status"></p><p class="muted">La sauvegarde contient tous les élèves et toutes les lectures, en classe et à la maison.</p></details></section>`;
+    box.querySelectorAll("[data-progress-origine]").forEach(b=>b.onclick=()=>{etat.origine=b.dataset.progressOrigine;vueProgres(box,compacte);box.querySelector(`[data-progress-origine="${etat.origine}"]`).focus({preventScroll:true});});
+    box.querySelectorAll("[data-progress-eleve]").forEach(b=>b.onclick=()=>{etat.eleve=b.dataset.progressEleve;vueProgres(box,compacte);box.querySelector("#progression-titre")?.focus({preventScroll:true});if(innerWidth<760)scroller?.scrollTo({top:0});});
+    const retour=box.querySelector("#progression-retour");if(retour)retour.onclick=()=>{const id=etat.eleve;etat.eleve="";vueProgres(box,compacte);[...box.querySelectorAll("[data-progress-eleve]")].find(b=>b.dataset.progressEleve===id)?.focus();};
+    const filtre=box.querySelector("#progression-texte");if(filtre)filtre.onchange=()=>{etat.texte=filtre.value;vueProgres(box,compacte);box.querySelector("#progression-texte").focus({preventScroll:true});};
+    const recherche=box.querySelector("#progression-recherche"),cherche=()=>{etat.recherche=recherche.value;let visibles=0;box.querySelectorAll("[data-progress-eleve]").forEach(b=>{b.hidden=!normalise(Donnees.nom(b.dataset.progressEleve)).includes(normalise(etat.recherche));if(!b.hidden)visibles++;});box.querySelector("#progression-recherche-vide").hidden=visibles>0 || !eleves.length;};
+    recherche.oninput=cherche;cherche();
+    function ouvreLecture(id){const d=[...box.querySelectorAll("[data-progress-lecture]")].find(d=>d.dataset.progressLecture===id);if(!d)return;box.querySelector("#tous").open=true;d.open=true;d.querySelector("summary").focus({preventScroll:true});d.scrollIntoView({block:"nearest",behavior:"smooth"});}
+    box.querySelectorAll("[data-progress-point]").forEach(point=>{point.onclick=()=>ouvreLecture(point.dataset.progressPoint);point.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();ouvreLecture(point.dataset.progressPoint);}};});
+    box.querySelectorAll("[data-suppr]").forEach(b=>b.onclick=async()=>{
+      if(b.dataset.sur!=="1"){b.dataset.sur="1";b.textContent="Confirmer la suppression ?";return;}
+      b.disabled=true;const ok=await Donnees.supprime(b.dataset.suppr);
+      if(!ok){b.disabled=false;b.dataset.sur="";b.textContent="Supprimer cette lecture";b.nextElementSibling.textContent="La suppression n’a pas été enregistrée. Réessaie.";return;}
+      if(box.querySelector("#progression"))vueProgres(box,compacte);
     });
-    let h2 = `<thead><tr><th>Date</th><th>Élève</th><th>Texte</th><th class="n">Essai</th><th class="n">Mots/min</th><th class="n">Erreurs</th><th></th></tr></thead><tbody>`;
-    es.slice().reverse().forEach(r=>{ const d = new Date(r.date);
-      h2 += `<tr><td>${d.toLocaleDateString("fr-FR",{day:"numeric",month:"short"})}</td><td>${esc(Donnees.nom(r.eleve))}</td><td>${esc(codeEpisode(r.ep))}</td><td class="n">${r.essai}</td><td class="n">${r.mclm}</td><td class="n">${r.erreurs}</td><td class="n"><button class="btn danger" data-suppr="${esc(r.id)}" style="min-height:40px">Supprimer</button></td></tr>`; });
-    box.querySelector("#tab2").innerHTML = h2+"</tbody>";
-    box.querySelector("#tab2").addEventListener("click", async e=>{ const b = e.target.closest("[data-suppr]"); if (!b) return;
-      if (b.dataset.sur!=="1"){ b.dataset.sur = "1"; b.textContent = "Confirmer ?"; return; }
-      await Donnees.supprime(b.dataset.suppr); vueProgres(box, compacte); box.querySelector("#tous").open = true; });
-    box.querySelector("#exp").onclick = async ()=>{ const info = box.querySelector("#ioinfo");
-      try { const dl = await window.claude.use("downloads"); const j = new Date().toISOString().slice(0,10);
-        await dl.save({filename:`banc-des-maitres-sauvegarde-${j}.json`, data:JSON.stringify(Donnees.sauvegarde(), null, 1)}); info.textContent = "Sauvegarde enregistrée."; }
-      catch(e){ info.textContent = e && e.code==="cancelled" ? "" : "La sauvegarde n'est pas possible ici."; } };
-    box.querySelector("#imp").onchange = async e=>{ const f = e.target.files[0]; if (!f) return; const info = box.querySelector("#ioinfo");
-      try { const ok = await Donnees.importe(JSON.parse(await f.text())); if (!ok) throw 0; vueProgres(box, compacte); box.querySelector("#ioinfo").textContent = "Sauvegarde importée."; }
-      catch(err){ info.textContent = "Ce fichier n'est pas une sauvegarde de Fluence."; } };
+    box.querySelector("#exp").onclick=async()=>{const info=box.querySelector("#ioinfo");try{const dl=await window.claude.use("downloads"),j=new Date().toISOString().slice(0,10);await dl.save({filename:`banc-des-maitres-sauvegarde-${j}.json`,data:JSON.stringify(Donnees.sauvegarde(),null,1)});info.textContent="Sauvegarde enregistrée.";}catch(e){info.textContent=e?.code==="cancelled"?"":"La sauvegarde n’est pas possible ici.";}};
+    box.querySelector("#progression-importer").onclick=()=>box.querySelector("#imp").click();
+    box.querySelector("#imp").onchange=async e=>{const f=e.target.files[0];if(!f)return;try{if(!await Donnees.importe(JSON.parse(await f.text())))throw Error();vueProgres(box,compacte);box.querySelector(".progression-sauvegarde").open=true;box.querySelector("#ioinfo").textContent="Sauvegarde importée.";}catch(e){const info=box.querySelector("#ioinfo");if(info)info.textContent="Ce fichier n’a pas pu être importé. Vérifie la sauvegarde et le stockage de cet appareil.";}};
     EnvoiMaison.ajouteBouton(box);
+    const acces=box.querySelector("#acces-parents");if(acces)box.querySelector("#progression-acces").appendChild(acces);
+    if(ancien&&scroller)scroller.scrollTop=scroll;
+    if(focus){const champ=box.querySelector("#"+focus.id);if(champ){champ.focus({preventScroll:true});if(focus.debut!==null)champ.setSelectionRange?.(focus.debut,focus.fin);}}
   }
   function actualiseObjectifs(box){
     box.querySelectorAll("[data-objectif-info]").forEach(info=>{
@@ -2064,16 +2236,19 @@ const EnvoiMaison = (() => {
   function ouvre(){
     if(Banc.ROLE==="parents") return;
     const existant=document.getElementById("maison-dialogue");if(existant){existant.focus();return;}
-    const precedent=document.activeElement, voile=el("div",{class:"voile"}), box=el("div",{class:"fenetre",id:"maison-dialogue",role:"dialog","aria-modal":"true","aria-label":"Accès parents et bilans maison",tabindex:"-1"});
-    box.style.cssText="display:block;width:min(960px,calc(100vw - 32px));max-width:100%;min-width:0;justify-items:stretch;overscroll-behavior:contain;text-align:left";
-    let retireVue=()=>{};
-    function ferme(){retireVue();document.removeEventListener("keydown",clavier);voile.remove();if(precedent?.isConnected)precedent.focus();}
+    const precedent=document.activeElement, voile=el("div",{class:"voile maison-voile"}), box=el("div",{class:"fenetre",id:"maison-dialogue",role:"dialog","aria-modal":"true","aria-label":"Accès parents et bilans maison",tabindex:"-1"}), viewport=window.visualViewport;
+    let retireVue=()=>{},cadre=0;
+    function ajusteFenetre(){
+      for(const [cle,valeur] of Object.entries({vtop:viewport?.offsetTop||0,vleft:viewport?.offsetLeft||0,vwidth:viewport?.width||innerWidth,vheight:viewport?.height||innerHeight}))voile.style.setProperty("--maison-"+cle,valeur+"px");
+      cancelAnimationFrame(cadre);cadre=requestAnimationFrame(()=>{const actif=document.activeElement;if(box.contains(actif)&&actif.matches("input,textarea,select"))actif.scrollIntoView({block:"nearest",inline:"nearest"});});
+    }
+    function ferme(){retireVue();cancelAnimationFrame(cadre);document.removeEventListener("keydown",clavier);window.removeEventListener("resize",ajusteFenetre);viewport?.removeEventListener("resize",ajusteFenetre);viewport?.removeEventListener("scroll",ajusteFenetre);voile.remove();if(precedent?.isConnected)precedent.focus({preventScroll:true});}
     function clavier(e){
       if(e.key==="Escape"){e.preventDefault();ferme();}
       if(e.key==="Tab"){const actifs=[...box.querySelectorAll('button:not([disabled]),a[href],input:not([hidden]),select,textarea')].filter(x=>x.offsetParent!==null),premier=actifs[0],dernier=actifs.at(-1);if(!premier)return;
         if(e.shiftKey&&(document.activeElement===premier||document.activeElement===box)){e.preventDefault();dernier.focus();}else if(!e.shiftKey&&(document.activeElement===dernier||document.activeElement===box)){e.preventDefault();premier.focus();}}
     }
-    voile.appendChild(box);document.body.appendChild(voile);retireVue=vue(box,ferme);document.addEventListener("keydown",clavier);box.focus();
+    voile.appendChild(box);document.body.appendChild(voile);retireVue=vue(box,ferme);document.addEventListener("keydown",clavier);window.addEventListener("resize",ajusteFenetre);viewport?.addEventListener("resize",ajusteFenetre);viewport?.addEventListener("scroll",ajusteFenetre);ajusteFenetre();box.focus({preventScroll:true});
   }
   function ajouteBouton(box){
     if(Banc.ROLE==="parents") return;
@@ -2083,7 +2258,7 @@ const EnvoiMaison = (() => {
   function vue(box,retour){
     if(Banc.ROLE==="parents") return;
     const eleves=Donnees.eleves();
-    box.innerHTML=`<div class="row start"><button class="btn" id="maison-retour">Retour</button><h1 style="font-size:clamp(24px,3vw,36px)">À la maison</h1></div>
+    box.innerHTML=`<div class="row start maison-dialogue-entete"><button class="btn" id="maison-retour">Retour</button><h1 style="font-size:clamp(24px,3vw,36px)">À la maison</h1></div>
       <section class="card" id="maison-cloud" style="margin-top:16px"></section>
       <section class="card" style="margin-top:16px"><h2>Accès de lecture sans lien personnel</h2><p>Ce lien commun permet de lire, d'imprimer les textes et de s'entraîner. Pour recevoir automatiquement les bilans, crée un lien personnel dans l'espace privé ci-dessus.</p>
       <label for="maison-invitation" class="label">Lien commun ou prénom prérempli</label><select class="sel" id="maison-invitation"><option value="">Lien commun, prénom à saisir</option>${eleves.map(e=>`<option value="${esc(e.id)}">${esc(e.nom)}</option>`).join("")}</select>
@@ -2234,6 +2409,8 @@ const MaisonCloud = (() => {
     }
     const erreur="Colle le lien de connexion complet reçu par e-mail, ou le code si ton message en contient un.";
     let u;try{u=new URL(saisie);}catch(e){throw new Error(erreur);}
+    const fragment=new URLSearchParams(u.hash.slice(1));
+    if(fragment.has("parents")||fragment.has("famille"))throw new Error("Ce lien est un accès parents. Demande un lien de connexion par e-mail pour ton espace enseignante.");
     const p=u.searchParams,hash=p.get("token_hash")||p.get("token");
     if(u.protocol!=="https:"||u.origin!==config().url||u.pathname!=="/auth/v1/verify"||u.username||u.password||u.hash||p.getAll("type").length!==1||!["magiclink","email"].includes(p.get("type"))||p.getAll("token").length+p.getAll("token_hash").length!==1||!hash||!/^[a-f0-9]{32,128}$/i.test(hash))throw new Error(erreur);
     // Ne jamais ouvrir l'URL collée, ni suivre son paramètre redirect_to.
@@ -2322,7 +2499,7 @@ const MaisonCloud = (() => {
       afficheConnectee=connectee();
       if(!configure()){box.innerHTML="<h2>Réception automatique privée</h2><p>La connexion au service privé est en préparation. Les liens personnels seront disponibles ici après son activation.</p>";return;}
       if(!connectee()){
-        box.innerHTML=`<h2>Connecter l'espace de l'enseignante</h2><p>Les bilans sont privés. Seul ton compte autorisé peut les recevoir.</p><label class="label" for="cloud-email">Adresse e-mail</label><input id="cloud-email" type="email" autocomplete="email" style="width:100%"><div class="row start" style="margin-top:12px"><button class="btn primary" id="cloud-code">Recevoir un lien de connexion</button></div><p>Dans le navigateur, ouvre le lien du mail. Dans l’application iPhone : dans le mail reçu, fais un appui long sur le lien de connexion, choisis « Copier le lien », puis colle-le ici. Ne l’ouvre pas avant de le coller : il ne sert qu’une fois.</p><div id="cloud-verification"><label class="label" for="cloud-otp">Lien de connexion reçu par e-mail (ou code)</label><input id="cloud-otp" type="text" autocapitalize="off" spellcheck="false" autocomplete="off" style="width:100%"><button class="btn primary" id="cloud-connexion" style="margin-top:10px">Se connecter</button></div><p id="cloud-info" role="status">${esc(infos.message)}</p>`;
+        box.innerHTML=`<h2>Connecter l'espace de l'enseignante</h2><p>Une seule connexion pour recevoir les résultats de tous tes élèves. Les bilans sont privés : seul ton compte autorisé peut les recevoir.</p><label class="label" for="cloud-email">Adresse e-mail</label><input id="cloud-email" type="email" autocomplete="email" style="width:100%"><div class="row start" style="margin-top:12px"><button class="btn primary" id="cloud-code">Recevoir un lien de connexion</button></div><p>Dans le navigateur, ouvre le lien du mail. Dans l’application iPhone : dans le mail reçu, fais un appui long sur le lien de connexion, choisis « Copier le lien », puis colle-le ici. Ne l’ouvre pas avant de le coller : il ne sert qu’une fois.</p><div id="cloud-verification"><label class="label" for="cloud-otp">Lien de connexion reçu par e-mail (ou code)</label><input id="cloud-otp" type="text" autocapitalize="off" spellcheck="false" autocomplete="off" aria-describedby="cloud-aide-lien" style="width:100%"><p class="muted" id="cloud-aide-lien">Les liens et QR codes des cartes sont réservés aux familles.</p><button class="btn primary" id="cloud-connexion" style="margin-top:10px">Se connecter</button></div><p id="cloud-info" role="status">${esc(infos.message)}</p>`;
         const info=box.querySelector("#cloud-info"),email=box.querySelector("#cloud-email"),code=box.querySelector("#cloud-code");
         code.onclick=async()=>{code.disabled=true;try{await demandeCode(email.value.trim());info.textContent="Le lien de connexion a été demandé. Consulte ta messagerie, puis ouvre le lien ou copie-le dans le champ ci-dessus.";}catch(e){info.textContent=e.message;}finally{code.disabled=false;}};
         box.querySelector("#cloud-connexion").onclick=async e=>{const b=e.currentTarget;b.disabled=true;try{await connecteCode(email.value.trim(),box.querySelector("#cloud-otp").value.trim());await rend();}catch(e){info.textContent=e.message;b.disabled=false;}};return;

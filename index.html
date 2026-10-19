@@ -337,6 +337,12 @@ html[data-role="parents"] .step{padding:0 10px}
 .progression-entete p{margin:6px 0 0}
 .progression-surtitre{font-size:12px;font-weight:700;letter-spacing:.1em;color:var(--green);margin:0 0 7px!important;text-transform:uppercase}
 .progression #acces-parents{font-size:14px;max-width:100%;white-space:normal;line-height:1.3;text-align:center;padding-block:10px}
+#progression-acces{max-width:480px;min-width:0}
+.progression-reception-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.progression #progression-actualiser{font-size:14px;min-height:44px}
+.progression #progression-actualiser[aria-disabled=true]{opacity:.65;cursor:wait}
+.progression #progression-reception{font-size:12px;line-height:1.5;color:var(--ink-soft);margin-top:8px;overflow-wrap:anywhere}
+.progression #progression-reception.progression-reception-erreur{color:#8d3b15}
 .progression-origines{display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:5px;background:var(--line);border-radius:17px;max-width:450px;margin:0 0 24px}
 .progression-origines button{display:flex;align-items:center;justify-content:center;gap:10px;min-height:50px;border:0;border-radius:12px;background:transparent;color:var(--ink-soft);font-size:17px;font-weight:700;cursor:pointer}
 .progression-origines button[aria-pressed=true]{color:var(--green-ink);background:var(--green);box-shadow:0 3px 9px rgb(0 0 0 / .08)}
@@ -392,7 +398,12 @@ html[data-role="parents"] .step{padding:0 10px}
 .progression-point{cursor:pointer;outline:none}
 .progression-point-visible{fill:var(--paper);stroke:var(--green);stroke-width:2.5}
 .progression-point:last-of-type .progression-point-visible{fill:var(--green)}
+.progression-point .progression-point-defi,.progression-point:last-of-type .progression-point-defi{fill:#b15c16;stroke:#86430e;stroke-width:2}
+.progression-legende .progression-losange{width:9px;height:9px;transform:rotate(45deg);border-radius:0;background:#b15c16}
+.progression-type-lecture{display:inline-block;font-size:11px;font-weight:700;color:var(--ink-soft);margin-top:5px}
+.progression-type-defi{background:#fff0d4;color:#82410c;border:1px solid #e1b171;border-radius:6px;padding:2px 7px}
 .progression-point:hover .progression-point-visible,.progression-point:focus-visible .progression-point-visible{stroke-width:5;fill:var(--green-soft)}
+.progression-point:hover .progression-point-defi,.progression-point:focus-visible .progression-point-defi{stroke-width:5;fill:#f6d6ac}
 .progression-note{font-size:12px;line-height:1.5;color:var(--ink-soft);margin:10px 0 0}
 .progression-vide{text-align:center;padding:26px 15px;color:var(--ink-soft)}
 .progression-vide>span{font-size:38px;color:var(--green)}
@@ -458,6 +469,21 @@ html[data-role="parents"] .step{padding:0 10px}
 .maison-progres-lectures>h2{font-size:23px;padding:20px 0 16px;margin:0}
 .maison-progres-lectures>h2 span{font-family:var(--font-read);font-size:14px;color:var(--ink-soft);font-weight:400;margin-left:8px}
 .maison-progres-note{font-size:14px;line-height:1.6;margin:20px 0 14px}
+.maison-lecture-choix{border:0;padding:0;margin:20px 0;min-width:0}
+.maison-lecture-choix legend{font-weight:700;margin-bottom:8px}
+.maison-lecture-choix>div{display:flex;flex-wrap:wrap;gap:8px}
+.maison-lecture-choix label{display:flex;align-items:center;gap:9px;min-height:48px;padding:10px 14px;border:1.5px solid var(--line);border-radius:12px;cursor:pointer;background:var(--paper);font-size:16px}
+.maison-lecture-choix label:has(input:checked){border-color:var(--green);background:var(--green-soft)}
+.maison-lecture-choix input{width:18px;height:18px;margin:0;accent-color:var(--green);flex:none}
+.maison-lecture-choix input:focus-visible{outline:3px solid var(--green);outline-offset:4px}
+.maison-lecture-choix:disabled label{cursor:default;opacity:.72}
+.maison-lecture-choix p{font-size:14px;line-height:1.5;color:var(--ink-soft);margin:8px 0 0}
+.maison-lecture-badge{display:inline-flex;align-items:center;max-width:100%;font-family:var(--font-read);font-size:12px;font-weight:700;line-height:1.4;color:#155c34;background:var(--green-soft);border-radius:7px;padding:4px 8px;margin:6px 0;white-space:normal}
+.maison-lecture-badge.maison-lecture-defi{color:#714a00;background:#fff0bd}
+.maison-progres .progression-lecture-texte>.maison-lecture-badge{display:table;margin:6px 0}
+.maison-lecture-point-defi{fill:#e5b444;stroke:#714a00;stroke-width:2.5}
+.progression-point:hover .maison-lecture-point-defi,.progression-point:focus-visible .maison-lecture-point-defi{stroke-width:5}
+.maison-progres .progression-legende .maison-lecture-losange{width:10px;height:10px;margin-inline:3px;transform:rotate(45deg);border:1.5px solid #714a00;border-radius:0;background:#e5b444}
 @media(max-width:759px){.maison-progres-entete{margin-bottom:18px}.maison-progres-entete p{font-size:15px}.maison-progres .progression-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.maison-rubriques{gap:8px}.maison-rubriques .btn{padding-inline:10px;min-width:0;font-size:16px}.maison-progres .progression-objectif{max-width:49%}.maison-progres .progression-fiche-entete{align-items:center}}
 </style>
 </head>
@@ -736,16 +762,23 @@ const Plateforme = (() => {
   /* ---------- les deux appareils gardent chacun la classe et tous les résultats ----------
      banc/classe et banc/reglages : la version la plus récente gagne (champ maj) ;
      banc/resultats : les deux listes sont réunies (chaque essai a son identifiant ; un essai supprimé le reste partout). */
+  // Égalité pédagogique stricte : les informations de transport restent locales.
+  const memeBilanMaison = (a,b) => {
+    if(!a||!b||a.suppr||b.suppr||a.origine!=="maison"||b.origine!=="maison"||typeof a.sourceId!=="string"||!a.sourceId||a.sourceId!==b.sourceId||typeof a.eleve!=="string"||!a.eleve||a.eleve!==b.eleve||a.ep!==b.ep||!Number.isFinite(Date.parse(a.date))||Date.parse(a.date)!==Date.parse(b.date))return false;
+    if(!["mclm","lus","erreurs","secondes","dernier"].every(k=>typeof a[k]==="number"&&Number.isFinite(a[k])&&a[k]===b[k]))return false;
+    return Array.isArray(a.fautes)&&Array.isArray(b.fautes)&&a.fautes.length===a.erreurs&&b.fautes.length===b.erreurs&&[a.fautes,b.fautes].every(f=>new Set(f).size===f.length&&f.every(i=>Number.isSafeInteger(i)&&i>=0&&i<=a.dernier))&&JSON.stringify(a.fautes.slice().sort((x,y)=>x-y))===JSON.stringify(b.fautes.slice().sort((x,y)=>x-y));
+  };
   const fusionResultats = (a, b) => {
     const m = new Map();
     for (const l of [a && a.liste, b && b.liste]) for (const r of (Array.isArray(l) ? l : [])){
       if (!r || typeof r.id!=="string") continue;
       const x = m.get(r.id);
       if (!x || (r.suppr && !x.suppr)) m.set(r.id, r);
+      else if(!Object.hasOwn(x,"typeLecture")&&["entrainement","defi"].includes(r.typeLecture)&&memeBilanMaison(x,r))m.set(r.id,{...x,typeLecture:r.typeLecture});
     }
     return {liste:[...m.values()].sort((x,y)=>String(x.date||"").localeCompare(String(y.date||"")) || x.id.localeCompare(y.id))};
   };
-  const sigResultats = d => (d && Array.isArray(d.liste) ? d.liste : []).map(r=>r.id+(r.suppr?"x":"")).sort().join(",");
+  const sigResultats = d => JSON.stringify((d && Array.isArray(d.liste) ? d.liste : []).map(r=>[r.id,!!r.suppr,r.suppr?null:["entrainement","defi"].includes(r.typeLecture)?r.typeLecture:null]).sort((a,b)=>String(a[0]).localeCompare(String(b[0]))));
   const plusRecent = (a, b) => !b ? a : (!a || (b.maj||0) > (a.maj||0)) ? b : a;
   const sigMaj = d => d ? String(d.maj||0)+":"+JSON.stringify(d).length : "";
   const Sync = (() => {
@@ -886,7 +919,7 @@ const Plateforme = (() => {
     if (name==="downloads") return Telechargements;
     return null;
   } };
-  return { NATIF, Liaison, Stock, partage:plug("Share"), eveille, rid, normalise, role, changeRole, fusionResultats, lsG, lsS };
+  return { NATIF, Liaison, Stock, partage:plug("Share"), eveille, rid, normalise, role, changeRole, fusionResultats, memeBilanMaison, lsG, lsS };
 })();
 window.Plateforme = Plateforme;
 
@@ -1117,6 +1150,14 @@ const Banc = (() => {
       contientBilan:(sourceId,eleve)=>resultats.liste.some(r=>r.origine==="maison"&&r.sourceId===sourceId&&(eleve===undefined||r.eleve===eleve)),
       record:(eleve, sauf)=>{ const l = vivants().filter(r=>r.eleve===eleve && r.id!==sauf); return l.length ? Math.max(...l.map(r=>r.mclm)) : null; },
       async ajoute(r){ if (resultats.liste.some(x=>x.id===r.id)) return true; const ok = await ecritResultats({liste:resultats.liste.concat([r])}); if(ok) signale("resultats"); return ok; },
+      async completeTypeLecture(r){
+        if(!["entrainement","defi"].includes(r?.typeLecture))return false;
+        const ancien=resultats.liste.find(x=>x.id===r.id||x.origine==="maison"&&x.sourceId===r.sourceId&&x.eleve===r.eleve);
+        if(!ancien||Object.hasOwn(ancien,"typeLecture")||!Plateforme.memeBilanMaison(ancien,r))return false;
+        const ok=await ecritResultats({liste:resultats.liste.map(x=>x===ancien?{...x,typeLecture:r.typeLecture}:x)});
+        if(!ok)throw new Error("Le type d’un bilan reçu ne peut pas encore être enregistré sur cet appareil. Réessaie la réception.");
+        signale("resultats");return true;
+      },
       async supprime(id){ const avant=resultats.liste.find(x=>x.id===id), marque={id,suppr:true,date:new Date().toISOString()}; if(avant?.origine==="maison")Object.assign(marque,{origine:"maison",sourceId:avant.sourceId,eleve:avant.eleve}); const ok = await ecritResultats({liste:resultats.liste.filter(x=>x.id!==id).concat([marque])}); if(ok) signale("resultats"); return ok; },
       vitesse:()=>reglages.vitesse||0.8,
       async fixeVitesse(v){ reglages = {vitesse:v, maj:Date.now()}; try { await docs.g.set(reglages); } catch(e){} },
@@ -1173,6 +1214,8 @@ const Banc = (() => {
     r.fautes.forEach(i=>{ const m = toks[i] && nu(toks[i].t); if (m && !vus.has(m.toLowerCase())){ vus.add(m.toLowerCase()); res.push(m); } });
     return res;
   }
+  const libelleLecture = r => r.typeLecture==="defi" ? "Défi du 4ᵉ soir" : r.typeLecture==="entrainement" ? "Entraînement" : "Lecture";
+  const badgeLecture = r => `<span class="progression-type-lecture${r.typeLecture==="defi"?" progression-type-defi":""}">${libelleLecture(r)}</span>`;
   function carteResultat(r, b, nomEleve, ok){
     const cible = Donnees.objectifInfo(r.eleve), objectif = cible.valeur;
     const durs = motsDifficiles(r);
@@ -1204,6 +1247,18 @@ const Banc = (() => {
 
   /* ---------- vues partagées : progrès, élèves ---------- */
   const etatsProgres = new WeakMap();
+  function actualiseReceptionProgres(box,etat){
+    const info=box.querySelector("#progression-reception"),bouton=box.querySelector("#progression-actualiser"),connexion=box.querySelector("#acces-parents");
+    if(!info||!bouton)return;
+    const s=window.MaisonCloud?.statutReception?.()||{connectee:false};
+    const enCours=!!s.enCours||!!etat.receptionEnCours;
+    if(s.enCours||!s.connectee)etat.erreurReception="";
+    if(connexion){connexion.textContent="Se connecter";connexion.hidden=!!s.connectee&&!s.reconnexionNecessaire;}
+    bouton.hidden=!s.connectee;
+    bouton.setAttribute("aria-disabled",String(enCours));bouton.textContent=enCours?"Actualisation…":"Actualiser";
+    info.classList.toggle("progression-reception-erreur",!!(s.erreur||s.reconnexionNecessaire||etat.erreurReception));
+    info.textContent=!s.connectee?"Connecte-toi pour recevoir les bilans maison.":enCours?"Réception des bilans maison…":s.reconnexionNecessaire?"Reconnecte-toi pour recevoir les bilans maison.":etat.erreurReception||s.message||(s.erreur?"Réception momentanément indisponible. Vérifie la connexion, puis réessaie.":s.derniereReception?"Les bilans maison ont été vérifiés.":"Les bilans maison n’ont pas encore été vérifiés.");
+  }
   const dateProgres = (date, courte=false) => Number.isFinite(Date.parse(date)) ? new Date(date).toLocaleDateString("fr-FR",courte?{day:"numeric",month:"numeric"}:{day:"numeric",month:"long",year:"numeric"}) : "Date non précisée";
   const titreProgres = r => ep(r.ep)?.titre || r.ep;
   function grapheProgres(rs, objectif, petit){
@@ -1219,8 +1274,8 @@ const Banc = (() => {
       if(rs.length>1)h+=`<polygon points="${x(0)},${H-B} ${points} ${x(rs.length-1)},${H-B}" fill="url(#progression-degrade)"/><polyline points="${points}" class="progression-trace"/>`;
       const intervalles=Math.min(rs.length-1,petit?3:5),etiquettes=new Set(Array.from({length:intervalles+1},(_,i)=>intervalles?Math.round(i*(rs.length-1)/intervalles):0));
       rs.forEach((r,i)=>{
-        const label=`${dateProgres(r.date)} · ${titreProgres(r)} · ${r.mclm} MCLM`;
-        h+=`<g class="progression-point" role="button" tabindex="0" data-progress-point="${esc(r.id)}" aria-label="${esc(label+". Consulter cette lecture.")}"><title>${esc(label)}</title><circle cx="${x(i)}" cy="${y(r.mclm)}" r="20" fill="transparent"/><circle class="progression-point-visible" cx="${x(i)}" cy="${y(r.mclm)}" r="${i===rs.length-1?6:4.5}"/></g>`;
+        const label=`${dateProgres(r.date)} · ${titreProgres(r)} · ${libelleLecture(r)} · ${r.mclm} MCLM`;
+        h+=`<g class="progression-point" role="button" tabindex="0" data-progress-point="${esc(r.id)}" aria-label="${esc(label+". Consulter cette lecture.")}"><title>${esc(label)}</title><circle cx="${x(i)}" cy="${y(r.mclm)}" r="20" fill="transparent"/>${r.typeLecture==="defi"?`<path class="progression-point-visible progression-point-defi" d="M${x(i)},${y(r.mclm)-8}l8,8 -8,8 -8,-8Z"/>`:`<circle class="progression-point-visible" cx="${x(i)}" cy="${y(r.mclm)}" r="${i===rs.length-1?6:4.5}"/>`}</g>`;
         if(etiquettes.has(i))h+=`<text x="${x(i)}" y="${H-14}" text-anchor="${i===0&&rs.length>1?"start":i===rs.length-1&&rs.length>1?"end":"middle"}">${esc(dateProgres(r.date,true))}</text>`;
       });
     }
@@ -1230,7 +1285,7 @@ const Banc = (() => {
     if(ROLE==="parents")return;
     const ancien=box.querySelector("#progression"),scroller=box.closest("main"),scroll=scroller?.scrollTop||0;
     const actif=box.contains(document.activeElement)?document.activeElement:null;
-    const focus=actif&&["progression-recherche","progression-texte"].includes(actif.id)?{id:actif.id,debut:actif.selectionStart,fin:actif.selectionEnd}:null;
+    const focus=actif&&["progression-recherche","progression-texte","progression-actualiser","acces-parents"].includes(actif.id)?{id:actif.id,debut:actif.selectionStart,fin:actif.selectionEnd}:null;
     const etat=etatsProgres.get(box)||{origine:"classe",eleve:"",texte:"",recherche:"",ouverts:new Set(),tous:true};
     if(ancien){etat.ouverts=new Set([...box.querySelectorAll("[data-progress-lecture][open]")].map(d=>d.dataset.progressLecture));etat.tous=box.querySelector("#tous")?.open??etat.tous;}
     etatsProgres.set(box,etat);
@@ -1241,7 +1296,7 @@ const Banc = (() => {
     const score=v=>v===null?"—":String(v);
     const normalise=t=>String(t).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase("fr");
     box.innerHTML=`<section id="progression" class="progression${st?" progression-selection":""}">
-      <div class="progression-entete"><div><p class="progression-surtitre">SUIVI DES LECTURES</p><h1>Les progrès</h1><p class="muted">La progression de chaque élève, lecture après lecture.</p></div><div id="progression-acces"></div></div>
+      <div class="progression-entete"><div><p class="progression-surtitre">SUIVI DES LECTURES</p><h1>Les progrès</h1><p class="muted">La progression de chaque élève, lecture après lecture.</p></div><div id="progression-acces"><div class="progression-reception-actions"><button class="btn" type="button" id="progression-actualiser" aria-describedby="progression-reception">Actualiser</button></div><p id="progression-reception" role="status" aria-live="polite"></p></div></div>
       <div class="progression-origines" role="group" aria-label="Lieu de lecture"><button type="button" data-progress-origine="classe" aria-pressed="${!foyer}"><span aria-hidden="true">${'<svg viewBox="0 0 24 24"><path d="M3 9 12 3l9 6M5 8v12h14V8M9 20v-6h6v6M10 9h4"/>'}</svg></span>En classe</button><button type="button" data-progress-origine="maison" aria-pressed="${foyer}"><span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m3 11 9-8 9 8M5 9v12h14V9M9 21v-7h6v7"/></svg></span>À la maison</button></div>
       <div class="progression-contenu"><aside class="progression-liste"><div class="progression-liste-titre"><h2>Les élèves</h2><span>${eleves.length}</span></div><label class="progression-recherche" for="progression-recherche"><span class="sr-only">Rechercher un élève</span><input id="progression-recherche" type="search" autocomplete="off" placeholder="Rechercher un élève" value="${esc(etat.recherche)}"></label><div id="progression-eleves">
       ${eleves.map(e=>{const a=Donnees.progres(e.id,etat.origine);return `<button type="button" class="progression-eleve" data-progress-eleve="${esc(e.id)}" aria-pressed="${etat.eleve===e.id}"${normalise(e.nom).includes(normalise(etat.recherche))?"":" hidden"}><span class="progression-avatar" aria-hidden="true">${esc(lettres(e.nom))}</span><span class="progression-eleve-nom">${esc(e.nom)}<small>${a.nombre?`${a.nombre} lecture${a.nombre>1?"s":""}`:"Aucune lecture"}</small></span><span class="progression-eleve-score">${score(a.dernier)}${a.dernier!==null?"<small>MCLM</small>":""}</span></button>`;}).join("")}
@@ -1249,8 +1304,8 @@ const Banc = (() => {
       <div class="progression-detail" id="progression-detail">${st?`<button class="btn progression-retour" id="progression-retour" type="button">← Tous les élèves</button><section class="progression-carte"><div class="progression-fiche-entete"><div><p class="progression-surtitre">${lieu}</p><h2 id="progression-titre" tabindex="-1">${esc(st.nom)}</h2></div><div class="progression-objectif" id="progression-objectif">${p.objectif.valeur!==null?`<span>Objectif${p.objectif.mode==="automatique"?" automatique":" manuel"}</span><strong><span data-progress-objectif-valeur>${esc(p.objectif.valeur)}</span> <small>MCLM</small></strong>`:"<span>Objectif automatique</span><strong class=\"progression-objectif-attente\">Après la première lecture</strong>"}</div></div>
       <div class="progression-filtre"><label for="progression-texte">Texte</label><select id="progression-texte"><option value="">Tous les textes</option>${EPS.filter(e=>estDisponible(e)||Donnees.progres(st.id,etat.origine).lectures.some(r=>r.ep===e.id)).map(e=>`<option value="${esc(e.id)}"${etat.texte===e.id?" selected":""}>${esc(e.titre)}</option>`).join("")}</select></div>
       <div class="progression-stats"><div><span>Dernière lecture</span><strong data-progress-stat="dernier">${score(p.dernier)}</strong><small>MCLM</small></div><div><span>Meilleur résultat</span><strong data-progress-stat="meilleur">${score(p.meilleur)}</strong><small>MCLM</small></div><div><span>Depuis la première</span><strong data-progress-stat="evolution" class="${p.evolution>0?"progression-hausse":""}">${p.evolution===null?"—":(p.evolution>0?"+":"")+p.evolution}</strong><small>MCLM</small></div><div><span>Lectures</span><strong data-progress-stat="lectures">${p.nombre}</strong><small>${lieu.toLocaleLowerCase("fr")}</small></div></div>
-      <div class="progression-graphique"><div class="progression-legende"><span><i></i> Mots corrects par minute</span>${p.objectif.valeur!==null?'<span><i class="progression-tiret"></i> Objectif</span>':""}</div>${p.mesures.length?grapheProgres(p.mesures,p.objectif.valeur,compacte||innerWidth<680):`<div class="progression-vide"><span aria-hidden="true">↗</span><h3>${p.nombre?"Pas encore de mesure à tracer":"Pas encore de lecture"}</h3><p>${etat.texte?"Aucune lecture pour ce texte":"Les lectures "+(foyer?"faites à la maison":"faites en classe")} ${p.nombre?"avec un score et une date valides.":etat.texte?" "+lieu.toLocaleLowerCase("fr")+".":"apparaîtront ici."}</p></div>`}</div><p class="progression-note">${etat.texte?"Lectures de ce texte, dans l’ordre chronologique.":"Plusieurs textes peuvent avoir des difficultés différentes. Choisis un texte pour comparer ses lectures."}${foyer?" Bilans déclarés par la famille.":""}</p>
-      </section><details class="progression-carte progression-lectures" id="tous"${etat.tous?" open":""}><summary>Les lectures <span>${p.nombre}</span></summary><div id="progression-lectures">${p.lectures.length?p.lectures.slice().reverse().map(r=>{const durs=motsDifficiles(r);return `<details class="progression-lecture" data-progress-lecture="${esc(r.id)}"${etat.ouverts.has(r.id)?" open":""}><summary><span class="progression-lecture-texte">${esc(titreProgres(r))}<small>${esc(dateProgres(r.date))} · lecture ${r.essai}</small></span><span class="progression-lecture-score">${Number.isSafeInteger(r.mclm)&&r.mclm>=0?r.mclm:"—"}<small>MCLM</small></span></summary><div class="progression-lecture-detail"><dl><div><dt>Mots lus</dt><dd>${esc(r.lus??"—")}</dd></div><div><dt>Erreurs</dt><dd>${esc(r.erreurs??"—")}</dd></div><div><dt>Temps</dt><dd>${esc(r.secondes??"—")} s</dd></div></dl>${durs.length?`<p class="label">Mots à retravailler</p><div class="hard">${durs.map(m=>`<span>${esc(m)}</span>`).join("")}</div>`:""}<button type="button" class="btn danger" data-suppr="${esc(r.id)}">Supprimer cette lecture</button><p class="muted progression-suppression-info" role="status"></p></div></details>`;}).join(""):'<p class="muted">Les prochaines lectures seront consultables ici.</p>'}</div></details>`:`<section class="progression-carte progression-bienvenue"><div class="progression-bienvenue-icone" aria-hidden="true"><svg viewBox="0 0 80 80"><path d="M14 60h54M18 54V38m18 16V27m18 27V15"/><path class="progression-fleche" d="m17 28 18-13 15 3 17-12m-10 0h10v10"/></svg></div><h2>Choisis un élève</h2><p>Retrouve ses lectures ${foyer?"à la maison":"en classe"},<br>ses progrès et son objectif.</p></section>`}</div></div>
+      <div class="progression-graphique"><div class="progression-legende"><span><i></i> Mots corrects par minute</span>${p.objectif.valeur!==null?'<span><i class="progression-tiret"></i> Objectif</span>':""}${p.mesures.some(r=>r.typeLecture==="defi")?'<span><i class="progression-losange"></i> Défi du 4ᵉ soir</span>':""}</div>${p.mesures.length?grapheProgres(p.mesures,p.objectif.valeur,compacte||innerWidth<680):`<div class="progression-vide"><span aria-hidden="true">↗</span><h3>${p.nombre?"Pas encore de mesure à tracer":"Pas encore de lecture"}</h3><p>${etat.texte?"Aucune lecture pour ce texte":"Les lectures "+(foyer?"faites à la maison":"faites en classe")} ${p.nombre?"avec un score et une date valides.":etat.texte?" "+lieu.toLocaleLowerCase("fr")+".":"apparaîtront ici."}</p></div>`}</div><p class="progression-note">${etat.texte?"Lectures de ce texte, dans l’ordre chronologique.":"Plusieurs textes peuvent avoir des difficultés différentes. Choisis un texte pour comparer ses lectures."}${foyer?" Bilans déclarés par la famille.":""}</p>
+      </section><details class="progression-carte progression-lectures" id="tous"${etat.tous?" open":""}><summary>Les lectures <span>${p.nombre}</span></summary><div id="progression-lectures">${p.lectures.length?p.lectures.slice().reverse().map(r=>{const durs=motsDifficiles(r);return `<details class="progression-lecture" data-progress-lecture="${esc(r.id)}"${etat.ouverts.has(r.id)?" open":""}><summary><span class="progression-lecture-texte">${esc(titreProgres(r))}<small>${esc(dateProgres(r.date))} · lecture ${r.essai}</small>${badgeLecture(r)}</span><span class="progression-lecture-score">${Number.isSafeInteger(r.mclm)&&r.mclm>=0?r.mclm:"—"}<small>MCLM</small></span></summary><div class="progression-lecture-detail"><dl><div><dt>Mots lus</dt><dd>${esc(r.lus??"—")}</dd></div><div><dt>Erreurs</dt><dd>${esc(r.erreurs??"—")}</dd></div><div><dt>Temps</dt><dd>${esc(r.secondes??"—")} s</dd></div></dl>${durs.length?`<p class="label">Mots à retravailler</p><div class="hard">${durs.map(m=>`<span>${esc(m)}</span>`).join("")}</div>`:""}<button type="button" class="btn danger" data-suppr="${esc(r.id)}">Supprimer cette lecture</button><p class="muted progression-suppression-info" role="status"></p></div></details>`;}).join(""):'<p class="muted">Les prochaines lectures seront consultables ici.</p>'}</div></details>`:`<section class="progression-carte progression-bienvenue"><div class="progression-bienvenue-icone" aria-hidden="true"><svg viewBox="0 0 80 80"><path d="M14 60h54M18 54V38m18 16V27m18 27V15"/><path class="progression-fleche" d="m17 28 18-13 15 3 17-12m-10 0h10v10"/></svg></div><h2>Choisis un élève</h2><p>Retrouve ses lectures ${foyer?"à la maison":"en classe"},<br>ses progrès et son objectif.</p></section>`}</div></div>
       <details class="progression-sauvegarde"><summary>Sauvegarder ou restaurer les données</summary><div class="row start"><button class="btn" id="exp" type="button">Exporter une sauvegarde</button><button class="btn" id="progression-importer" type="button">Importer une sauvegarde</button><input type="file" id="imp" accept="application/json,.json" hidden></div><p class="muted" id="ioinfo" role="status"></p><p class="muted">La sauvegarde contient tous les élèves et toutes les lectures, en classe et à la maison.</p></details></section>`;
     box.querySelectorAll("[data-progress-origine]").forEach(b=>b.onclick=()=>{etat.origine=b.dataset.progressOrigine;vueProgres(box,compacte);box.querySelector(`[data-progress-origine="${etat.origine}"]`).focus({preventScroll:true});});
     box.querySelectorAll("[data-progress-eleve]").forEach(b=>b.onclick=()=>{etat.eleve=b.dataset.progressEleve;vueProgres(box,compacte);box.querySelector("#progression-titre")?.focus({preventScroll:true});if(innerWidth<760)scroller?.scrollTo({top:0});});
@@ -1270,7 +1325,17 @@ const Banc = (() => {
     box.querySelector("#progression-importer").onclick=()=>box.querySelector("#imp").click();
     box.querySelector("#imp").onchange=async e=>{const f=e.target.files[0];if(!f)return;try{if(!await Donnees.importe(JSON.parse(await f.text())))throw Error();vueProgres(box,compacte);box.querySelector(".progression-sauvegarde").open=true;box.querySelector("#ioinfo").textContent="Sauvegarde importée.";}catch(e){const info=box.querySelector("#ioinfo");if(info)info.textContent="Ce fichier n’a pas pu être importé. Vérifie la sauvegarde et le stockage de cet appareil.";}};
     EnvoiMaison.ajouteBouton(box);
-    const acces=box.querySelector("#acces-parents");if(acces)box.querySelector("#progression-acces").appendChild(acces);
+    const acces=box.querySelector("#acces-parents");if(acces)box.querySelector(".progression-reception-actions").prepend(acces);
+    // Une seule écoute par conteneur ; une notification ne reconstruit jamais la fiche en cours.
+    if(!etat.retireReception)etat.retireReception=window.MaisonCloud?.surChange?.(()=>actualiseReceptionProgres(box,etat));
+    box.querySelector("#progression-actualiser").onclick=async()=>{
+      if(etat.receptionEnCours||window.MaisonCloud?.statutReception?.().enCours)return;
+      etat.receptionEnCours=true;etat.erreurReception="";actualiseReceptionProgres(box,etat);
+      try{await window.MaisonCloud.recoit();}
+      catch(e){etat.erreurReception="Impossible d’actualiser les bilans maison. Vérifie la connexion, puis réessaie.";}
+      finally{etat.receptionEnCours=false;actualiseReceptionProgres(box,etat);}
+    };
+    actualiseReceptionProgres(box,etat);
     if(ancien&&scroller)scroller.scrollTop=scroll;
     if(focus){const champ=box.querySelector("#"+focus.id);if(champ){champ.focus({preventScroll:true});if(focus.debut!==null)champ.setSelectionRange?.(focus.debut,focus.fin);}}
   }
@@ -1427,7 +1492,7 @@ const Banc = (() => {
     else { document.getElementById("app-ecran").hidden = false; await Ecran.demarre(); }
     await MaisonCloud.init(); EnvoiMaison.recoitLien();
   }
-  return { DATA, EPS, ROLE, $, el, esc, estMot, nu, ep, estDisponible, textesDisponibles, textesFamille, ouvertFamille, dateFamille, estTamallette, libelleEpisode, etapesEpisode, motsDefi, ajouteRupture, DUREE, ImportClasse, Donnees, Lien, calcule, bilan, carteResultat, motsDifficiles, courbe, vueProgres, vueEleves, actualiseObjectifs, prepareImpression, imprimeTexte, bip, compteRebours, demarre };
+  return { DATA, EPS, ROLE, $, el, esc, estMot, nu, ep, estDisponible, textesDisponibles, textesFamille, ouvertFamille, dateFamille, estTamallette, libelleEpisode, etapesEpisode, motsDefi, ajouteRupture, DUREE, ImportClasse, Donnees, Lien, calcule, bilan, carteResultat, libelleLecture, motsDifficiles, courbe, vueProgres, vueEleves, actualiseObjectifs, prepareImpression, imprimeTexte, bip, compteRebours, demarre };
 })();
 window.Banc = Banc;
 
@@ -2102,7 +2167,7 @@ window.Telephone = Telephone;
 /* Progrès d'un seul enfant : réponse privée en mémoire, sans données de classe locales. */
 "use strict";
 const ParentsProgres = (() => {
-  const {esc,el,ep,motsDifficiles}=Banc;
+  const {esc,el,ep,motsDifficiles,libelleLecture}=Banc;
   let generation=0,vue=null,donnees=null,origine="maison",texte="",prenom="",actif=false,tokenVue="";
   const token=()=>{const t=new URLSearchParams(location.hash.slice(1)).get("famille");return /^[a-f0-9]{64}$/.test(t||"")?t:"";};
   const date=(d,courte=false)=>new Date(d).toLocaleDateString("fr-FR",courte?{day:"2-digit",month:"2-digit"}:{day:"numeric",month:"long",year:"numeric"});
@@ -2134,7 +2199,7 @@ const ParentsProgres = (() => {
       if(!actif||version!==generation||identifiant!==token())return;
       if(!retour||!Array.isArray(retour.lectures)||!retour.objectif)throw {code:"reponse-invalide"};
       // Le service valide le contenu ; la vue ne conserve que les champs qu'elle affiche.
-      const lectures=retour.lectures.map(r=>({id:r.id,ep:r.ep,date:r.date,origine:r.origine,mclm:r.mclm,lus:r.lus,erreurs:r.erreurs,secondes:r.secondes,fautes:Array.isArray(r.fautes)?r.fautes.slice():[]}));
+      const lectures=retour.lectures.map(r=>({id:r.id,ep:r.ep,date:r.date,origine:r.origine,mclm:r.mclm,lus:r.lus,erreurs:r.erreurs,secondes:r.secondes,fautes:Array.isArray(r.fautes)?r.fautes.slice():[],...(["entrainement","defi"].includes(r.typeLecture)?{typeLecture:r.typeLecture}:{})}));
       donnees={objectif:{valeur:retour.objectif.valeur,mode:retour.objectif.mode},lectures};rend();
     }catch(e){if(!actif||version!==generation||identifiant!==token())return;donnees=null;message(...erreur(e),true);}
   }
@@ -2148,7 +2213,7 @@ const ParentsProgres = (() => {
     const points=rs.map((r,i)=>`${x(i)},${y(r.mclm)}`).join(" ");
     if(rs.length>1)h+=`<polygon points="${x(0)},${H-B} ${points} ${x(rs.length-1)},${H-B}" fill="url(#parents-progres-degrade)"/><polyline points="${points}" class="progression-trace"/>`;
     const nombreLabels=Math.min(rs.length,petit?4:6),labels=new Set(Array.from({length:nombreLabels},(_,i)=>Math.round(i*(rs.length-1)/(nombreLabels-1||1))));
-    rs.forEach((r,i)=>{h+=`<g class="progression-point" role="button" tabindex="0" data-parent-point="${esc(r.id)}" aria-label="${esc(`${date(r.date)} · ${titre(r)} · ${r.mclm} mots corrects par minute. Consulter cette lecture.`)}"><circle cx="${x(i)}" cy="${y(r.mclm)}" r="20" fill="transparent"/><circle class="progression-point-visible" cx="${x(i)}" cy="${y(r.mclm)}" r="${i===rs.length-1?6:4.5}"/></g>`;if(labels.has(i))h+=`<text x="${x(i)}" y="${H-14}" text-anchor="${i===0&&rs.length>1?"start":i===rs.length-1&&rs.length>1?"end":"middle"}">${esc(date(r.date,true))}</text>`;});
+    rs.forEach((r,i)=>{h+=`<g class="progression-point" role="button" tabindex="0" data-parent-point="${esc(r.id)}" data-type-lecture="${r.typeLecture||"lecture"}" aria-label="${esc(`${libelleLecture(r)} · ${date(r.date)} · ${titre(r)} · ${r.mclm} mots corrects par minute. Consulter cette lecture.`)}"><circle cx="${x(i)}" cy="${y(r.mclm)}" r="20" fill="transparent"/>${r.typeLecture==="defi"?`<path class="maison-lecture-point-defi" d="M ${x(i)} ${y(r.mclm)-8} l 8 8 -8 8 -8 -8 Z"/>`:`<circle class="progression-point-visible" cx="${x(i)}" cy="${y(r.mclm)}" r="${i===rs.length-1?6:4.5}"/>`}</g>`;if(labels.has(i))h+=`<text x="${x(i)}" y="${H-14}" text-anchor="${i===0&&rs.length>1?"start":i===rs.length-1&&rs.length>1?"end":"middle"}">${esc(date(r.date,true))}</text>`;});
     return h+"</svg>";
   }
   function rend(){
@@ -2160,9 +2225,9 @@ const ParentsProgres = (() => {
       <section class="progression-carte"><div class="progression-fiche-entete"><h2>${lieu}</h2><div class="progression-objectif" id="parents-progres-objectif"><span>Objectif${objectif.mode==="automatique"?" automatique":objectif.mode==="manuel"?" de lecture":""}</span>${Number.isFinite(objectif.valeur)?`<strong>${objectif.valeur} <small>mots/min</small></strong>`:'<strong class="progression-objectif-attente">Après la première lecture</strong>'}</div></div>
       <div class="progression-filtre"><label for="parents-progres-texte">Texte</label><select id="parents-progres-texte"><option value="">Tous les textes</option>${Banc.EPS.filter(e=>(Banc.estDisponible(e)&&(Banc.estTamallette(e)||Banc.ouvertFamille(e)))||donnees.lectures.some(r=>r.ep===e.id)).map(e=>`<option value="${esc(e.id)}"${texte===e.id?" selected":""}>${esc(titre({ep:e.id}))}</option>`).join("")}</select></div>
       <div class="progression-stats"><div><span>Dernière lecture</span><strong data-parent-stat="dernier">${score(dernier)}</strong><small>mots/min</small></div><div><span>Meilleur résultat</span><strong data-parent-stat="meilleur">${score(meilleur)}</strong><small>mots/min</small></div><div><span>Depuis la première</span><strong data-parent-stat="evolution" class="${evolution>0?"progression-hausse":""}">${evolution===null?"—":(evolution>0?"+":"")+evolution}</strong><small>mots/min</small></div><div><span>Lectures</span><strong data-parent-stat="lectures">${rs.length}</strong><small>${lieu.toLocaleLowerCase("fr")}</small></div></div>
-      ${rs.length?`<div class="progression-legende"><span><i></i> Mots corrects par minute</span>${Number.isFinite(objectif.valeur)?'<span><i class="progression-tiret"></i> Objectif</span>':""}</div>${graphique(rs,objectif.valeur)}`:`<div class="progression-vide"><span aria-hidden="true">↗</span><h3>Pas encore de lecture</h3><p>${texte?"Aucune lecture pour ce texte "+lieu.toLocaleLowerCase("fr")+".":"Les lectures "+lieu.toLocaleLowerCase("fr")+" apparaîtront ici."}</p></div>`}
+      ${rs.length?`<div class="progression-legende"><span><i></i> Mots corrects par minute</span>${rs.some(r=>r.typeLecture==="defi")?'<span><i class="maison-lecture-losange"></i> Défi du 4ᵉ soir</span>':""}${Number.isFinite(objectif.valeur)?'<span><i class="progression-tiret"></i> Objectif</span>':""}</div>${graphique(rs,objectif.valeur)}`:`<div class="progression-vide"><span aria-hidden="true">↗</span><h3>Pas encore de lecture</h3><p>${texte?"Aucune lecture pour ce texte "+lieu.toLocaleLowerCase("fr")+".":"Les lectures "+lieu.toLocaleLowerCase("fr")+" apparaîtront ici."}</p></div>`}
       <p class="progression-note">${texte?"Lectures de ce texte, dans l’ordre chronologique.":"Les textes peuvent avoir des difficultés différentes. Choisissez un texte pour comparer ses lectures."}${origine==="maison"?" Les bilans à la maison sont déclarés par la famille.":""}</p></section>
-      <section class="progression-carte progression-lectures maison-progres-lectures"><h2>Les lectures <span>${rs.length}</span></h2>${rs.length?rs.slice().reverse().map(r=>{const E=ep(r.ep),durs=E?.collection==="feuilleton"&&!Banc.ouvertFamille(E)?[]:motsDifficiles(r);return `<details class="progression-lecture" data-parent-lecture="${esc(r.id)}"><summary><span class="progression-lecture-texte">${esc(titre(r))}<small>${esc(date(r.date))}</small></span><span class="progression-lecture-score">${r.mclm}<small>mots/min</small></span></summary><div class="progression-lecture-detail"><dl><div><dt>Mots lus</dt><dd>${r.lus??"—"}</dd></div><div><dt>Erreurs</dt><dd>${r.erreurs??"—"}</dd></div><div><dt>Temps</dt><dd>${r.secondes??"—"} s</dd></div></dl>${durs.length?`<p class="label">Mots à retravailler</p><div class="hard">${durs.map(m=>`<span>${esc(m)}</span>`).join("")}</div>`:""}</div></details>`;}).join(""):'<p class="muted">Les prochaines lectures seront consultables ici.</p>'}</section>
+      <section class="progression-carte progression-lectures maison-progres-lectures"><h2>Les lectures <span>${rs.length}</span></h2>${rs.length?rs.slice().reverse().map(r=>{const E=ep(r.ep),durs=E?.collection==="feuilleton"&&!Banc.ouvertFamille(E)?[]:motsDifficiles(r);return `<details class="progression-lecture" data-parent-lecture="${esc(r.id)}"><summary><span class="progression-lecture-texte">${esc(titre(r))}<span class="maison-lecture-badge${r.typeLecture==="defi"?" maison-lecture-defi":""}" data-type-lecture="${r.typeLecture||"lecture"}">${libelleLecture(r)}</span><small>${esc(date(r.date))}</small></span><span class="progression-lecture-score">${r.mclm}<small>mots/min</small></span></summary><div class="progression-lecture-detail"><dl><div><dt>Mots lus</dt><dd>${r.lus??"—"}</dd></div><div><dt>Erreurs</dt><dd>${r.erreurs??"—"}</dd></div><div><dt>Temps</dt><dd>${r.secondes??"—"} s</dd></div></dl>${durs.length?`<p class="label">Mots à retravailler</p><div class="hard">${durs.map(m=>`<span>${esc(m)}</span>`).join("")}</div>`:""}</div></details>`;}).join(""):'<p class="muted">Les prochaines lectures seront consultables ici.</p>'}</section>
       <p class="maison-progres-note muted">Seuls les résultats de votre enfant sont affichés. Les nouveaux résultats apparaissent après leur transmission par l’enseignante ou l’envoi du bilan maison.</p><button type="button" class="btn" id="parents-progres-actualiser">Actualiser les progrès</button>`;
     cible.querySelectorAll("[data-parent-origine]").forEach(b=>b.onclick=()=>{origine=b.dataset.parentOrigine;rend();vue.querySelector(`[data-parent-origine="${origine}"]`).focus({preventScroll:true});});
     cible.querySelector("#parents-progres-texte").onchange=e=>{texte=e.target.value;rend();vue.querySelector("#parents-progres-texte").focus({preventScroll:true});};
@@ -2184,7 +2249,7 @@ window.ParentsProgres=ParentsProgres;
 /* Défis à la maison : aucun accès à la classe ni à la liaison de l'enseignante. */
 "use strict";
 const Parents = (() => {
-  const { $, el, esc, motsDefi, calcule, motsDifficiles, bip } = Banc;
+  const { $, el, esc, motsDefi, calcule, motsDifficiles, bip, libelleLecture } = Banc;
   const CLE = "fluence-parents-v1";
   // Empreinte dédiée au lien de démonstration : jamais le secret ni son empreinte d’accès aux bilans.
   const EMPREINTE_APERCU = "d22921451b224db9d886cdd5fc5c658d263d8a4fa63a0ccc023a8907c56b01f8";
@@ -2229,7 +2294,8 @@ const Parents = (() => {
     const contexteValide = c=>c===undefined || c==="" || typeof c==="string" && /^[a-f0-9]{64}$/.test(c);
     if (!d || d.version !== 1 || !Array.isArray(d.historique) || !d.historique.every(r => r && r.origine === "maison" && typeof r.id === "string" && typeof r.prenom === "string" && typeof r.ep === "string" && typeof r.titre === "string" && contexteValide(r.contexte) && Number.isFinite(Date.parse(r.date)) && [r.mclm,r.lus,r.erreurs,r.secondes,r.dernier].every(n=>Number.isFinite(n) && n>=0) && Array.isArray(r.fautes) && r.fautes.every(n=>Number.isInteger(n) && n>=0))) throw new Error("historique non reconnu");
     if(d.profils!==undefined && (!d.profils || typeof d.profils!=="object" || Array.isArray(d.profils) || !Object.entries(d.profils).every(([c,p])=>/^[a-f0-9]{64}$/.test(c) && p && typeof p.prenom==="string"))) throw new Error("profils non reconnus");
-    const historique = d.historique.map(r=>({id:r.id,formatVersion:1,origine:"maison",contexte:r.contexte||"",prenom:r.prenom,ep:r.ep,titre:r.titre,date:r.date,mclm:r.mclm,lus:r.lus,erreurs:r.erreurs,secondes:r.secondes,dernier:r.dernier,fautes:r.fautes.slice()}));
+    if(d.historique.some(r=>r.typeLecture!==undefined && !["entrainement","defi"].includes(r.typeLecture)))throw new Error("type de lecture non reconnu");
+    const historique = d.historique.map(r=>({id:r.id,formatVersion:1,origine:"maison",contexte:r.contexte||"",prenom:r.prenom,ep:r.ep,titre:r.titre,date:r.date,mclm:r.mclm,lus:r.lus,erreurs:r.erreurs,secondes:r.secondes,dernier:r.dernier,fautes:r.fautes.slice(),...(r.typeLecture?{typeLecture:r.typeLecture}:{})}));
     const profils=Object.fromEntries(Object.entries(d.profils||{}).map(([c,p])=>[c,{prenom:p.prenom,vitesse:[0.6,0.8,1].includes(p.vitesse)?p.vitesse:0.8}]));
     return {version:1, prenom:typeof d.prenom === "string" ? d.prenom : "", vitesse:[0.6,0.8,1].includes(d.vitesse) ? d.vitesse : 0.8, historique, profils};
   }
@@ -2266,7 +2332,7 @@ const Parents = (() => {
     const c = el("article", {class:"card maison-bilan","data-maison-bilan":r.id});
     const date = new Date(r.date).toLocaleString("fr-FR",{dateStyle:"short",timeStyle:"short"});
     const durs = motsDifficiles(r);
-    c.innerHTML = `<div class="label">Résultat · ${esc(date)}</div>
+    c.innerHTML = `<div class="label">Résultat · ${esc(date)}</div><span class="maison-lecture-badge${r.typeLecture==="defi"?" maison-lecture-defi":""}" data-type-lecture="${r.typeLecture||"lecture"}">${libelleLecture(r)}</span>
       <h3>${esc(r.prenom)} — ${esc(r.titre)}</h3>
       <div class="big-num">${r.mclm}</div><div class="muted">mots lus correctement par minute</div>
       <dl class="res"><dt>Mots lus</dt><dd>${r.lus}</dd><dt>Erreurs</dt><dd>${r.erreurs}</dd><dt>Temps</dt><dd>${r.secondes} s</dd></dl>
@@ -2341,9 +2407,10 @@ const Parents = (() => {
   function defi(P,E){
     rubrique="entrainement";actualiseRubriques();window.ParentsProgres?.ferme();
     const duree = Banc.DUREE(), mots = motsDefi(E), fautes = new Set(), contexteDefi=contexte;
-    let etat = "pret", depart = 0, ecoule = 0, timer = null, prenom = "", annuleCompte = ()=>{};
+    let etat = "pret", depart = 0, ecoule = 0, timer = null, prenom = "", typeLecture = "entrainement", annuleCompte = ()=>{};
     P.innerHTML = `${E.audio ? '<div class="maison-ecoute"><div class="row start"><button class="btn" type="button" id="maison-ecouter">Écouter le texte</button><button class="btn" type="button" id="maison-ecouter-debut" hidden>Depuis le début</button></div><p class="muted" id="maison-ecoute-info" role="status" hidden></p></div>' : ""}<p class="lead">L’enfant lit. Touchez les mots mal lus.</p>
       <div class="maison-identite"><label for="maison-prenom">Prénom de l’enfant</label><input id="maison-prenom" autocomplete="off" autocapitalize="words" maxlength="80" value="${esc(profil().prenom)}"><p id="maison-prenom-erreur" class="maison-erreur" role="status" hidden></p></div>
+      <fieldset id="maison-type-lecture" class="maison-lecture-choix" aria-describedby="maison-type-aide"><legend>Cette lecture</legend><div><label><input type="radio" name="typeLecture" value="entrainement" checked><span>Entraînement</span></label><label><input type="radio" name="typeLecture" value="defi"><span>Défi du 4ᵉ soir</span></label></div><p id="maison-type-aide">Choisissez le défi le 4ᵉ soir. Chaque score reste enregistré.</p></fieldset>
       <div class="maison-pilotage"><div class="chrono"><div><strong class="big-num" id="maison-chrono">${duree}</strong> secondes</div>
       <div class="row"><button class="btn primary" id="maison-depart" type="button">Démarrer</button><button class="btn" id="maison-fini" type="button" hidden>Lecture terminée</button></div></div>
       <div class="defi-compte-rebours" id="maison-compte-rebours" role="status" aria-live="assertive" aria-atomic="true" hidden><span>La lecture commence dans</span><strong class="defi-compte-nombre" id="maison-compte-nombre"></strong></div>
@@ -2351,6 +2418,7 @@ const Parents = (() => {
       <div id="maison-resultat" tabindex="-1" hidden></div><div class="maison-texte"><div class="text" id="maison-texte" lang="fr"></div></div>`;
     const champ = P.querySelector("#maison-prenom"), erreur = P.querySelector("#maison-prenom-erreur"), bouton = P.querySelector("#maison-depart"), fini = P.querySelector("#maison-fini"), chrono = P.querySelector("#maison-chrono"), consigne = P.querySelector("#maison-consigne"), texte = P.querySelector("#maison-texte"), resultat = P.querySelector("#maison-resultat"), spans = [];
     const pilotage=P.querySelector(".maison-pilotage"), compte=P.querySelector("#maison-compte-rebours"), nombre=P.querySelector("#maison-compte-nombre");
+    const choixLecture=P.querySelector("#maison-type-lecture");
     // La voix reste dans cet écran ; le défi et la navigation arrêtent toute écoute.
     const audio=E.audio ? $("#audio") : null, ecouter=P.querySelector("#maison-ecouter"), debut=P.querySelector("#maison-ecouter-debut"), infoEcoute=P.querySelector("#maison-ecoute-info");
     let souhaiteEcoute=false, commandeEcoute=0;
@@ -2431,7 +2499,7 @@ const Parents = (() => {
       pilotage.classList.remove("etat-dernier");consigne.classList.remove("etat-dernier");pilotage.classList.add("termine");
       const secondes = Math.max(1,Math.min(60,Math.round(ecoule)));
       const {eleve, ...mesures} = calcule(E,null,secondes,dernier,fautes);
-      const r = {...mesures,formatVersion:1,origine:"maison",contexte:contexteDefi,prenom, titre:E.titre};
+      const r = {...mesures,formatVersion:1,origine:"maison",contexte:contexteDefi,prenom,titre:E.titre,typeLecture};
       donnees.historique.push(r); sauve();
       spans.forEach((s,i)=>{s.classList.toggle("after",i>dernier);s.classList.toggle("last",i===dernier);s.classList.toggle("err",r.fautes.includes(i));s.removeAttribute("aria-pressed");s.removeAttribute("role");s.removeAttribute("tabindex");});
       P.querySelector("#maison-bilan-precedent")?.remove();
@@ -2446,6 +2514,7 @@ const Parents = (() => {
       if(etat !== "pret") return;
       try {prenom=validePrenom(champ.value);} catch(e){erreur.hidden=false;erreur.textContent=e.message;champ.focus();return;}
       erreur.hidden=true; profil().prenom=prenom; sauve(); champ.value=prenom; champ.disabled=true;
+      typeLecture=choixLecture.querySelector(":checked")?.value==="defi"?"defi":"entrainement";choixLecture.disabled=true;
       etat="compte-rebours";arreteEcoute();bouton.disabled=true;fini.hidden=true;pilotage.classList.add("etat-compte-rebours");
       spans.filter(s=>s.getAttribute("role")==="button").forEach(s=>s.setAttribute("aria-disabled","true"));
       consigne.textContent="Préparez-vous. Attendez la fin du compte à rebours pour lire.";
@@ -2466,7 +2535,7 @@ const Parents = (() => {
     function visibilite(){
       if(document.hidden&&etat==="compte-rebours"){
         annuleCompte();annuleCompte=()=>{};etat="pret";compte.hidden=true;pilotage.classList.remove("etat-compte-rebours");
-        spans.forEach(s=>s.removeAttribute("aria-disabled"));champ.disabled=false;bouton.disabled=false;
+        spans.forEach(s=>s.removeAttribute("aria-disabled"));champ.disabled=false;bouton.disabled=false;choixLecture.disabled=false;
         consigne.textContent="Départ interrompu. Appuyez sur Démarrer quand l’enfant est prêt : 3, 2, 1 annonceront le départ.";
         actualiseEcoute();Plateforme.eveille(false);return;
       }
@@ -2531,6 +2600,7 @@ const EnvoiMaison = (() => {
   }
   function normalise(r){
     if(!r || typeof r!=="object" || r.origine!=="maison" || !/^[a-zA-Z0-9_-]{8,80}$/.test(r.id||"")) throw new Error("Ce bilan maison n'est pas valide.");
+    if(Object.hasOwn(r,"typeLecture") && !["entrainement","defi"].includes(r.typeLecture)) throw new Error("Le type de lecture n’est pas valide.");
     const E=ep(r.ep), date=new Date(r.date);
     if(!E || !Number.isFinite(date.getTime()) || date.getTime()>Date.now()+86400000) throw new Error("Le texte ou la date de ce bilan n'est pas valide.");
     const toks=motsDefi(E);
@@ -2538,7 +2608,7 @@ const EnvoiMaison = (() => {
     if(!Array.isArray(r.fautes) || r.fautes.length>toks.length || r.fautes.some(i=>!Number.isInteger(i)||i<0||i>r.dernier||!toks[i].w) || new Set(r.fautes).size!==r.fautes.length) throw new Error("La liste des erreurs n'est pas valide.");
     const lus=toks.slice(0,r.dernier+1).filter(t=>t.w).length, erreurs=r.fautes.length;
     if(r.lus!==lus || r.erreurs!==erreurs) throw new Error("Les nombres de mots et d'erreurs ne correspondent pas au texte.");
-    return {id:r.id,origine:"maison",prenom:nom(r.prenom),ep:E.id,titre:E.titre,date:date.toISOString(),secondes:r.secondes,dernier:r.dernier,fautes:r.fautes.slice().sort((a,b)=>a-b),lus,erreurs,mclm:Math.round((lus-erreurs)*60/r.secondes)};
+    return {id:r.id,origine:"maison",prenom:nom(r.prenom),ep:E.id,titre:E.titre,date:date.toISOString(),secondes:r.secondes,dernier:r.dernier,fautes:r.fautes.slice().sort((a,b)=>a-b),lus,erreurs,mclm:Math.round((lus-erreurs)*60/r.secondes),...(Object.hasOwn(r,"typeLecture")?{typeLecture:r.typeLecture}:{})};
   }
   const paquet = r => { const bilan=normalise(r);return {format:FORMAT,version:1,texte:empreinte(bilan.ep),bilan}; };
   function code(d){ const bytes=new TextEncoder().encode(JSON.stringify(d)); let s="";bytes.forEach(b=>s+=String.fromCharCode(b));return btoa(s).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/g,""); }
@@ -2555,7 +2625,7 @@ const EnvoiMaison = (() => {
   const idLocal = (sourceId,eleve)=>"maison:"+encodeURIComponent(eleve)+":"+sourceId;
   function lienParent(prenom=""){ const url=base();return url ? url+"#parents"+(prenom?"&prenom="+encodeURIComponent(nom(prenom)):"") : ""; }
   function prenomLien(){try {const p=new URLSearchParams(location.hash.slice(1)).get("prenom");return p?nom(p):"";}catch(e){return "";}}
-  const texteBilan = r => `Fluence — entraînement à la maison\n${r.prenom} · ${r.titre}\n${new Date(r.date).toLocaleDateString("fr-FR")}\n${r.lus} mots lus, ${r.erreurs} erreur(s), ${r.secondes} secondes : ${r.mclm} mots corrects par minute.\nBilan déclaré par la famille.`;
+  const texteBilan = r => `Fluence — ${Banc.libelleLecture(r)} à la maison\n${r.prenom} · ${r.titre}\n${new Date(r.date).toLocaleDateString("fr-FR")}\n${r.lus} mots lus, ${r.erreurs} erreur(s), ${r.secondes} secondes : ${r.mclm} mots corrects par minute.\nBilan déclaré par la famille.`;
   async function partage(r){
     const d=paquet(r), url=base()+"#bilan="+code(d), text=texteBilan(d.bilan), title="Bilan Fluence à la maison";
     if(Plateforme.partage){await Plateforme.partage.share({title,text,url});return {message:"Le partage est terminé. Le bilan reste disponible ici ; la réception n'est pas confirmée par Fluence."};}
@@ -2609,7 +2679,7 @@ const EnvoiMaison = (() => {
     function apercuBilan(texte){
       apercu.innerHTML="";
       try {const r=lit(texte);info.textContent="Bilan prêt à vérifier. Rien n'est encore enregistré.";
-        apercu.innerHTML=`<h3>${esc(r.prenom)} — ${esc(r.titre)}</h3><p>${esc(new Date(r.date).toLocaleDateString("fr-FR"))} · ${r.lus} mots lus · ${r.erreurs} erreur(s) · ${r.secondes} secondes · <b>${r.mclm} mots/min</b></p><label class="label" for="maison-eleve">Associer à l'élève de la classe</label><select class="sel" id="maison-eleve"><option value="">Choisir l'élève…</option>${Donnees.eleves().map(e=>`<option value="${esc(e.id)}">${esc(e.nom)}</option>`).join("")}</select><div class="row start" style="margin-top:12px"><button class="btn primary" id="maison-confirme">Ajouter au suivi maison</button><button class="btn" id="maison-annule">Annuler</button></div>`;
+        apercu.innerHTML=`<h3>${esc(r.prenom)} — ${esc(r.titre)}</h3><p>${Banc.libelleLecture(r)}</p><p>${esc(new Date(r.date).toLocaleDateString("fr-FR"))} · ${r.lus} mots lus · ${r.erreurs} erreur(s) · ${r.secondes} secondes · <b>${r.mclm} mots/min</b></p><label class="label" for="maison-eleve">Associer à l'élève de la classe</label><select class="sel" id="maison-eleve"><option value="">Choisir l'élève…</option>${Donnees.eleves().map(e=>`<option value="${esc(e.id)}">${esc(e.nom)}</option>`).join("")}</select><div class="row start" style="margin-top:12px"><button class="btn primary" id="maison-confirme">Ajouter au suivi maison</button><button class="btn" id="maison-annule">Annuler</button></div>`;
         const sel=apercu.querySelector("#maison-eleve"), correspond=Donnees.eleves().filter(e=>e.nom.normalize("NFC").toLocaleLowerCase("fr")===r.prenom.toLocaleLowerCase("fr"));
         if(correspond.length===1) sel.value=correspond[0].id;
         apercu.querySelector("#maison-annule").onclick=()=>{apercu.innerHTML="";info.textContent="Import annulé.";};
@@ -2628,7 +2698,7 @@ const EnvoiMaison = (() => {
     const fichier=box.querySelector("#maison-file");box.querySelector("#maison-fichier").onclick=()=>fichier.click();
     fichier.onchange=async()=>{const f=fichier.files[0];if(!f)return;try {if(f.size>30000)throw new Error("Le bilan doit faire moins de 30 Ko.");apercuBilan(await f.text());}catch(e){info.textContent=e.message;}finally{fichier.value="";}};
     function afficheResultats(){const cible=box.querySelector("#maison-resultats"),rs=Donnees.essaisMaison().slice().reverse();
-      cible.innerHTML=rs.length?`<div class="tablewrap"><table class="t"><thead><tr><th>Date</th><th>Élève</th><th>Texte</th><th>Mots/min</th><th>Erreurs</th><th></th></tr></thead><tbody>${rs.map(r=>`<tr><td>${esc(new Date(r.date).toLocaleDateString("fr-FR"))}</td><td>${esc(Donnees.nom(r.eleve))}</td><td>${esc(ep(r.ep)?.titre||r.ep)}</td><td>${esc(r.mclm)}</td><td>${esc(r.erreurs)}</td><td><button class="btn danger" data-maison-supprime="${esc(r.id)}">Supprimer</button></td></tr>`).join("")}</tbody></table></div>`:`<p class="muted">Aucun bilan maison importé pour l'instant.</p>`;
+      cible.innerHTML=rs.length?`<div class="tablewrap"><table class="t"><thead><tr><th>Date</th><th>Élève</th><th>Texte</th><th>Mots/min</th><th>Erreurs</th><th></th></tr></thead><tbody>${rs.map(r=>`<tr><td>${esc(new Date(r.date).toLocaleDateString("fr-FR"))}</td><td>${esc(Donnees.nom(r.eleve))}</td><td>${esc(ep(r.ep)?.titre||r.ep)}<br><small>${Banc.libelleLecture(r)}</small></td><td>${esc(r.mclm)}</td><td>${esc(r.erreurs)}</td><td><button class="btn danger" data-maison-supprime="${esc(r.id)}">Supprimer</button></td></tr>`).join("")}</tbody></table></div>`:`<p class="muted">Aucun bilan maison importé pour l'instant.</p>`;
       cible.querySelectorAll("[data-maison-supprime]").forEach(b=>b.onclick=async()=>{if(!b.dataset.confirme){b.dataset.confirme="1";b.textContent="Confirmer ?";return;}b.disabled=true;if(await Donnees.supprime(b.dataset.maisonSupprime))afficheResultats();else{b.disabled=false;info.textContent="Impossible de supprimer le bilan. Réessaie.";}});
     }
     afficheResultats();
@@ -2650,7 +2720,7 @@ window.EnvoiMaison=EnvoiMaison;
 const MaisonCloud = (() => {
   const AUTH="fluence-cloud-auth-v1", QUEUE="fluence-parents-envois-v1";
   const ecoutes=new Set(); let session=null, file=[], chargee=false, stockageBloque=false, envoi=null, reception=null, actualisation=null, demarre=false, generation=0, ecrituresSession=Promise.resolve();
-  let infos={message:"",recu:0,nonAssocies:0};
+  let infos={message:"",recu:0,nonAssocies:0,derniereReception:0,erreur:false,reconnexionNecessaire:false};
   const signale=()=>ecoutes.forEach(f=>{try{f();}catch(e){}});
   const config=()=>window.BANC_MAISON||{};
   const configure=()=>/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(config().url||"")&&typeof config().publishableKey==="string"&&config().publishableKey.length>20;
@@ -2698,7 +2768,7 @@ const MaisonCloud = (() => {
   const cles=(v,obligatoires,facultatives=[])=>objet(v)&&obligatoires.every(k=>Object.hasOwn(v,k))&&Object.keys(v).every(k=>obligatoires.includes(k)||facultatives.includes(k));
   const dateValide=v=>typeof v==="string"&&/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(v)&&Number.isFinite(Date.parse(v))&&Date.parse(v)>=Date.UTC(2000,0,1)&&Date.parse(v)<=Date.now()+86400000&&new Date(v).toISOString().slice(0,19)===v.slice(0,19);
   function mesureValide(r){
-    return objet(r)&&/^[ET][1-9][0-9]{0,2}$/.test(r.ep||"")&&dateValide(r.date)&&entier(r.mclm,0,60000)&&entier(r.lus,0,1000)&&entier(r.erreurs,0,r.lus)&&typeof r.secondes==="number"&&Number.isFinite(r.secondes)&&r.secondes>=0&&r.secondes<=60&&(!Object.hasOwn(r,"dernier")||entier(r.dernier,0,5000)&&r.lus<=r.dernier+1)&&(!Object.hasOwn(r,"fautes")||Array.isArray(r.fautes)&&r.fautes.length===r.erreurs&&new Set(r.fautes).size===r.fautes.length&&r.fautes.every(i=>entier(i,0,r.dernier??5000)));
+    return objet(r)&&(!Object.hasOwn(r,"typeLecture")||["entrainement","defi"].includes(r.typeLecture))&&/^[ET][1-9][0-9]{0,2}$/.test(r.ep||"")&&dateValide(r.date)&&entier(r.mclm,0,60000)&&entier(r.lus,0,1000)&&entier(r.erreurs,0,r.lus)&&typeof r.secondes==="number"&&Number.isFinite(r.secondes)&&r.secondes>=0&&r.secondes<=60&&(!Object.hasOwn(r,"dernier")||entier(r.dernier,0,5000)&&r.lus<=r.dernier+1)&&(!Object.hasOwn(r,"fautes")||Array.isArray(r.fautes)&&r.fautes.length===r.erreurs&&new Set(r.fautes).size===r.fautes.length&&r.fautes.every(i=>entier(i,0,r.dernier??5000)));
   }
   const erreurProgres=(code,message)=>Object.assign(new Error(message),{code});
   let generationParents=0;
@@ -2712,12 +2782,12 @@ const MaisonCloud = (() => {
     try{
       for(let page=0;page<100;page++){
         valideAcces();
-        const d=await requete("/functions/v1/fluence-bilan",{method:"POST",cache:"no-store",credentials:"omit",body:JSON.stringify({token,action:"progression",limite:200,...(curseur?{curseur}:{})})});
+        const d=await requete("/functions/v1/fluence-bilan",{method:"POST",cache:"no-store",credentials:"omit",body:JSON.stringify({token,action:"progression",avecTypeLecture:true,limite:200,...(curseur?{curseur}:{})})});
         valideAcces();
         if(!cles(d,["version","objectif","lectures","suivant"])||d.version!==1||!cles(d.objectif,["valeur","mode"])||!["manuel","automatique","attente"].includes(d.objectif.mode)||!(d.objectif.mode==="attente"?d.objectif.valeur===null:entier(d.objectif.valeur,0,d.objectif.mode==="manuel"?60000:66000))||!Array.isArray(d.lectures)||d.lectures.length>200||!(d.suivant===null||typeof d.suivant==="string"&&d.suivant.length>0&&d.suivant.length<=4096&&!/[\x00-\x20\x7f]/.test(d.suivant)))throw erreurProgres("reponse-invalide","Les progrès reçus ne sont pas lisibles. Réessayez.");
         objectif={valeur:d.objectif.valeur,mode:d.objectif.mode};
         for(const r of d.lectures){
-          if(!cles(r,["id","origine","ep","date","mclm","lus","erreurs","secondes"],["dernier","fautes"])||!UUID.test(r.id||"")||!["classe","maison"].includes(r.origine)||!mesureValide(r)||ids.has(r.id))throw erreurProgres("reponse-invalide","Les progrès reçus ne sont pas lisibles. Réessayez.");
+          if(!cles(r,["id","origine","ep","date","mclm","lus","erreurs","secondes"],["dernier","fautes","typeLecture"])||!UUID.test(r.id||"")||!["classe","maison"].includes(r.origine)||!mesureValide(r)||ids.has(r.id))throw erreurProgres("reponse-invalide","Les progrès reçus ne sont pas lisibles. Réessayez.");
           const ordre=[Date.parse(r.date),r.id.toLowerCase()];
           if(precedent&&(ordre[0]<precedent[0]||ordre[0]===precedent[0]&&ordre[1]<=precedent[1]))throw erreurProgres("reponse-invalide","L’ordre des progrès reçus est incomplet. Réessayez.");
           precedent=ordre;ids.add(r.id);lectures.push({...r,...(r.fautes?{fautes:r.fautes.slice()}:{})});
@@ -2760,7 +2830,7 @@ const MaisonCloud = (() => {
       if(Object.hasOwn(mesure,"dernier")&&(!entier(mesure.dernier,0,5000)||mesure.lus>mesure.dernier+1))delete mesure.dernier;
       if(Object.hasOwn(mesure,"fautes")&&(!Array.isArray(mesure.fautes)||mesure.fautes.length!==mesure.erreurs||new Set(mesure.fautes).size!==mesure.fautes.length||mesure.fautes.some(i=>!entier(i,0,mesure.dernier??5000))))delete mesure.fautes;
       if(!chaineId(ID_ELEVE,r.eleve)||![undefined,null,"classe","maison"].includes(r.origine)||!mesureValide(mesure)||r.origine==="maison"&&!chaineId(ID_SOURCE,r.sourceId)){invalides++;continue;}
-      lectures.push({id:r.id,child_ref:r.eleve,origine:r.origine==="maison"?"maison":"classe",...(r.origine==="maison"?{source_id:r.sourceId}:{}),ep:r.ep,date:new Date(r.date).toISOString(),mclm:r.mclm,lus:r.lus,erreurs:r.erreurs,secondes:r.secondes,...(Object.hasOwn(mesure,"dernier")?{dernier:mesure.dernier}:{}),...(Object.hasOwn(mesure,"fautes")?{fautes:mesure.fautes.slice()}:{} )});
+      lectures.push({id:r.id,child_ref:r.eleve,origine:r.origine==="maison"?"maison":"classe",...(r.origine==="maison"?{source_id:r.sourceId}:{}),ep:r.ep,date:new Date(r.date).toISOString(),mclm:r.mclm,lus:r.lus,erreurs:r.erreurs,secondes:r.secondes,...(Object.hasOwn(mesure,"typeLecture")?{typeLecture:mesure.typeLecture}:{}),...(Object.hasOwn(mesure,"dernier")?{dernier:mesure.dernier}:{}),...(Object.hasOwn(mesure,"fautes")?{fautes:mesure.fautes.slice()}:{} )});
     }
     return {p_eleves:eleves,p_lectures:lectures,p_suppressions:suppressions,invalides};
   }
@@ -2843,7 +2913,7 @@ const MaisonCloud = (() => {
     if(!session)throw new Error("Connectez l'espace de l'enseignante.");
     if(session.expire>Date.now()+60000)return session.access_token;
     if(!actualisation){const version=generation,refresh_token=session.refresh_token;actualisation=(async()=>{const d=await requete("/auth/v1/token?grant_type=refresh_token",{method:"POST",body:JSON.stringify({refresh_token})});await gardeSession(d,version);return session.access_token;})();}
-    const courante=actualisation;try{return await courante;}finally{if(actualisation===courante)actualisation=null;}
+    const courante=actualisation;try{return await courante;}catch(e){if([400,401,403].includes(e.status))e.reconnexionNecessaire=true;throw e;}finally{if(actualisation===courante)actualisation=null;}
   }
   async function api(path,options={}){const version=generation,identite=session?.user.id,token=await jeton();if(version!==generation||session?.user.id!==identite)throw new Error("Cette connexion a été annulée.");return requete(path,options,token);}
   async function demandeCode(email){
@@ -2873,7 +2943,7 @@ const MaisonCloud = (() => {
     const permis=await requete("/rest/v1/rpc/fluence_teacher_enabled",{method:"POST",body:"{}"},d.access_token);
     verifieGeneration(version);
     if(permis!==true)throw new Error("Ce compte n'est pas autorisé comme enseignante de Fluence.");
-    await gardeSession(d,version);verifieGeneration(version);infos.message="Connexion effectuée. Les bilans restent privés.";signale();
+    await gardeSession(d,version);verifieGeneration(version);infos={message:"Connexion effectuée. Les bilans restent privés.",recu:0,nonAssocies:0,derniereReception:0,erreur:false,reconnexionNecessaire:false};signale();
   }
   async function connecteCode(email,texte){
     if(Banc.ROLE==="parents")throw Error("Accès enseignante uniquement.");
@@ -2884,12 +2954,16 @@ const MaisonCloud = (() => {
   }
   async function deconnecte(){
     if(Banc.ROLE==="parents")return;
-    const token=session?.access_token,version=++generation;session=null;actualisation=null;dejaPublie.clear();publicationDemandee=false;messageProgres="";if(minuteurPublication){clearTimeout(minuteurPublication);minuteurPublication=null;}infos={message:"Espace déconnecté.",recu:0,nonAssocies:0};signale();
+    const token=session?.access_token,version=++generation;session=null;actualisation=null;dejaPublie.clear();publicationDemandee=false;messageProgres="";if(minuteurPublication){clearTimeout(minuteurPublication);minuteurPublication=null;}infos={message:"Espace déconnecté.",recu:0,nonAssocies:0,derniereReception:0,erreur:false,reconnexionNecessaire:false};signale();
     let erreur=null;try{await ecritSession(null,version);}catch(e){erreur=new Error("Impossible d'effacer la connexion enregistrée sur cet appareil. La déconnexion a aussi été demandée au service. Réessaie lorsque le stockage est disponible.");}
     if(token)try {await requete("/auth/v1/logout?scope=local",{method:"POST"},token);}catch(e){}
     if(erreur){if(version===generation){infos.message=erreur.message;signale();}throw erreur;}
   }
   const connectee=()=>Banc.ROLE!=="parents"&&!!session;
+  function statutReception(){
+    if(Banc.ROLE==="parents")return {configuree:configure(),connectee:false,enCours:false,message:"",recu:0,nonAssocies:0,derniereReception:0,erreur:false,reconnexionNecessaire:false};
+    return {configuree:configure(),connectee:connectee(),enCours:!!reception,message:infos.message,recu:infos.recu,nonAssocies:infos.nonAssocies,derniereReception:infos.derniereReception||0,erreur:!!infos.erreur,reconnexionNecessaire:!!infos.reconnexionNecessaire};
+  }
   async function invitations(){if(Banc.ROLE==="parents")throw Error("Accès enseignante uniquement.");return api("/rest/v1/fluence_accesses?select=id,child_ref,revoked,created_at&order=created_at.desc");}
   async function creeLien(eleveId){
     if(Banc.ROLE==="parents"||!Banc.Donnees.eleve(eleveId))throw new Error("Choisis un élève de la classe.");
@@ -2913,16 +2987,19 @@ const MaisonCloud = (() => {
           if(!eleve||!Banc.Donnees.eleve(eleve)){nonAssocies++;continue;}
           let r;try{r=EnvoiMaison.lit(JSON.stringify(row.payload));}catch(e){nonAssocies++;continue;}
           const id=EnvoiMaison.idLocal(r.id,eleve);
-          if(Banc.Donnees.contientResultat(id)||Banc.Donnees.contientBilan(r.id,eleve))continue;
           const record={...r,id,sourceId:r.id,eleve,nomDeclare:r.prenom,reception:row.received_at,source:"automatique"};delete record.prenom;
+          if(Banc.Donnees.contientResultat(id)||Banc.Donnees.contientBilan(r.id,eleve)){
+            if(Object.hasOwn(r,"typeLecture"))await Banc.Donnees.completeTypeLecture?.(record);
+            continue;
+          }
           if(!await Banc.Donnees.ajoute(record))throw new Error("Un bilan est reçu en ligne mais ne peut pas encore être enregistré sur cet appareil.");ajoutes++;
         }
         if(rows.length<500)break;
       }
       if(version!==generation||session?.user.id!==identite)return;
-      infos={message:nonAssocies?`${nonAssocies} bilan(s) en ligne à vérifier : élève absent de cet appareil ou texte différent. Relie l'appareil à ta classe pour retrouver les élèves.`:"Réception à jour. Les nouveaux bilans arrivent automatiquement quand Fluence est ouvert.",recu:ajoutes,nonAssocies};
-    }catch(e){if(version===generation&&session?.user.id===identite)infos.message=e.message||"Réception momentanément indisponible. Les bilans restent dans l'espace privé en ligne.";}finally{if(version===generation&&session?.user.id===identite)await synchronise();signale();}})();
-    try{await reception;}finally{reception=null;}
+      infos={message:nonAssocies?`${nonAssocies} bilan(s) en ligne à vérifier : élève absent de cet appareil ou texte différent. Relie l'appareil à ta classe pour retrouver les élèves.`:"Réception à jour. Les nouveaux bilans arrivent automatiquement quand Fluence est ouvert.",recu:ajoutes,nonAssocies,derniereReception:Date.now(),erreur:false,reconnexionNecessaire:false};
+    }catch(e){if(version===generation&&session?.user.id===identite){infos.erreur=true;infos.reconnexionNecessaire=!!e.reconnexionNecessaire||[401,403].includes(e.status);infos.message=infos.reconnexionNecessaire?"La connexion privée doit être renouvelée. Ouvre Accès parents pour te reconnecter. Les bilans restent enregistrés en ligne.":e.message||"Réception momentanément indisponible. Les bilans restent dans l'espace privé en ligne.";}}finally{if(version===generation&&session?.user.id===identite)await synchronise();}})();
+    signale();try{await reception;}finally{reception=null;signale();}
   }
   async function init(){
     if(demarre)return;demarre=true;
@@ -2946,13 +3023,15 @@ const MaisonCloud = (() => {
   }
   function vue(box){
     if(Banc.ROLE==="parents")return ()=>{};
-    const {esc,Donnees}=Banc;let vivant=true,afficheConnectee=null;
+    const {esc,Donnees}=Banc;let vivant=true,afficheFormulaire=null;
+    const besoinConnexion=()=>!connectee()||infos.reconnexionNecessaire;
     async function rend(){if(!vivant)return;
-      afficheConnectee=connectee();
+      afficheFormulaire=besoinConnexion();
       if(!configure()){box.innerHTML="<h2>Réception automatique privée</h2><p>La connexion au service privé est en préparation. Les liens personnels seront disponibles ici après son activation.</p>";return;}
-      if(!connectee()){
+      if(afficheFormulaire){
         box.innerHTML=`<h2>Connecter l'espace de l'enseignante</h2><p>Une seule connexion pour recevoir les résultats de tous tes élèves. Les bilans sont privés : seul ton compte autorisé peut les recevoir.</p><label class="label" for="cloud-email">Adresse e-mail</label><input id="cloud-email" type="email" autocomplete="email" style="width:100%"><div class="row start" style="margin-top:12px"><button class="btn primary" id="cloud-code">Recevoir un lien de connexion</button></div><p>Dans le navigateur, ouvre le lien du mail. Dans l’application iPhone : dans le mail reçu, fais un appui long sur le lien de connexion, choisis « Copier le lien », puis colle-le ici. Ne l’ouvre pas avant de le coller : il ne sert qu’une fois.</p><div id="cloud-verification"><label class="label" for="cloud-otp">Lien de connexion reçu par e-mail (ou code)</label><input id="cloud-otp" type="text" autocapitalize="off" spellcheck="false" autocomplete="off" aria-describedby="cloud-aide-lien" style="width:100%"><p class="muted" id="cloud-aide-lien">Les liens et QR codes des cartes sont réservés aux familles.</p><button class="btn primary" id="cloud-connexion" style="margin-top:10px">Se connecter</button></div><p id="cloud-info" role="status">${esc(infos.message)}</p>`;
         const info=box.querySelector("#cloud-info"),email=box.querySelector("#cloud-email"),code=box.querySelector("#cloud-code");
+        email.value=session?.user.email||"";
         code.onclick=async()=>{code.disabled=true;try{await demandeCode(email.value.trim());info.textContent="Le lien de connexion a été demandé. Consulte ta messagerie, puis ouvre le lien ou copie-le dans le champ ci-dessus.";}catch(e){info.textContent=e.message;}finally{code.disabled=false;}};
         box.querySelector("#cloud-connexion").onclick=async e=>{const b=e.currentTarget;b.disabled=true;try{await connecteCode(email.value.trim(),box.querySelector("#cloud-otp").value.trim());await rend();}catch(e){info.textContent=e.message;b.disabled=false;}};return;
       }
@@ -2965,10 +3044,10 @@ const MaisonCloud = (() => {
       box.querySelector("#cloud-partage").onclick=async()=>{try{const d={title:"Fluence à la maison",text:"Voici votre lien personnel pour imprimer les textes et transmettre les bilans de lecture à l'enseignante.",url:champ.value};if(Plateforme.partage)await Plateforme.partage.share(d);else if(navigator.share)await navigator.share(d);else box.querySelector("#cloud-copie").click();}catch(e){info.textContent=e?.name==="AbortError"?"Partage annulé.":"Le partage n'a pas abouti. Tu peux copier le lien.";}};
       liste();
     }
-    const retire=surChange(()=>{if(connectee()!==afficheConnectee){rend();return;}const p=box.querySelector(connectee()?"#cloud-reception":"#cloud-info");if(p)p.textContent=[infos.message,messageProgres].filter(Boolean).join(" ");});rend();return ()=>{vivant=false;retire();};
+    const retire=surChange(()=>{if(besoinConnexion()!==afficheFormulaire){rend();return;}const p=box.querySelector(afficheFormulaire?"#cloud-info":"#cloud-reception");if(p)p.textContent=[infos.message,messageProgres].filter(Boolean).join(" ");});rend();return ()=>{vivant=false;retire();};
   }
   function surChange(f){ecoutes.add(f);return ()=>ecoutes.delete(f);}
-  return {init,configure,parentActif,progressionParents,synchronise,etat,envoie,surChange,demandeCode,connecteCode,deconnecte,connectee,creeLien,invitations,revoque,recoit,vue};
+  return {init,configure,parentActif,progressionParents,synchronise,etat,envoie,surChange,demandeCode,connecteCode,deconnecte,connectee,statutReception,creeLien,invitations,revoque,recoit,vue};
 })();
 window.MaisonCloud=MaisonCloud;
 

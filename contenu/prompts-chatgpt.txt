@@ -1,0 +1,243 @@
+LE BANC DES MAÎTRES — PROMPTS POUR CHATGPT
+Mode d'emploi : ouvre UNE seule conversation ChatGPT pour toutes les images.
+Colle d'abord le prompt « PERSONNAGES », puis les prompts suivants, un par un, dans la même conversation.
+Copie tout ce qui se trouve entre deux lignes de tirets.
+Enregistre chaque image avec le nom indiqué (E1-1, E1-2…) dans le dossier « Images ».
+Si un visage change, renvoie l'image de la fiche des personnages avec le prompt.
+
+===== PERSONNAGES (à faire en premier) =====
+------------------------------------------------------------
+Crée une planche de personnages pour un album jeunesse, sur fond blanc, avec chaque personnage en pied, de face, côte à côte. Style : aquarelle et crayon de couleur, traits doux et expressifs, couleurs chaudes et lumineuses. Aucun texte, aucune lettre et aucun chiffre dans l'image.
+1. Maya, 9 ans : cheveux bruns bouclés attachés en queue de cheval, lunettes rondes rouges, veste jaune, un petit carnet à la main.
+2. Sami, 10 ans : peau mate, cheveux noirs courts, maillot de football bleu, grand sourire, un paquet de biscuits dans la poche.
+3. Jules, 9 ans : cheveux blonds en bataille, pull vert, air timide, jumelles autour du cou.
+4. Romy, 9 ans : cheveux roux en deux tresses, taches de rousseur, sweat violet, baskets, l'air décidé.
+5. Gaspard, 9 ans : peau noire, cheveux courts frisés, pull orange, un cahier de dessin sous le bras.
+6. Marcel, cuisinier de cantine : grand, moustache grise, toque blanche, tablier bleu.
+7. La maîtresse, environ 35 ans : cheveux châtains attachés, grande écharpe rouge, un stylo vert dans la main.
+À droite, ajoute le banc des maîtres : un vieux banc en bois clair, sous un préau d'école de Provence, avec un papier plié coincé sous le siège.
+------------------------------------------------------------
+
+########## ÉPISODE 1 — Un mot sous le banc ##########
+
+===== E1-1 =====
+------------------------------------------------------------
+Image carrée (format 1:1) pour un album jeunesse, dans le même style que la fiche des personnages : aquarelle et crayon de couleur, traits doux, couleurs chaudes de Provence. Reprends exactement les visages, les coiffures et les vêtements de la fiche des personnages. Aucun texte, aucune lettre et aucun chiffre dans l'image (les papiers sont pliés ou leur écriture est illisible).
+Scène : La cour d'une école de village en Provence, un matin d'automne. Sous le préau, le vieux banc des maîtres. Maya, accroupie, montre du doigt un papier plié coincé sous le siège. Au fond, Sami, Jules et Romy jouent dans la cour.
+------------------------------------------------------------
+
+===== E1-2 =====
+------------------------------------------------------------
+Image carrée (format 1:1) pour un album jeunesse, dans le même style que la fiche des personnages : aquarelle et crayon de couleur, traits doux, couleurs chaudes de Provence. Reprends exactement les visages, les coiffures et les vêtements de la fiche des personnages. Aucun texte, aucune lettre et aucun chiffre dans l'image (les papiers sont pliés ou leur écriture est illisible).
+Scène : Les quatre enfants serrés autour de Maya, qui déplie un petit papier écrit à l'encre verte (écriture illisible). Romy hausse les épaules, Sami et Jules sont intrigués, Maya tient son carnet ouvert.
+------------------------------------------------------------
+
+===== E1-3 =====
+------------------------------------------------------------
+Image carrée (format 1:1) pour un album jeunesse, dans le même style que la fiche des personnages : aquarelle et crayon de couleur, traits doux, couleurs chaudes de Provence. Reprends exactement les visages, les coiffures et les vêtements de la fiche des personnages. Aucun texte, aucune lettre et aucun chiffre dans l'image (les papiers sont pliés ou leur écriture est illisible).
+Scène : Assis sur un muret de la cour, Sami tient un paquet de biscuits au chocolat. Les quatre enfants se penchent pour lire le dos du paquet (texte illisible). Jules tient un épi de blé dans sa main.
+------------------------------------------------------------
+
+===== E1-4 =====
+------------------------------------------------------------
+Image carrée (format 1:1) pour un album jeunesse, dans le même style que la fiche des personnages : aquarelle et crayon de couleur, traits doux, couleurs chaudes de Provence. Reprends exactement les visages, les coiffures et les vêtements de la fiche des personnages. Aucun texte, aucune lettre et aucun chiffre dans l'image (les papiers sont pliés ou leur écriture est illisible).
+Scène : Une salle de classe de CM1. La maîtresse à l'écharpe rouge montre un grand planisphère au tableau. Sur une table devant elle : une cabosse de cacao, une betterave et une bouteille de lait. Les quatre enfants regardent, la main levée.
+------------------------------------------------------------
+
+===== E1-5 =====
+------------------------------------------------------------
+Image carrée (format 1:1) pour un album jeunesse, dans le même style que la fiche des personnages : aquarelle et crayon de couleur, traits doux, couleurs chaudes de Provence. Reprends exactement les visages, les coiffures et les vêtements de la fiche des personnages. Aucun texte, aucune lettre et aucun chiffre dans l'image (les papiers sont pliés ou leur écriture est illisible).
+Scène : Sami croque fièrement dans son biscuit, ses amis rient autour de lui. Au premier plan, sous le préau, le banc des maîtres, avec un nouveau papier plié glissé sous le siège.
+------------------------------------------------------------
+
+########## ÉPISODE 2 — La poubelle de la cantine ##########
+
+===== E2-1 =====
+------------------------------------------------------------
+Image carrée (format 1:1) pour un album jeunesse, dans le même style que la fiche des personnages : aquarelle et crayon de couleur, traits doux, couleurs chaudes de Provence. Reprends exactement les visages, les coiffures et les vêtements de la fiche des personnages. Aucun texte, aucune lettre et aucun chiffre dans l'image (les papiers sont pliés ou leur écriture est illisible).
+Scène : Une cantine scolaire lumineuse. Les quatre enfants sont à table avec leurs plateaux. Jules regarde les plateaux voisins, où restent des morceaux de pain, des carottes et des yaourts fermés.
+------------------------------------------------------------
+
+===== E2-2 =====
+------------------------------------------------------------
+Image carrée (format 1:1) pour un album jeunesse, dans le même style que la fiche des personnages : aquarelle et crayon de couleur, traits doux, couleurs chaudes de Provence. Reprends exactement les visages, les coiffures et les vêtements de la fiche des personnages. Aucun texte, aucune lettre et aucun chiffre dans l'image (les papiers sont pliés ou leur écriture est illisible).
+Scène : Marcel, le cuisinier à la moustache grise, vide une assiette dans une grande poubelle grise, l'air triste. Romy, devant lui, lui pose une question.
+------------------------------------------------------------
+
+===== E2-3 =====
+------------------------------------------------------------
+Image carrée (format 1:1) pour un album jeunesse, dans le même style que la fiche des personnages : aquarelle et crayon de couleur, traits doux, couleurs chaudes de Provence. Reprends exactement les visages, les coiffures et les vêtements de la fiche des personnages. Aucun texte, aucune lettre et aucun chiffre dans l'image (les papiers sont pliés ou leur écriture est illisible).
+Scène : Dans la cuisine de la cantine, la poubelle est posée sur une balance (écran sans chiffres lisibles). Jules ouvre de grands yeux, Sami se tient la tête, Marcel sourit derrière eux.
+------------------------------------------------------------
+
+===== E2-4 =====
+------------------------------------------------------------
+Image carrée (format 1:1) pour un album jeunesse, dans le même style que la fiche des personnages : aquarelle et crayon de couleur, traits doux, couleurs chaudes de Provence. Reprends exactement les visages, les coiffures et les vêtements de la fiche des personnages. Aucun texte, aucune lettre et aucun chiffre dans l'image (les papiers sont pliés ou leur écriture est illisible).
+Scène : Les enfants dessinent des affiches à genoux par terre, avec des feutres. Sur une affiche, une carotte qui pleure (sans texte). Romy parle à deux petits élèves de maternelle.
+------------------------------------------------------------
+
+===== E2-5 =====
+------------------------------------------------------------
+Image carrée (format 1:1) pour un album jeunesse, dans le même style que la fiche des personnages : aquarelle et crayon de couleur, traits doux, couleurs chaudes de Provence. Reprends exactement les visages, les coiffures et les vêtements de la fiche des personnages. Aucun texte, aucune lettre et aucun chiffre dans l'image (les papiers sont pliés ou leur écriture est illisible).
+Scène : Marcel lève le pouce en souriant. Près du banc des maîtres, Maya tient un nouveau papier plié. Sami, derrière elle, regarde Marcel d'un air soupçonneux.
+------------------------------------------------------------
+
+########## ÉPISODE 3 — Les moines du Thoronet ##########
+
+===== E3-1 =====
+------------------------------------------------------------
+Image carrée (format 1:1) pour un album jeunesse, dans le même style que la fiche des personnages : aquarelle et crayon de couleur, traits doux, couleurs chaudes de Provence. Reprends exactement les visages, les coiffures et les vêtements de la fiche des personnages. Aucun texte, aucune lettre et aucun chiffre dans l'image (les papiers sont pliés ou leur écriture est illisible).
+Scène : Un car scolaire sur une petite route du Var, entre des collines couvertes de chênes. Par la vitre, on voit Maya qui serre son carnet contre elle.
+------------------------------------------------------------
+
+===== E3-2 =====
+------------------------------------------------------------
+Image carrée (format 1:1) pour un album jeunesse, dans le même style que la fiche des personnages : aquarelle et crayon de couleur, traits doux, couleurs chaudes de Provence. Reprends exactement les visages, les coiffures et les vêtements de la fiche des personnages. Aucun texte, aucune lettre et aucun chiffre dans l'image (les papiers sont pliés ou leur écriture est illisible).
+Scène : Le cloître de pierre claire de l'abbaye du Thoronet : des galeries voûtées très sobres autour d'un jardin. Une guide parle aux enfants de la classe. Sami a l'air très étonné.
+------------------------------------------------------------
+
+===== E3-3 =====
+------------------------------------------------------------
+Image carrée (format 1:1) pour un album jeunesse, dans le même style que la fiche des personnages : aquarelle et crayon de couleur, traits doux, couleurs chaudes de Provence. Reprends exactement les visages, les coiffures et les vêtements de la fiche des personnages. Aucun texte, aucune lettre et aucun chiffre dans l'image (les papiers sont pliés ou leur écriture est illisible).
+Scène : Une scène du Moyen Âge, comme un souvenir en aquarelle : des moines en robe blanche travaillent dans un jardin près de l'abbaye, l'un d'eux tend du pain à un voyageur pauvre.
+------------------------------------------------------------
+
+===== E3-4 =====
+------------------------------------------------------------
+Image carrée (format 1:1) pour un album jeunesse, dans le même style que la fiche des personnages : aquarelle et crayon de couleur, traits doux, couleurs chaudes de Provence. Reprends exactement les visages, les coiffures et les vêtements de la fiche des personnages. Aucun texte, aucune lettre et aucun chiffre dans l'image (les papiers sont pliés ou leur écriture est illisible).
+Scène : L'intérieur d'une église romane nue, en grandes pierres claires, éclairée par une petite fenêtre. Les enfants chantent la bouche ouverte, Romy a les yeux fermés.
+------------------------------------------------------------
+
+===== E3-5 =====
+------------------------------------------------------------
+Image carrée (format 1:1) pour un album jeunesse, dans le même style que la fiche des personnages : aquarelle et crayon de couleur, traits doux, couleurs chaudes de Provence. Reprends exactement les visages, les coiffures et les vêtements de la fiche des personnages. Aucun texte, aucune lettre et aucun chiffre dans l'image (les papiers sont pliés ou leur écriture est illisible).
+Scène : Le lendemain matin, sous le préau, Maya fronce les sourcils en lisant un papier près du banc des maîtres. Jules et Sami regardent par-dessus son épaule.
+------------------------------------------------------------
+
+########## ÉPISODE 4 — Le club secret ##########
+
+===== E4-1 =====
+------------------------------------------------------------
+Image carrée (format 1:1) pour un album jeunesse, dans le même style que la fiche des personnages : aquarelle et crayon de couleur, traits doux, couleurs chaudes de Provence. Reprends exactement les visages, les coiffures et les vêtements de la fiche des personnages. Aucun texte, aucune lettre et aucun chiffre dans l'image (les papiers sont pliés ou leur écriture est illisible).
+Scène : La cour de récré. Gaspard est assis tout seul par terre près du banc des maîtres et dessine dans un cahier, la tête penchée. Plus loin, des élèves jouent.
+------------------------------------------------------------
+
+===== E4-2 =====
+------------------------------------------------------------
+Image carrée (format 1:1) pour un album jeunesse, dans le même style que la fiche des personnages : aquarelle et crayon de couleur, traits doux, couleurs chaudes de Provence. Reprends exactement les visages, les coiffures et les vêtements de la fiche des personnages. Aucun texte, aucune lettre et aucun chiffre dans l'image (les papiers sont pliés ou leur écriture est illisible).
+Scène : Dans un coin de la cour, Romy, le doigt levé, parle à Sami, Jules et Maya. Sami rit, Jules regarde ses chaussures, Maya a l'air pensive. Gaspard est au loin, seul.
+------------------------------------------------------------
+
+===== E4-3 =====
+------------------------------------------------------------
+Image carrée (format 1:1) pour un album jeunesse, dans le même style que la fiche des personnages : aquarelle et crayon de couleur, traits doux, couleurs chaudes de Provence. Reprends exactement les visages, les coiffures et les vêtements de la fiche des personnages. Aucun texte, aucune lettre et aucun chiffre dans l'image (les papiers sont pliés ou leur écriture est illisible).
+Scène : Romy, les bras croisés, l'air fâché. Maya, vue de dos, traverse la cour vers Gaspard.
+------------------------------------------------------------
+
+===== E4-4 =====
+------------------------------------------------------------
+Image carrée (format 1:1) pour un album jeunesse, dans le même style que la fiche des personnages : aquarelle et crayon de couleur, traits doux, couleurs chaudes de Provence. Reprends exactement les visages, les coiffures et les vêtements de la fiche des personnages. Aucun texte, aucune lettre et aucun chiffre dans l'image (les papiers sont pliés ou leur écriture est illisible).
+Scène : Gros plan sur le cahier ouvert de Gaspard, rempli de dessins de dragons, de châteaux forts et de chevaliers. Maya, Jules et Sami se penchent, émerveillés. Gaspard sourit.
+------------------------------------------------------------
+
+===== E4-5 =====
+------------------------------------------------------------
+Image carrée (format 1:1) pour un album jeunesse, dans le même style que la fiche des personnages : aquarelle et crayon de couleur, traits doux, couleurs chaudes de Provence. Reprends exactement les visages, les coiffures et les vêtements de la fiche des personnages. Aucun texte, aucune lettre et aucun chiffre dans l'image (les papiers sont pliés ou leur écriture est illisible).
+Scène : Romy est assise près des autres, l'air désolé. Gaspard lui tend une feuille avec un dragon dessiné. Tout le monde sourit.
+------------------------------------------------------------
+
+########## ÉPISODE 5 — Le goûter du champion ##########
+
+===== E5-1 =====
+------------------------------------------------------------
+Image carrée (format 1:1) pour un album jeunesse, dans le même style que la fiche des personnages : aquarelle et crayon de couleur, traits doux, couleurs chaudes de Provence. Reprends exactement les visages, les coiffures et les vêtements de la fiche des personnages. Aucun texte, aucune lettre et aucun chiffre dans l'image (les papiers sont pliés ou leur écriture est illisible).
+Scène : Le stade de l'école. Sami, essoufflé, s'arrête les mains sur les genoux, un paquet de bonbons dépasse de sa poche. Romy continue de courir derrière lui.
+------------------------------------------------------------
+
+===== E5-2 =====
+------------------------------------------------------------
+Image carrée (format 1:1) pour un album jeunesse, dans le même style que la fiche des personnages : aquarelle et crayon de couleur, traits doux, couleurs chaudes de Provence. Reprends exactement les visages, les coiffures et les vêtements de la fiche des personnages. Aucun texte, aucune lettre et aucun chiffre dans l'image (les papiers sont pliés ou leur écriture est illisible).
+Scène : Sami se tient le ventre en grimaçant. Jules lui parle. Maya regarde vers la porte de la cuisine de la cantine, l'air soupçonneux.
+------------------------------------------------------------
+
+===== E5-3 =====
+------------------------------------------------------------
+Image carrée (format 1:1) pour un album jeunesse, dans le même style que la fiche des personnages : aquarelle et crayon de couleur, traits doux, couleurs chaudes de Provence. Reprends exactement les visages, les coiffures et les vêtements de la fiche des personnages. Aucun texte, aucune lettre et aucun chiffre dans l'image (les papiers sont pliés ou leur écriture est illisible).
+Scène : Dans la cuisine de la cantine, Marcel montre une grande table où les aliments sont rangés par familles : pain, riz et pâtes ; fruits et légumes ; fromage et yaourts. À part, un tout petit bol de bonbons.
+------------------------------------------------------------
+
+===== E5-4 =====
+------------------------------------------------------------
+Image carrée (format 1:1) pour un album jeunesse, dans le même style que la fiche des personnages : aquarelle et crayon de couleur, traits doux, couleurs chaudes de Provence. Reprends exactement les visages, les coiffures et les vêtements de la fiche des personnages. Aucun texte, aucune lettre et aucun chiffre dans l'image (les papiers sont pliés ou leur écriture est illisible).
+Scène : En fin de journée, autour d'un stade : Sami et Romy courent côte à côte, Jules tient un chronomètre, Maya écrit dans son carnet. Sur un banc, le goûter de Sami : du pain, du fromage, une pomme et une gourde d'eau.
+------------------------------------------------------------
+
+===== E5-5 =====
+------------------------------------------------------------
+Image carrée (format 1:1) pour un album jeunesse, dans le même style que la fiche des personnages : aquarelle et crayon de couleur, traits doux, couleurs chaudes de Provence. Reprends exactement les visages, les coiffures et les vêtements de la fiche des personnages. Aucun texte, aucune lettre et aucun chiffre dans l'image (les papiers sont pliés ou leur écriture est illisible).
+Scène : Le jour du cross, Sami franchit la ligne d'arrivée, épuisé mais très heureux. Derrière une barrière, ses amis crient et applaudissent.
+------------------------------------------------------------
+
+########## ÉPISODE 6 — La fête médiévale ##########
+
+===== E6-1 =====
+------------------------------------------------------------
+Image carrée (format 1:1) pour un album jeunesse, dans le même style que la fiche des personnages : aquarelle et crayon de couleur, traits doux, couleurs chaudes de Provence. Reprends exactement les visages, les coiffures et les vêtements de la fiche des personnages. Aucun texte, aucune lettre et aucun chiffre dans l'image (les papiers sont pliés ou leur écriture est illisible).
+Scène : Une rue de village provençal décorée de drapeaux colorés. Les cinq enfants sont déguisés : Gaspard en chevalier avec une cape à dragon doré, Maya en dame du Moyen Âge, Sami en écuyer, Romy en archère, Jules en troubadour.
+------------------------------------------------------------
+
+===== E6-2 =====
+------------------------------------------------------------
+Image carrée (format 1:1) pour un album jeunesse, dans le même style que la fiche des personnages : aquarelle et crayon de couleur, traits doux, couleurs chaudes de Provence. Reprends exactement les visages, les coiffures et les vêtements de la fiche des personnages. Aucun texte, aucune lettre et aucun chiffre dans l'image (les papiers sont pliés ou leur écriture est illisible).
+Scène : Sur la place du village, un forgeron frappe un fer rouge sur l'enclume, des étincelles volent. À côté, un potier façonne un bol sur son tour. Les enfants déguisés regardent.
+------------------------------------------------------------
+
+===== E6-3 =====
+------------------------------------------------------------
+Image carrée (format 1:1) pour un album jeunesse, dans le même style que la fiche des personnages : aquarelle et crayon de couleur, traits doux, couleurs chaudes de Provence. Reprends exactement les visages, les coiffures et les vêtements de la fiche des personnages. Aucun texte, aucune lettre et aucun chiffre dans l'image (les papiers sont pliés ou leur écriture est illisible).
+Scène : Un crieur en costume médiéval agite une cloche. Sami se frotte le ventre. Romy montre du doigt les remparts et une vieille tour. Jules regarde avec ses jumelles.
+------------------------------------------------------------
+
+===== E6-4 =====
+------------------------------------------------------------
+Image carrée (format 1:1) pour un album jeunesse, dans le même style que la fiche des personnages : aquarelle et crayon de couleur, traits doux, couleurs chaudes de Provence. Reprends exactement les visages, les coiffures et les vêtements de la fiche des personnages. Aucun texte, aucune lettre et aucun chiffre dans l'image (les papiers sont pliés ou leur écriture est illisible).
+Scène : Devant une petite église, un tailleur de pierre sculpte une tête de lion dans un bloc de pierre. Jules l'écoute, les yeux grands ouverts.
+------------------------------------------------------------
+
+===== E6-5 =====
+------------------------------------------------------------
+Image carrée (format 1:1) pour un album jeunesse, dans le même style que la fiche des personnages : aquarelle et crayon de couleur, traits doux, couleurs chaudes de Provence. Reprends exactement les visages, les coiffures et les vêtements de la fiche des personnages. Aucun texte, aucune lettre et aucun chiffre dans l'image (les papiers sont pliés ou leur écriture est illisible).
+Scène : Le soir, banquet sur la place éclairée de lanternes, avec des musiciens qui jouent de la flûte et du tambour. À une table, la maîtresse à l'écharpe rouge et Marcel rient ensemble. Maya les observe.
+------------------------------------------------------------
+
+########## ÉPISODE 7 — Les treize desserts ##########
+
+===== E7-1 =====
+------------------------------------------------------------
+Image carrée (format 1:1) pour un album jeunesse, dans le même style que la fiche des personnages : aquarelle et crayon de couleur, traits doux, couleurs chaudes de Provence. Reprends exactement les visages, les coiffures et les vêtements de la fiche des personnages. Aucun texte, aucune lettre et aucun chiffre dans l'image (les papiers sont pliés ou leur écriture est illisible).
+Scène : La salle de classe décorée pour Noël, avec des guirlandes et une petite crèche de santons provençaux. Romy tape dans ses mains, toute contente. Les autres enfants l'écoutent.
+------------------------------------------------------------
+
+===== E7-2 =====
+------------------------------------------------------------
+Image carrée (format 1:1) pour un album jeunesse, dans le même style que la fiche des personnages : aquarelle et crayon de couleur, traits doux, couleurs chaudes de Provence. Reprends exactement les visages, les coiffures et les vêtements de la fiche des personnages. Aucun texte, aucune lettre et aucun chiffre dans l'image (les papiers sont pliés ou leur écriture est illisible).
+Scène : Au tableau, Gaspard dessine des desserts (dattes, noix, figues, nougat, mandarines). Romy compte sur ses doigts. Sami tient une mandarine.
+------------------------------------------------------------
+
+===== E7-3 =====
+------------------------------------------------------------
+Image carrée (format 1:1) pour un album jeunesse, dans le même style que la fiche des personnages : aquarelle et crayon de couleur, traits doux, couleurs chaudes de Provence. Reprends exactement les visages, les coiffures et les vêtements de la fiche des personnages. Aucun texte, aucune lettre et aucun chiffre dans l'image (les papiers sont pliés ou leur écriture est illisible).
+Scène : Des tables couvertes d'une nappe blanche, avec les treize desserts de Provence : dattes, noix, figues sèches, amandes, raisins secs, nougat blanc et nougat noir, pompe à l'huile, mandarines. Marcel, en toque, a l'air fier. Sami le montre du doigt.
+------------------------------------------------------------
+
+===== E7-4 =====
+------------------------------------------------------------
+Image carrée (format 1:1) pour un album jeunesse, dans le même style que la fiche des personnages : aquarelle et crayon de couleur, traits doux, couleurs chaudes de Provence. Reprends exactement les visages, les coiffures et les vêtements de la fiche des personnages. Aucun texte, aucune lettre et aucun chiffre dans l'image (les papiers sont pliés ou leur écriture est illisible).
+Scène : La maîtresse à l'écharpe rouge sourit, un stylo vert à la main. Maya, surprise, la montre du doigt. Marcel rit derrière elles.
+------------------------------------------------------------
+
+===== E7-5 =====
+------------------------------------------------------------
+Image carrée (format 1:1) pour un album jeunesse, dans le même style que la fiche des personnages : aquarelle et crayon de couleur, traits doux, couleurs chaudes de Provence. Reprends exactement les visages, les coiffures et les vêtements de la fiche des personnages. Aucun texte, aucune lettre et aucun chiffre dans l'image (les papiers sont pliés ou leur écriture est illisible).
+Scène : Le soir, la cour de l'école en hiver, avec des guirlandes lumineuses. Maya, en bonnet et écharpe, déplie un petit papier près du banc des maîtres et sourit.
+------------------------------------------------------------

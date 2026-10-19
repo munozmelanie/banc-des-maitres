@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Le banc des maîtres</title>
+<meta name="description" content="Fluence au TBI : le feuilleton lu par la maîtresse, l'écho, le chœur et le défi d'une minute, avec le téléphone en télécommande.">
+<meta name="theme-color" content="#1D7F48">
+<meta name="format-detection" content="telephone=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Banc des maîtres">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+__TETE__
+<style>
+__POLICES__
+/* Mise en page : un écran par moment de la séance, piloté au TBI. Le vert est celui de l'encre des mots cachés sous le banc. */
+:root{
+  --bg:#F2F4EF;         /* cour d'école */
+  --paper:#FFFFFF;
+  --ink:#1D2530;
+  --ink-soft:#5C6672;
+  --line:#DCE2D8;
+  --wood:#9C6B3C;       /* le banc */
+  --wood-soft:#F3E8DC;
+  --green:#1D7F48;      /* l'encre verte */
+  --green-ink:#FFFFFF;
+  --green-soft:#E2F1E7;
+  --marker:#FFE14D;     /* surligneur */
+  --marker-ink:#1D2530;
+  --err:#C93C3C;
+  --err-soft:#FBE3E3;
+  --echo:#E6EFF9;
+  --shadow:0 10px 30px rgb(0 0 0 / .18);
+  --font-display:"Grandstander","Comic Neue","Trebuchet MS",system-ui,sans-serif;
+  --font-read:"Andika","Atkinson Hyperlegible","Verdana",system-ui,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#141A17; --paper:#1C2420; --ink:#ECF1EC; --ink-soft:#A6B2AA; --line:#2E3A33;
+  --wood:#D19A64; --wood-soft:#2C241C; --green:#4CC17E; --green-ink:#0E1712; --green-soft:#1E3327;
+  --marker:#FFD93B; --marker-ink:#141A17; --err:#F07272; --err-soft:#3A2224; --echo:#22313F; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141A17; --paper:#1C2420; --ink:#ECF1EC; --ink-soft:#A6B2AA; --line:#2E3A33;
+  --wood:#D19A64; --wood-soft:#2C241C; --green:#4CC17E; --green-ink:#0E1712; --green-soft:#1E3327;
+  --marker:#FFD93B; --marker-ink:#141A17; --err:#F07272; --err-soft:#3A2224; --echo:#22313F; color-scheme:dark}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-read);font-size:17px;line-height:1.45;overflow:hidden}
+[hidden]{display:none!important}
+img{max-width:100%}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--green);outline-offset:2px}
+.app{height:100%;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px)}
+.wrap{width:100%;max-width:1720px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-block:10px}
+.brand{font-family:var(--font-display);font-weight:800;font-size:clamp(20px,2.2vw,30px);margin-right:auto;display:flex;align-items:center;gap:10px;min-width:0;cursor:pointer}
+.brand svg{width:44px;height:30px;flex:none}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;min-width:48px;padding:0 16px;border-radius:12px;border:1.5px solid var(--line);background:var(--paper);cursor:pointer;font-weight:700;font-size:16px;color:var(--ink);text-decoration:none;-webkit-tap-highlight-color:transparent}
+.btn:hover{border-color:var(--green)}
+.btn.primary{background:var(--green);border-color:var(--green);color:var(--green-ink)}
+.btn.big{min-height:60px;font-size:20px;padding:0 26px}
+.btn.danger{color:var(--err);border-color:var(--err-soft)}
+.btn[disabled]{opacity:.35;cursor:default}
+.btn svg{width:22px;height:22px;flex:none}
+.btn[aria-current="page"]{border-color:var(--green);background:var(--green-soft)}
+.dot{width:12px;height:12px;border-radius:50%;background:var(--line);flex:none}
+.dot.on{background:var(--green);box-shadow:0 0 0 4px var(--green-soft)}
+main{flex:1;min-height:0;overflow:auto}
+.view{padding-block:8px 24px}
+h1,h2,h3{font-family:var(--font-display);font-weight:800;margin:0;text-wrap:balance}
+.lead{color:var(--ink-soft);max-width:70ch;margin:6px 0 0}
+.muted{color:var(--ink-soft)}
+.label{font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft)}
+.card{background:var(--paper);border:1.5px solid var(--line);border-radius:18px;padding:14px 16px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:center}
+.row.start{justify-content:flex-start}
+.banner{position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:20;background:var(--paper);border:2px solid var(--wood);color:var(--ink);border-radius:14px;padding:10px 16px;font-weight:700;box-shadow:var(--shadow);max-width:calc(100% - 32px);text-align:center}
+
+/* Accueil */
+.eps{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px;margin-top:20px}
+.ep{display:flex;flex-direction:column;gap:6px;text-align:left;background:var(--paper);border:1.5px solid var(--line);border-radius:18px;padding:0 0 16px;cursor:pointer;min-width:0;overflow:hidden;color:var(--ink)}
+.ep:hover{border-color:var(--green)}
+.ep>*:not(.vign){margin-inline:18px}
+.ep .vign{aspect-ratio:16/9;width:100%;object-fit:cover;background:repeating-linear-gradient(135deg,var(--wood-soft) 0 14px,var(--paper) 14px 28px);margin-bottom:6px}
+.ep .num{font-family:var(--font-display);font-weight:800;color:var(--green);font-size:15px;letter-spacing:.06em;text-transform:uppercase}
+.ep b{font-family:var(--font-display);font-size:22px;line-height:1.15}
+.ep .meta{font-size:14px;color:var(--ink-soft)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.chip{font-size:13px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--wood-soft);color:var(--wood)}
+.chip.ok{background:var(--green-soft);color:var(--green)}
+.note{display:inline-block;margin-top:18px;background:var(--paper);border:1.5px dashed var(--green);color:var(--green);border-radius:6px;padding:10px 14px;transform:rotate(-1deg);font-weight:700}
+
+/* Séance */
+.steps{display:flex;gap:6px;flex-wrap:wrap}
+.step{min-height:44px;padding:0 14px;border-radius:999px;border:1.5px solid var(--line);background:var(--paper);font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px;color:var(--ink-soft)}
+.step i{font-style:normal;width:24px;height:24px;border-radius:50%;display:inline-grid;place-items:center;background:var(--bg);font-size:13px;color:var(--ink)}
+.step[aria-current="step"]{border-color:var(--green);color:var(--ink);background:var(--green-soft)}
+.step[aria-current="step"] i{background:var(--green);color:var(--green-ink)}
+.ephead{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding-block:4px 10px}
+.ephead h2{font-size:clamp(20px,2vw,28px);margin-right:auto}
+.panel{height:calc(100vh - 210px);height:calc(100dvh - 210px);min-height:420px;display:flex;flex-direction:column}
+
+/* Mots flash */
+.flash{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:var(--paper);border-radius:22px;border:1.5px solid var(--line);padding:20px}
+.flash .word{font-family:var(--font-read);font-weight:700;font-size:clamp(48px,9vw,150px);line-height:1.3;padding-bottom:.15em;text-align:center;overflow-wrap:anywhere}
+.flash .count{color:var(--ink-soft);font-weight:700;font-variant-numeric:tabular-nums}
+.allwords{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;max-width:1300px}
+.allwords span{font-size:clamp(20px,2vw,32px);padding:6px 14px;background:var(--wood-soft);border-radius:10px}
+
+/* Lecteur */
+.stage{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);grid-template-rows:minmax(0,1fr);gap:clamp(14px,2vw,32px);align-items:center}
+.pic{height:100%;min-height:0;display:flex;align-items:center;justify-content:center}
+.pic img,.ph{max-height:100%;max-width:100%;aspect-ratio:1;object-fit:contain;border-radius:18px;background:var(--paper);box-shadow:0 0 0 1.5px var(--line)}
+.ph{width:100%;display:grid;place-items:center;text-align:center;padding:24px;background:repeating-linear-gradient(135deg,var(--wood-soft) 0 18px,var(--paper) 18px 36px);color:var(--wood);font-weight:700}
+.ph b{display:block;font-family:var(--font-display);font-size:38px}
+.textbox{height:100%;min-height:0;display:flex;align-items:center;background:var(--paper);border-radius:22px;box-shadow:0 0 0 1.5px var(--line);padding:clamp(16px,2.6vw,44px)}
+.text{width:100%;max-height:100%;font-size:var(--fs,40px);line-height:1.55;overflow-wrap:break-word}
+.text.title{font-family:var(--font-display);font-weight:800;text-align:center;line-height:1.2}
+.w{border-radius:.18em;padding:0 .06em;margin:0 -.06em;cursor:pointer;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.w.on{background:var(--marker);color:var(--marker-ink)}
+.s.echo{background:var(--echo);box-shadow:0 .08em 0 0 var(--green);border-radius:.2em;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.controls{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;padding-top:10px}
+.group{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.seg{display:inline-flex;border:1.5px solid var(--line);border-radius:12px;overflow:hidden;background:var(--paper)}
+.seg button{min-height:48px;padding:0 14px;border:0;background:none;cursor:pointer;font-weight:700;color:var(--ink-soft)}
+.seg button+button{border-left:1.5px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--green);color:var(--green-ink)}
+.pageno{font-weight:700;color:var(--ink-soft);font-variant-numeric:tabular-nums}
+.noaudio{background:var(--wood-soft);color:var(--wood);border-radius:12px;padding:8px 14px;font-weight:700}
+.echobar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(110px + env(safe-area-inset-bottom,0px));display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center;background:var(--paper);border:2px solid var(--green);border-radius:16px;padding:10px 12px 10px 18px;box-shadow:var(--shadow);z-index:5;max-width:calc(100% - 32px)}
+.echobar strong{font-family:var(--font-display);font-size:24px;color:var(--green)}
+
+/* Défi */
+.defi{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:18px}
+.defi .textbox{align-items:flex-start}
+.defi .text{font-size:var(--fs,34px);line-height:1.6}
+.w.err{background:var(--err-soft);color:var(--err);text-decoration:line-through;text-decoration-thickness:2px}
+.w.after{opacity:.28}
+.w.last{box-shadow:0 0 0 3px var(--green);border-radius:.2em}
+.side{display:flex;flex-direction:column;gap:12px;min-width:0;min-height:0;overflow:auto}
+.who{display:flex;flex-wrap:wrap;gap:8px}
+.who button{min-height:48px;padding:0 14px;border-radius:12px;border:1.5px solid var(--line);background:var(--paper);font-weight:700;cursor:pointer}
+.who button[aria-pressed="true"]{background:var(--green);border-color:var(--green);color:var(--green-ink)}
+.timer{height:16px;border-radius:999px;background:var(--bg);overflow:hidden;box-shadow:inset 0 0 0 1.5px var(--line)}
+.timer i{display:block;height:100%;width:0;background:var(--green);transition:width .25s linear}
+.big-num{font-family:var(--font-display);font-weight:800;font-size:64px;line-height:1;font-variant-numeric:tabular-nums}
+.stamp{display:inline-block;border:3px solid var(--green);color:var(--green);font-family:var(--font-display);font-weight:800;font-size:22px;padding:6px 12px;border-radius:8px;transform:rotate(-4deg);margin-top:8px}
+.hint{font-weight:700;color:var(--green)}
+.side #res{order:-1}
+dl.res{display:grid;grid-template-columns:auto auto;gap:4px 12px;margin:10px 0 0;font-variant-numeric:tabular-nums}
+dl.res dt{color:var(--ink-soft)}
+dl.res dd{margin:0;font-weight:700;text-align:right}
+.hard{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.hard span{background:var(--err-soft);color:var(--err);border-radius:8px;padding:2px 8px;font-weight:700}
+
+/* Progrès et élèves */
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:16px;margin-top:16px}
+.chart svg{width:100%;height:auto;display:block}
+.chart text{fill:var(--ink-soft);font-size:15px;font-family:var(--font-read)}
+.chart .val{fill:var(--ink);font-weight:700}
+table.t{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+table.t th,table.t td{padding:8px 10px;border-bottom:1.5px solid var(--line);text-align:left}
+table.t td.n,table.t th.n{text-align:right}
+.tablewrap{overflow-x:auto}
+.form{display:grid;grid-template-columns:auto minmax(0,1fr) 170px;gap:10px 14px;align-items:center;max-width:720px;margin-top:16px}
+.form input{min-height:48px;border-radius:12px;border:1.5px solid var(--line);background:var(--paper);padding:0 12px;width:100%}
+.saved{color:var(--green);font-weight:700}
+details.all{margin-top:18px}
+details.all summary{cursor:pointer;font-weight:700;min-height:44px;display:flex;align-items:center}
+
+/* Fenêtre « Relier le téléphone » */
+.voile{position:fixed;inset:0;background:rgb(0 0 0 / .45);display:grid;place-items:center;z-index:30;padding:16px}
+.fenetre{background:var(--paper);border-radius:24px;padding:clamp(18px,3vw,36px);max-width:min(980px,100%);max-height:100%;overflow:auto;box-shadow:var(--shadow);display:grid;grid-template-columns:auto minmax(0,1fr);gap:clamp(18px,3vw,40px);align-items:center}
+.fenetre .qr{width:clamp(220px,26vw,340px);aspect-ratio:1;background:#fff;border-radius:16px;padding:8px;display:grid;place-items:center}
+.fenetre .qr svg{width:100%;height:100%}
+.fenetre .qr svg rect[fill="#ffffff"],.fenetre .qr svg path{shape-rendering:crispEdges}
+.code{font-family:var(--font-display);font-weight:800;font-size:clamp(30px,4vw,54px);letter-spacing:.06em;font-variant-numeric:tabular-nums;color:var(--green)}
+.fenetre ol{margin:10px 0 0;padding-left:1.3em;font-size:19px}
+.fenetre li+li{margin-top:6px}
+.etat-lien{display:flex;align-items:center;gap:10px;font-weight:700;margin-top:14px}
+
+/* ---------- Téléphone : la télécommande de la maîtresse ---------- */
+.tel{height:100%;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px)}
+.tel header{display:flex;align-items:center;gap:10px;padding:10px 16px 8px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.tel header .brand{font-size:20px}
+.tel header .brand svg{width:36px;height:24px}
+.pastille{display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:var(--ink-soft);background:var(--paper);border:1.5px solid var(--line);border-radius:999px;padding:6px 12px;white-space:nowrap}
+.tel main{padding:4px 16px 24px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.tel h2{font-size:24px;margin:6px 0 4px}
+.tel h3{font-size:19px}
+.tel .card+.card{margin-top:12px}
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);background:var(--paper);border-top:1.5px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+.tabs button{border:0;background:none;min-height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:13px;font-weight:700;color:var(--ink-soft);cursor:pointer;-webkit-tap-highlight-color:transparent}
+.tabs svg{width:24px;height:24px}
+.tabs button[aria-current="page"]{color:var(--green)}
+.liste{display:flex;flex-direction:column;gap:10px;margin-top:10px}
+.liste .btn{justify-content:flex-start;text-align:left;min-height:56px;width:100%}
+.liste .btn small{display:block;font-weight:400;color:var(--ink-soft);font-size:13px}
+.etapes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.etapes .btn{min-height:52px;font-size:15px;padding:0 8px}
+.tele{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+.tele .btn{flex:1 1 auto;min-height:56px}
+.tele .btn.primary{flex-basis:100%;min-height:68px;font-size:20px}
+.tele .seg{flex-basis:100%;display:flex}
+.tele .seg button{flex:1;min-height:52px}
+.champ{display:flex;gap:10px;margin-top:10px}
+.champ input{flex:1;min-width:0;min-height:56px;border-radius:12px;border:1.5px solid var(--line);background:var(--paper);padding:0 14px;font-family:var(--font-display);font-weight:800;font-size:22px;letter-spacing:.06em;text-transform:uppercase}
+select.sel{width:100%;min-height:52px;border-radius:12px;border:1.5px solid var(--line);background:var(--paper);padding:0 12px;font-weight:700}
+.tdefi .text{font-size:21px;line-height:1.75;margin-top:6px}
+.tdefi .w{padding:.05em .1em;margin:0}
+.chrono{display:flex;align-items:baseline;gap:12px}
+.chrono .big-num{font-size:52px}
+.collant{position:sticky;bottom:0;background:linear-gradient(to bottom,transparent,var(--bg) 30%);padding:18px 0 4px;margin-top:8px;display:flex;gap:10px}
+.collant .btn{flex:1}
+.astuce{border-color:var(--wood);background:var(--wood-soft)}
+.tel .form{grid-template-columns:auto minmax(0,1fr);margin-top:10px}
+.tel .form .goal{grid-column:2}
+.tel .grid2{grid-template-columns:minmax(0,1fr)}
+.tel .chart svg{max-width:520px}
+
+@media (max-width:900px), (orientation:portrait){
+  body{overflow:auto}
+  .panel{height:auto;min-height:0}
+  .stage{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto}
+  .pic img,.ph{max-height:46vh}
+  .defi{grid-template-columns:minmax(0,1fr)}
+  .form{grid-template-columns:auto minmax(0,1fr)}
+  .form .goal{grid-column:2}
+  .grid2{grid-template-columns:minmax(0,1fr)}
+  .fenetre{grid-template-columns:minmax(0,1fr);justify-items:center}
+}
+html[data-role="tel"] body{overflow:hidden}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app" id="app-ecran" hidden>
+  <div class="wrap bar">
+    <div class="brand" id="home-link" role="button" tabindex="0" title="Accueil">
+      <svg viewBox="0 0 44 30" aria-hidden="true"><rect x="2" y="6" width="40" height="5" rx="2" fill="var(--wood)"/><rect x="2" y="14" width="40" height="5" rx="2" fill="var(--wood)"/><rect x="6" y="19" width="4" height="10" rx="1.5" fill="var(--wood)"/><rect x="34" y="19" width="4" height="10" rx="1.5" fill="var(--wood)"/><rect x="18" y="16" width="9" height="6" rx="1" fill="var(--paper)" stroke="var(--green)" stroke-width="1.5" transform="rotate(-8 22 19)"/></svg>
+      <span>Le banc des maîtres</span>
+    </div>
+    <button class="btn" data-go="home">Épisodes</button>
+    <button class="btn" data-go="students">Élèves</button>
+    <button class="btn" data-go="progress">Progrès</button>
+    <button class="btn" id="b-tel" title="Relier le téléphone de la maîtresse"><span class="dot" id="b-tel-dot"></span><span id="b-tel-txt">Relier le téléphone</span></button>
+    <button class="btn" id="fs" title="Plein écran" aria-label="Plein écran"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+  </div>
+  <main id="main"><div class="wrap view" id="view"></div></main>
+  <audio id="audio" preload="auto"></audio>
+</div>
+
+<div class="tel" id="app-tel" hidden>
+  <header>
+    <div class="brand" style="margin-right:auto">
+      <svg viewBox="0 0 44 30" aria-hidden="true"><rect x="2" y="6" width="40" height="5" rx="2" fill="var(--wood)"/><rect x="2" y="14" width="40" height="5" rx="2" fill="var(--wood)"/><rect x="6" y="19" width="4" height="10" rx="1.5" fill="var(--wood)"/><rect x="34" y="19" width="4" height="10" rx="1.5" fill="var(--wood)"/><rect x="18" y="16" width="9" height="6" rx="1" fill="var(--paper)" stroke="var(--green)" stroke-width="1.5" transform="rotate(-8 22 19)"/></svg>
+      <span>Le banc des maîtres</span>
+    </div>
+    <span class="pastille" id="t-lien"><span class="dot" id="t-dot"></span><span id="t-lien-txt">Pas relié</span></span>
+  </header>
+  <main id="t-main"></main>
+  <nav class="tabs" id="t-tabs" aria-label="Rubriques">
+    <button data-tab="ecran"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>Écran</button>
+    <button data-tab="defi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M10 2h4"/></svg>Défi</button>
+    <button data-tab="eleves"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><circle cx="17" cy="9" r="2.5"/><path d="M17 14.5c2.3 0 4 1.5 4.5 4"/></svg>Élèves</button>
+    <button data-tab="progres"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18"/><path d="M5 16l4-5 4 3 6-8"/></svg>Progrès</button>
+  </nav>
+</div>
+__SCRIPTS__
+</body>
+</html>

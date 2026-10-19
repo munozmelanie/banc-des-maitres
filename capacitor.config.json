@@ -1,0 +1,8 @@
+{
+  "appId": "com.pookee.bancdesmaitres",
+  "appName": "Banc des maîtres",
+  "webDir": "www",
+  "ios": {
+    "contentInset": "never"
+  }
+}

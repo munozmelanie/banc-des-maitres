@@ -1,0 +1,162 @@
+// Tests de l'appli assemblée (www/), dans Chromium :
+//  1. l'écran de la classe seul : épisodes, élèves, mots, voix et surligneur, écho, défi d'une minute, progrès, sauvegarde ;
+//  2. le téléphone relié par un relais local : code tapé, télécommande, défi mené depuis le téléphone,
+//     résultats recopiés sur l'écran, puis un ordinateur remis à zéro qui retrouve tout auprès du téléphone ;
+//  3. petits écrans : pas de défilement horizontal.
+// Usage : python3 outils/build.py && npm test
+const { chromium } = require("playwright");
+const path = require("path"), os = require("os"), fs = require("fs");
+const { site, relais } = require("./serveurs");
+const CAPT = path.join(__dirname, "captures"); fs.mkdirSync(CAPT, { recursive: true });
+const attends = async (fn, ms, msg) => { const t = Date.now(); while (Date.now() - t < ms) { try { if (await fn()) return; } catch (e) {} await new Promise(r => setTimeout(r, 150)); } throw new Error("délai dépassé : " + msg); };
+let ok = 0; const vrai = (c, m) => { if (!c) throw new Error("ÉCHEC : " + m); ok++; console.log("  ✓", m); };
+
+(async () => {
+  const { serveur, base } = await site();
+  const R = await relais();
+  const Q = "?relais=" + encodeURIComponent("nostr:" + R.url);
+  const b = await chromium.launch({ args: ["--autoplay-policy=no-user-gesture-required"] });
+  const erreurs = [];
+  const ouvre = async (ctx, url, tel) => { const p = await ctx.newPage(); await p.setViewportSize(tel ? { width: 390, height: 844 } : { width: 1366, height: 768 });
+    p.on("pageerror", e => erreurs.push((tel ? "tel" : "écran") + " : " + e.message));
+    p.on("console", m => { if (m.type() === "error" && !/WebSocket|Failed to load resource/.test(m.text())) erreurs.push((tel ? "tel" : "écran") + " : " + m.text()); });
+    await p.goto(url); return p; };
+  try {
+    console.log("1. L'écran de la classe");
+    const ctxE = await b.newContext();
+    let tbi = await ouvre(ctxE, base + Q + "#ecran");
+    await attends(() => tbi.evaluate(() => document.querySelectorAll(".ep").length === 7), 5000, "accueil");
+    vrai(await tbi.evaluate(() => [...document.querySelectorAll(".chip.ok")].filter(c => c.textContent === "Voix enregistrée").length) === 7, "les 7 épisodes ont leur voix");
+    await tbi.screenshot({ path: path.join(CAPT, "1-accueil.png") });
+    await tbi.click("[data-go=students]"); await tbi.fill("#n0", "Test A"); await tbi.fill("#g0", "70"); await tbi.fill("#n1", "Test B"); await tbi.click("#sv");
+    await attends(() => tbi.evaluate(() => Banc.Donnees.eleves()[0].nom === "Test A"), 3000, "élèves enregistrés");
+    vrai(true, "les prénoms et les objectifs s'enregistrent");
+    await tbi.click("[data-go=home]"); await tbi.click(".ep >> nth=0");
+    await attends(() => tbi.evaluate(() => document.querySelector("#wd").textContent === "préau"), 3000, "mots");
+    await tbi.click("#wn"); vrai(await tbi.evaluate(() => document.querySelector("#wd").textContent === "aperçoit"), "les mots à préparer défilent");
+    await tbi.click(".step >> nth=1");
+    await tbi.click("#play");
+    await attends(() => tbi.evaluate(() => { const a = document.querySelector("#audio"); return !a.paused && a.currentTime > 1.6; }), 6000, "lecture");
+    await attends(() => tbi.evaluate(() => !!document.querySelector("#txt .w.on")), 3000, "surligneur");
+    vrai(await tbi.evaluate(() => document.querySelector("#pno").textContent === "Page 1 / 5"), "« Écouter » passe du titre à la page 1 et la voix démarre");
+    vrai(await tbi.evaluate(() => /Dans|la|cour|de|l’école/.test(document.querySelector("#txt .w.on").textContent)), "le surligneur suit les premiers mots (" + await tbi.evaluate(() => document.querySelector("#txt .w.on").textContent) + ")");
+    await tbi.screenshot({ path: path.join(CAPT, "2-lecture.png") });
+    await tbi.evaluate(() => { const E = Banc.ep("E1"); document.querySelector("#audio").currentTime = E.pages[1].b - 0.4; });
+    await attends(() => tbi.evaluate(() => document.querySelector("#pno").textContent === "Page 2 / 5"), 4000, "page suivante");
+    vrai(true, "la page se tourne toute seule à la fin de la page");
+    await tbi.click("#play"); // pause
+    await tbi.click(".step >> nth=2"); await tbi.click("#next"); await tbi.click("#play");
+    await attends(() => tbi.evaluate(() => !document.querySelector("#echobar").hidden), 15000, "fin de la première phrase");
+    vrai(await tbi.evaluate(() => document.querySelector("#audio").paused && !!document.querySelector(".s.echo")), "l'écho s'arrête après une phrase et attend la classe");
+    await tbi.click("#enext");
+    await attends(() => tbi.evaluate(() => document.querySelectorAll(".s")[1].classList.contains("echo")), 3000, "phrase suivante");
+    vrai(true, "« Phrase suivante » fait entendre la deuxième phrase");
+    await tbi.evaluate(() => document.querySelector("#audio").pause());
+
+    await tbi.evaluate(() => history.replaceState(null, "", location.pathname + location.search + "#essai-rapide"));
+    await tbi.click("[data-go=home]"); await tbi.click(".ep >> nth=0"); await tbi.click(".step >> nth=4");
+    await tbi.click("#who button >> nth=0"); await tbi.click("#go");
+    for (const k of [3, 7, 12]) await tbi.click(`#txt .w >> nth=${k}`);
+    await attends(() => tbi.evaluate(() => /dernier mot/.test(document.querySelector("#hint").textContent)), 10000, "fin du temps");
+    await tbi.click("#txt .w >> nth=40");
+    await attends(() => tbi.evaluate(() => !document.querySelector("#res").hidden), 3000, "résultat");
+    const r1 = await tbi.evaluate(() => Banc.Donnees.essais()[0]);
+    vrai(r1 && r1.lus === 41 && r1.erreurs === 3 && Math.abs(r1.mclm - 38 * 60 / r1.secondes) < 6, `défi sur l'écran : 41 mots lus, 3 erreurs en ${r1.secondes} s → ${r1.mclm} mots/min`);
+    vrai(await tbi.evaluate(() => /Premier essai/.test(document.querySelector("#res").textContent) && /Mots à retravailler/.test(document.querySelector("#res").textContent)), "le résultat montre « Premier essai ! » et les mots à retravailler");
+    await tbi.screenshot({ path: path.join(CAPT, "3-defi.png") });
+    await tbi.click(".step >> nth=5"); await tbi.screenshot({ path: path.join(CAPT, "4-progres-episode.png") });
+
+    console.log("2. Le téléphone relié");
+    const code = await tbi.evaluate(() => Plateforme.Liaison.code());
+    vrai(/^[0-9A-Z]{5}-[0-9A-Z]{5}$/.test(code), "l'écran crée son code de liaison (" + code + ")");
+    await tbi.click("#b-tel");
+    vrai(await tbi.evaluate(() => !!document.querySelector("#lier .qr svg")), "« Relier le téléphone » montre le QR code et le code");
+    await tbi.screenshot({ path: path.join(CAPT, "5-relier.png") });
+    vrai(await tbi.evaluate(() => decodeURIComponent(Plateforme.Liaison.lienTel()).includes("#lien=")), "le QR code contient le lien de la télécommande");
+    await tbi.click("#lier-ok");
+    const ctxT = await b.newContext({ hasTouch: true, isMobile: true });
+    let tel = await ouvre(ctxT, base + Q, true);
+    await attends(() => tel.evaluate(() => !!document.querySelector("#t-code-in")), 4000, "écran de liaison du téléphone");
+    vrai(await tel.evaluate(() => document.documentElement.dataset.role === "tel"), "sur un petit écran, l'appli s'ouvre en télécommande");
+    await tel.fill("#t-code-in", code.toLowerCase().replace("-", " ")); await tel.click("#t-code button");
+    await attends(() => tel.evaluate(() => document.querySelector("#t-lien-txt").textContent === "Écran relié"), 15000, "téléphone relié");
+    await attends(() => tbi.evaluate(() => document.querySelector("#b-tel-txt").textContent === "Téléphone relié"), 10000, "pastille de l'écran");
+    vrai(true, "le code tapé (même en minuscules) relie le téléphone et l'écran");
+    vrai(await tel.evaluate(() => location.hash.includes("lien=")), "l'adresse du téléphone garde le lien (pour l'écran d'accueil)");
+    await attends(() => tel.evaluate(() => Banc.Donnees.eleves()[0].nom === "Test A"), 10000, "classe recopiée");
+    await attends(() => tel.evaluate(() => Banc.Donnees.essais().length === 1), 10000, "résultat recopié");
+    vrai(true, "le téléphone reçoit la classe et le résultat déjà enregistrés");
+    await tbi.click("[data-go=home]");
+    await attends(() => tel.evaluate(() => document.querySelectorAll("[data-ep]").length === 7), 8000, "épisodes sur le téléphone");
+    await tel.click("[data-ep=E2]");
+    await attends(() => tbi.evaluate(() => Ecran.route().id === "E2" && Ecran.route().step === 0), 6000, "l'écran ouvre E2");
+    vrai(true, "toucher un épisode sur le téléphone l'ouvre sur l'écran");
+    await attends(() => tel.evaluate(() => !!document.querySelector("[data-clic=wn]")), 6000, "boutons des mots");
+    await tel.click("[data-clic=wn]");
+    await attends(() => tbi.evaluate(() => document.querySelector("#wc").textContent === "2 / 11"), 6000, "mot suivant à distance");
+    vrai(true, "la télécommande montre les boutons de l'écran et les touche à distance");
+    await tel.click("[data-nav='1']");
+    await attends(() => tel.evaluate(() => !!document.querySelector("[data-clic=play]")), 6000, "bouton Écouter");
+    await tel.screenshot({ path: path.join(CAPT, "6-telecommande.png") });
+    await tel.click("[data-clic=play]");
+    await attends(() => tbi.evaluate(() => !document.querySelector("#audio").paused), 6000, "voix lancée à distance");
+    await attends(() => tel.evaluate(() => /lecture en cours/.test(document.querySelector("#t-main").textContent)), 6000, "état « lecture »");
+    vrai(true, "« Écouter » sur le téléphone lance la voix sur l'écran");
+    await tel.click("[data-clic=play]");
+    await attends(() => tbi.evaluate(() => document.querySelector("#audio").paused), 6000, "pause à distance");
+
+    await tel.evaluate(() => { location.hash = location.hash + "&essai-rapide"; });
+    await tbi.evaluate(() => { history.replaceState(null, "", location.pathname + location.search + "#essai-rapide"); });
+    await tel.click("[data-tab=defi]");
+    await tel.selectOption("#t-ep", "E2");
+    await tel.click("#t-who [data-eleve=e2]");
+    await attends(() => tbi.evaluate(() => Ecran.route().step === 4 && Ecran.route().id === "E2" && /se prépare/.test(document.querySelector("#hint").textContent)), 8000, "l'écran ouvre le défi");
+    vrai(true, "choisir l'élève sur le téléphone ouvre le défi sur l'écran");
+    await tel.click("#t-go");
+    await attends(() => tbi.evaluate(() => /lit/.test(document.querySelector("#hint").textContent)), 6000, "chrono sur l'écran");
+    vrai(true, "« Départ » sur le téléphone lance le chrono de l'écran");
+    for (const k of [2, 5]) await tel.click(`#t-txt .w >> nth=${k}`);
+    vrai(await tbi.evaluate(() => !document.querySelector("#txt .w.err")), "les erreurs notées sur le téléphone ne s'affichent pas pendant la lecture");
+    await tel.screenshot({ path: path.join(CAPT, "7-defi-telephone.png") });
+    await attends(() => tel.evaluate(() => /dernier mot lu/.test(document.querySelector("#t-main").textContent)), 10000, "fin du temps sur le téléphone");
+    await tel.click("#t-txt .w >> nth=30");
+    await attends(() => tel.evaluate(() => !!document.querySelector("#t-res")), 3000, "résultat sur le téléphone");
+    const r2 = await tel.evaluate(() => Telephone.defi().resultat);
+    vrai(r2.lus === 31 && r2.erreurs === 2 && r2.ep === "E2" && r2.eleve === "e2", `défi sur le téléphone : 31 mots lus, 2 erreurs → ${r2.mclm} mots/min`);
+    await attends(() => tbi.evaluate(m => !document.querySelector("#res").hidden && document.querySelector("#res .big-num").textContent === String(m), r2.mclm), 8000, "résultat sur l'écran");
+    vrai(await tbi.evaluate(() => document.querySelectorAll("#txt .w.err").length === 2 && !!document.querySelector("#txt .w.last")), "l'écran montre le résultat, le dernier mot lu et les erreurs");
+    await tbi.screenshot({ path: path.join(CAPT, "8-defi-ecran.png") });
+    await tel.screenshot({ path: path.join(CAPT, "9-resultat-telephone.png") });
+    await attends(() => tbi.evaluate(() => Banc.Donnees.essais().length === 2), 8000, "essai recopié sur l'écran");
+    vrai(true, "l'essai fait sur le téléphone est enregistré aussi sur l'écran");
+
+    console.log("   Ordinateur remis à zéro");
+    await tbi.close(); await ctxE.close();
+    const ctxE2 = await b.newContext();
+    tbi = await ouvre(ctxE2, base + Q + "#ecran&lien=" + code);
+    await attends(() => tbi.evaluate(() => Banc.Donnees.essais().length === 2 && Banc.Donnees.eleves()[1].nom === "Test B"), 15000, "récupération");
+    vrai(true, "un ordinateur tout neuf relié avec le même code retrouve la classe et les deux essais");
+    await tel.click("[data-tab=progres]");
+    await attends(() => tel.evaluate(() => /Test A/.test(document.querySelector("#tab").textContent)), 4000, "progrès sur le téléphone");
+    await tel.screenshot({ path: path.join(CAPT, "10-progres-telephone.png"), fullPage: true });
+    vrai(true, "les progrès s'affichent aussi sur le téléphone");
+    const suppr = await tel.evaluate(() => Banc.Donnees.essais()[0].id);
+    await tel.evaluate(() => document.querySelector("#tous").open = true);
+    await tel.click(`[data-suppr="${suppr}"]`); await tel.click(`[data-suppr="${suppr}"]`);
+    await attends(() => tbi.evaluate(() => Banc.Donnees.essais().length === 1), 8000, "suppression recopiée");
+    vrai(true, "un essai supprimé sur le téléphone l'est aussi sur l'écran");
+    const sauvegarde = await tbi.evaluate(() => Banc.Donnees.sauvegarde());
+    vrai(sauvegarde.format === "banc-des-maitres/sauvegarde" && sauvegarde.resultats.liste.length === 2 && sauvegarde.resultats.liste.filter(r => r.suppr).length === 1 && sauvegarde.classe.eleves[0].nom === "Test A", "la sauvegarde contient la classe et les essais (avec la suppression)");
+    await tbi.evaluate(async () => { await Banc.Donnees.importe({ students: [{ id: "a", name: "Test V1", goal: "60" }], results: [{ sid: "a", ep: "E1", date: "2026-10-10T10:00:00.000Z", essai: 1, mclm: 48, read: 50, err: 2, secs: 60 }], speed: 0.8 }); });
+    vrai(await tbi.evaluate(() => Banc.Donnees.essais().length === 2 && Banc.Donnees.eleves()[0].nom === "Test V1"), "une sauvegarde de la première version s'importe (classe remplacée, essais ajoutés)");
+
+    console.log("3. Petits écrans");
+    const m = await ouvre(await b.newContext(), base + Q + "#ecran", false); await m.setViewportSize({ width: 400, height: 820 });
+    await m.click(".ep >> nth=0"); await m.click(".step >> nth=1");
+    vrai(await m.evaluate(() => document.documentElement.scrollWidth <= 400), "écran étroit : pas de défilement horizontal");
+    vrai(await tel.evaluate(() => document.documentElement.scrollWidth <= 390), "téléphone : pas de défilement horizontal");
+    vrai(erreurs.length === 0, "aucune erreur JavaScript" + (erreurs.length ? " : " + erreurs.join(" | ") : ""));
+    console.log(`\n${ok} vérifications réussies (${R.messages()} messages par le relais local). Captures : tests/captures/`);
+  } catch (e) { console.error(e.message || e); if (erreurs.length) console.error("Erreurs de la page :", erreurs.join("\n")); process.exitCode = 1; }
+  finally { await b.close(); serveur.close(); R.wss.close(); }
+})();

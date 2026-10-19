@@ -1,0 +1,15 @@
+# fichiers générés
+www/
+hors-ligne/
+tests/captures/
+node_modules/
+__pycache__/
+.DS_Store
+# originaux des voix et des images : ils restent sur l'ordinateur ; seuls les MP3 nettoyés (src/audio/)
+# et les WebP (src/img/) vont dans le dépôt public
+contenu/enregistrements/
+contenu/images/
+# jamais de données d'élèves dans le dépôt public
+*sauvegarde*.json
+# fichier d'essai laissé par erreur le 19/10/2026 (la publication passe par outils/publier.sh, sans GitHub Actions)
+.github/

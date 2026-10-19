@@ -1123,7 +1123,14 @@ const Ecran = (() => {
     showPage(0);
     cleanup = ()=>{};
   }
-  function setSpeed(v){ audio.defaultPlaybackRate = v; audio.playbackRate = v; audio.preservesPitch = true; audio.webkitPreservesPitch = true; const s = $("#speed"); if (s) s.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed", String(+b.dataset.v===v))); }
+  function setSpeed(v){
+    audio.defaultPlaybackRate = v; audio.playbackRate = v;
+    audio.preservesPitch = true; audio.webkitPreservesPitch = true;
+    const s = $("#speed");
+    if (s) s.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed", String(+b.dataset.v===v)));
+    // Actualiser la télécommande dès le changement, sans attendre une pause ou la page suivante.
+    annonce();
+  }
   function showPage(p){
     page = Math.max(0, Math.min(p, EP.pages.length-1));
     const P = EP.pages[page];

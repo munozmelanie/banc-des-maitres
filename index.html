@@ -667,6 +667,109 @@ const Banc = (() => {
   function motsDefi(E){ const t = []; E.pages.slice(1).forEach((p,pi)=>p.toks.forEach((x,i)=>t.push({t:x[0], w:estMot(x[0]), pi, brk:i===0 && pi>0}))); return t; }
   const DUREE = () => /essai-rapide/.test(location.hash) ? 8 : 60;
 
+  /* Import de classe : lecture locale uniquement ; aucun identifiant du fichier n'est repris. */
+  const ImportClasse = (() => {
+    const MAX_OCTETS = 1024 * 1024, MAX_ELEVES = 100;
+    const cleNom = s => String(s).normalize("NFC").trim().replace(/\s+/g," ").toLocaleLowerCase("fr");
+    const cleColonne = s => cleNom(s).normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[ _-]/g,"");
+    const inactif = v => v === false || v === 0 || /^(false|non|no|0|inactif)$/i.test(String(v).trim());
+    function nomValide(v){
+      if (typeof v !== "string") throw new Error("Chaque élève doit avoir un prénom ou un nom sous forme de texte.");
+      const s = v.normalize("NFC").trim().replace(/\s+/g," ");
+      if (s.length > 80) throw new Error("Un nom dépasse 80 caractères. Raccourcis-le avant d'importer.");
+      if (s && (!/\p{L}/u.test(s) || /[<>\uFFFD\x00-\x1f\x7f]/.test(s))) throw new Error("Un nom contient des caractères non valides. Vérifie le fichier.");
+      return s;
+    }
+    function objectifValide(v){
+      if (v == null || String(v).trim() === "") return "";
+      const s = String(v).trim();
+      if (!/^\d{1,3}$/.test(s)) throw new Error("L'objectif doit être un nombre entier entre 0 et 999, ou rester vide.");
+      return String(+s);
+    }
+    function objet(x){
+      if (typeof x === "string") return {nom:nomValide(x), objectif:""};
+      if (!x || typeof x !== "object" || Array.isArray(x)) throw new Error("Le fichier doit contenir une liste de noms ou d'élèves.");
+      const d = {}; Object.keys(x).forEach(k => { d[cleColonne(k)] = x[k]; });
+      if (inactif(d.actif) || inactif(d.active)) return null;
+      if (!["prenom","nom","name"].some(k => Object.prototype.hasOwnProperty.call(d,k))) throw new Error("Une ligne n'a pas de colonne Prénom ou Nom.");
+      const prenom = d.prenom == null ? "" : nomValide(d.prenom);
+      const nom = d.nom == null ? "" : nomValide(d.nom);
+      const complet = prenom ? nomValide(prenom + (nom ? " " + nom : "")) : (nom || (d.name == null ? "" : nomValide(d.name)));
+      return {nom:complet, objectif:complet ? objectifValide(d.objectif ?? d.goal) : ""};
+    }
+    function nettoie(lignes){
+      const eleves = [], vus = new Set(); let ignores = 0, doublons = 0;
+      for (const ligne of lignes){
+        const e = objet(ligne);
+        if (!e || !e.nom){ ignores++; continue; }
+        const cle = cleNom(e.nom); if (vus.has(cle)){ doublons++; continue; }
+        vus.add(cle); eleves.push(e);
+        if (eleves.length > MAX_ELEVES) throw new Error("La liste dépasse 100 élèves. Réduis-la avant d'importer.");
+      }
+      if (!eleves.length) throw new Error("Aucun élève actif avec un nom n'a été trouvé dans ce fichier.");
+      return {eleves, ignores, doublons};
+    }
+    function csv(texte, sep){
+      const lignes = []; let ligne = [], champ = "", cite = false, ferme = false;
+      const ajoute = () => { ligne.push(champ); champ = ""; ferme = false; };
+      for (let i=0; i<texte.length; i++){
+        const c = texte[i];
+        if (cite){ if (c==='"'){ if (texte[i+1]==='"'){ champ+='"'; i++; } else { cite=false; ferme=true; } } else champ+=c; continue; }
+        if (c===sep){ ajoute(); continue; }
+        if (c==='\r' || c==='\n'){ if (c==='\r' && texte[i+1]==='\n') i++; ajoute(); lignes.push(ligne); ligne=[]; continue; }
+        if (ferme){ if (/\s/.test(c)) continue; throw new Error("CSV non valide : un caractère suit un guillemet fermé."); }
+        if (c==='"'){ if (champ.trim()) throw new Error("CSV non valide : vérifie les guillemets."); champ=""; cite=true; }
+        else champ+=c;
+      }
+      if (cite) throw new Error("CSV non valide : un guillemet n'est pas fermé.");
+      ajoute(); lignes.push(ligne);
+      return lignes.filter(l=>l.some(c=>c.trim()));
+    }
+    function lit(texte, fichier=""){
+      if (typeof texte !== "string" || new TextEncoder().encode(texte).length > MAX_OCTETS) throw new Error("Le fichier doit faire au maximum 1 Mo.");
+      const ext = fichier.split(".").pop().toLowerCase();
+      if (fichier && !["csv","tsv","txt","json"].includes(ext)) throw new Error("Choisis un fichier CSV, TXT, TSV ou JSON. Exporte d'abord les fichiers Excel ou PDF dans l'un de ces formats.");
+      const t = texte.replace(/^\uFEFF/,"").replace(/^(?:[ \t]*(?:\r\n|\n|\r))+/g,""), contenu = t.trim();
+      if (!contenu) throw new Error("Le fichier est vide.");
+      if (ext === "json" || /^[\[{]/.test(contenu)){
+        let d; try { d=JSON.parse(contenu); } catch(e){ throw new Error("JSON non valide : vérifie le fichier ou refais son export."); }
+        const lignes = Array.isArray(d) ? d : (d && d.classe && d.classe.eleves) || (d && d.eleves);
+        if (!Array.isArray(lignes)) throw new Error("Ce JSON ne contient pas de liste d'élèves (tableau de noms ou classe.eleves).");
+        return nettoie(lignes);
+      }
+      if (/^</.test(contenu) || /\uFFFD/.test(t)) throw new Error("Ce fichier n'est pas une liste de classe lisible. Exporte-le en texte UTF-8.");
+      let cite = false; const counts = {";":0, ",":0, "\t":0};
+      for (let i=0;i<t.length;i++){ const c=t[i]; if(c==='"'){ if(cite && t[i+1]==='"') i++; else cite=!cite; } else if(!cite){ if(c==='\r'||c==='\n') break; if(c in counts) counts[c]++; } }
+      const sep = Object.keys(counts).sort((a,b)=>counts[b]-counts[a])[0];
+      const lignes = csv(t, counts[sep] ? sep : "\u0000");
+      const entetes = lignes[0].map(cleColonne), connus = ["prenom","nom","name"];
+      const aEntete = entetes.some(c=>connus.includes(c));
+      if (!aEntete){
+        if (lignes.some(l=>l.length!==1)) throw new Error("Pour plusieurs colonnes, ajoute une première ligne Prénom, Nom et éventuellement Objectif.");
+        return nettoie(lignes.map(l=>l[0]));
+      }
+      if (new Set(entetes).size!==entetes.length) throw new Error("Deux colonnes ont le même titre. Vérifie la première ligne.");
+      return nettoie(lignes.slice(1).map(l=>{
+        if(l.length!==entetes.length) throw new Error("Une ligne n'a pas le même nombre de colonnes que l'en-tête.");
+        const d={};entetes.forEach((k,i)=>{d[k]=l[i];});return d;
+      }));
+    }
+    function estDefaut(liste){ return liste.length>0 && liste.every((e,i)=>e.id==="e"+(i+1) && e.nom==="Élève "+(i+1) && !e.objectif); }
+    function fusion(existants, importes, options={}){
+      const candidats = nettoie(importes).eleves, remplaceDefaut = !!options.remplaceDefaut && estDefaut(existants);
+      const eleves = (remplaceDefaut ? [] : existants).map(e=>({...e}));
+      const noms = new Set(eleves.map(e=>cleNom(e.nom))), ids = new Set(eleves.map(e=>e.id)); let ajoutes=0, reconnus=0;
+      candidats.forEach(e=>{
+        if(noms.has(cleNom(e.nom))){ reconnus++; return; }
+        let id; do { id="e"+Plateforme.rid(8); } while(ids.has(id));
+        eleves.push({id,nom:e.nom,objectif:e.objectif}); ids.add(id); noms.add(cleNom(e.nom)); ajoutes++;
+      });
+      if(eleves.length>MAX_ELEVES) throw new Error("L'import porterait la classe à plus de 100 élèves. Aucun changement n'a été enregistré.");
+      return {eleves,ajoutes,reconnus,remplaceDefaut};
+    }
+    return {lit, fusion, nettoie, estDefaut, valideNom:nomValide, valideObjectif:objectifValide, MAX_OCTETS, MAX_ELEVES};
+  })();
+
   /* ---------- Données : la classe, les résultats, les réglages ----------
      Enregistrées sur l'appareil (et recopiées sur l'autre appareil à chaque liaison).
      banc/classe    : {eleves:[{id, nom, objectif}], maj}
@@ -681,7 +784,7 @@ const Banc = (() => {
     /* sauvegarde de la première version (fichier « HORS LIGNE » de septembre, même navigateur) */
     function depuisV1(d){
       if (!d || !Array.isArray(d.students)) return null;
-      const cl = {eleves:d.students.slice(0,12).map((s,i)=>({id:String(s.id||("e"+(i+1))), nom:String(s.name||("Élève "+(i+1))).slice(0,40), objectif:String(s.goal||"").replace(/[^0-9]/g,"")})), maj:Date.now()};
+      const cl = {eleves:d.students.map((s,i)=>({id:String(s.id||("e"+(i+1))), nom:String(s.name||("Élève "+(i+1))), objectif:String(s.goal||"").replace(/[^0-9]/g,"")})), maj:Date.now()};
       const li = (Array.isArray(d.results) ? d.results : []).map(r=>({id:"v1-"+String(r.sid)+"-"+String(r.ep)+"-"+String(r.date), eleve:String(r.sid), ep:String(r.ep), date:String(r.date),
         mclm:+r.mclm||0, lus:+r.read||0, erreurs:+r.err||0, secondes:+r.secs||0}));
       return {classe:cl, resultats:{liste:li}, vitesse:+d.speed||0.8};
@@ -709,7 +812,8 @@ const Banc = (() => {
     return { init,
       eleves:()=>classe.eleves, eleve:id=>classe.eleves.find(e=>e.id===id)||null,
       nom:id=>{ const e = classe.eleves.find(x=>x.id===id); return e ? e.nom : "Élève"; },
-      async enregistreEleves(liste){ classe = {eleves:liste, maj:Date.now()}; try { await docs.c.set(classe); signale("classe"); return true; } catch(e){ return false; } },
+      async enregistreEleves(liste){ const nouvelle = {eleves:liste, maj:Date.now()}; try { await docs.c.set(nouvelle); classe = nouvelle; signale("classe"); return true; } catch(e){ return false; } },
+      sansEssais:()=>resultats.liste.length===0,
       essais, essaisDe:(eleve, epId)=>essais().filter(r=>r.eleve===eleve && (!epId || r.ep===epId)),
       record:(eleve, sauf)=>{ const l = vivants().filter(r=>r.eleve===eleve && r.id!==sauf); return l.length ? Math.max(...l.map(r=>r.mclm)) : null; },
       async ajoute(r){ if (resultats.liste.some(x=>x.id===r.id)) return true; resultats = {liste:resultats.liste.concat([r])}; const ok = await ecritResultats(); signale("resultats"); return ok; },
@@ -830,17 +934,71 @@ const Banc = (() => {
       catch(err){ info.textContent = "Ce fichier n'est pas une sauvegarde de Fluence."; } };
   }
   function vueEleves(box){
+    /* Une copie reçue du téléphone ne doit pas effacer une prévisualisation en cours. */
+    if (box.querySelector("#import-classe-apercu:not([hidden])")) return;
     const liste = Donnees.eleves().map(e=>Object.assign({}, e));
-    box.innerHTML = `<h1 style="font-size:clamp(24px,3vw,40px)">Les élèves du groupe</h1><p class="lead">Tape le prénom de chaque élève et, si tu veux, son objectif en mots par minute. Les prénoms restent dans tes appareils (l'ordinateur de la classe et ton téléphone) : ils ne sont écrits nulle part dans l'appli ni sur internet.</p>
+    const originaux = new Map(liste.map(e=>[e.id,{...e}]));
+    box.innerHTML = `<h1 style="font-size:clamp(24px,3vw,40px)">Les élèves de la classe</h1><p class="lead">Tape le prénom de chaque élève et, si tu veux, son objectif en mots par minute. Les prénoms sont enregistrés dans tes appareils et échangés par une liaison chiffrée ; ils ne sont pas publiés.</p>
+      <div class="row start" style="margin-top:16px"><button class="btn" id="import-classe-choisir" type="button">Importer une liste de classe</button><input type="file" id="import-classe-file" accept=".csv,.txt,.tsv,.json,text/csv,text/plain,application/json" hidden></div>
+      <p class="muted" style="margin:8px 0 0">CSV, TXT ou JSON, jusqu'à 100 élèves et 1 Mo. Le fichier est lu sur cet appareil. Tu pourras vérifier la liste avant de l'enregistrer.</p>
+      <p id="import-classe-info" role="status" style="margin:8px 0 0"></p>
+      <form class="card" id="import-classe-apercu" hidden autocomplete="off" style="margin-top:16px"><h2 style="font-size:24px">Vérifier la liste à importer</h2><p id="import-classe-compte" class="muted"></p>
+        <p class="muted">Corrige les noms si besoin ; efface un nom pour l'écarter. Les élèves déjà présents conservent leur identifiant, leur objectif et leurs résultats. Pour distinguer deux élèves de même prénom, ajoute leur nom.</p>
+        <div class="form" id="import-classe-champs"></div><div class="row start" style="margin-top:16px"><button class="btn primary" id="import-classe-confirme" type="submit">Importer et enregistrer</button><button class="btn" id="import-classe-annule" type="button">Annuler</button></div></form>
       <form class="form" id="f" autocomplete="off"></form><div class="row start" style="margin-top:16px"><button class="btn primary" id="sv" type="button">Enregistrer</button><button class="btn" id="add" type="button">Ajouter un élève</button><span class="saved" id="ok" role="status"></span></div>`;
     const f = box.querySelector("#f");
-    const lit = () => liste.forEach((s,i)=>{ s.nom = (f.querySelector("#n"+i).value.trim().slice(0,40) || `Élève ${i+1}`); s.objectif = f.querySelector("#g"+i).value.replace(/[^0-9]/g,"").slice(0,3); });
+    box.querySelector("#import-classe-choisir").onclick=()=>box.querySelector("#import-classe-file").click();
+    f.onsubmit = e=>e.preventDefault();
+    const lit = () => { const suivants=liste.map((s,i)=>({nom:ImportClasse.valideNom(f.querySelector("#n"+i).value) || `Élève ${i+1}`,objectif:ImportClasse.valideObjectif(f.querySelector("#g"+i).value)})); suivants.forEach((s,i)=>Object.assign(liste[i],s)); };
     const dessine = () => { f.innerHTML = ""; liste.forEach((s,i)=>{ f.appendChild(el("label",{for:"n"+i, class:"label"}, `Élève ${i+1}`));
-      const n = el("input",{id:"n"+i, "aria-label":`Prénom de l'élève ${i+1}`, autocapitalize:"words", spellcheck:"false"}); n.value = s.nom; f.appendChild(n);
-      const g = el("input",{id:"g"+i, class:"goal", inputmode:"numeric", placeholder:"objectif (mots/min)", "aria-label":`Objectif de l'élève ${i+1}`}); g.value = s.objectif||""; f.appendChild(g); }); };
+      const n = el("input",{id:"n"+i, "aria-label":`Prénom de l'élève ${i+1}`, maxlength:"80", autocapitalize:"words", spellcheck:"false"}); n.value = s.nom; f.appendChild(n);
+      const g = el("input",{id:"g"+i, class:"goal", inputmode:"numeric", maxlength:"3", placeholder:"objectif (mots/min)", "aria-label":`Objectif de l'élève ${i+1}`}); g.value = s.objectif||""; f.appendChild(g); }); };
     dessine();
-    box.querySelector("#sv").onclick = async ()=>{ lit(); box.querySelector("#ok").textContent = await Donnees.enregistreEleves(liste) ? "Enregistré." : "Impossible d'enregistrer sur cet appareil."; };
-    box.querySelector("#add").onclick = ()=>{ lit(); if (liste.length>=12) return; liste.push({id:"e"+Plateforme.rid(4), nom:`Élève ${liste.length+1}`, objectif:""}); dessine(); f.querySelector("#n"+(liste.length-1)).select(); };
+    box.querySelector("#sv").onclick = async ()=>{ try { box.querySelector("#ok").textContent = await Donnees.enregistreEleves(baseActuelle()) ? "Enregistré." : "Impossible d'enregistrer sur cet appareil."; } catch(e){ box.querySelector("#ok").textContent=e.message; } };
+    box.querySelector("#add").onclick = ()=>{ try { lit(); if (liste.length>=ImportClasse.MAX_ELEVES){ box.querySelector("#ok").textContent="La classe contient déjà 100 élèves."; return; } liste.push({id:"e"+Plateforme.rid(4), nom:`Élève ${liste.length+1}`, objectif:""}); dessine(); f.querySelector("#n"+(liste.length-1)).select(); } catch(e){ box.querySelector("#ok").textContent=e.message; } };
+    const apercu=box.querySelector("#import-classe-apercu"), info=box.querySelector("#import-classe-info"); let lecture=0;
+    /* Reprend les nouvelles données reçues entre-temps, avec les modifications locales explicites. */
+    const baseActuelle = () => {
+      lit(); const locaux=new Map(liste.map(e=>[e.id,e]));
+      const base=Donnees.eleves().map(e=>{ const avant=originaux.get(e.id), local=locaux.get(e.id); if(!avant || !local) return {...e}; return {...e, nom:local.nom!==avant.nom ? local.nom:e.nom, objectif:local.objectif!==avant.objectif ? local.objectif:e.objectif}; });
+      const ids=new Set(base.map(e=>e.id)); liste.filter(e=>!originaux.has(e.id) && !ids.has(e.id)).forEach(e=>base.push({...e}));
+      return base;
+    };
+    const prepare = eleves => ImportClasse.fusion(baseActuelle(),eleves,{remplaceDefaut:Donnees.sansEssais()});
+    const affiche = resultat => {
+      const plan=prepare(resultat.eleves), champs=box.querySelector("#import-classe-champs"); champs.innerHTML="";
+      resultat.eleves.forEach((e,i)=>{
+        const id="import-classe-nom-"+i; champs.appendChild(el("label",{for:id,class:"label"},String(i+1)));
+        const n=el("input",{id,"data-import-nom":String(i),maxlength:"80","aria-label":`Nom importé ${i+1}`,autocapitalize:"words",spellcheck:"false"});n.value=e.nom;champs.appendChild(n);
+        const g=el("input",{class:"goal","data-import-objectif":String(i),inputmode:"numeric",maxlength:"3",placeholder:"objectif (mots/min)","aria-label":`Objectif importé ${i+1}`});g.value=e.objectif;champs.appendChild(g);
+      });
+      box.querySelector("#import-classe-compte").textContent=`${resultat.eleves.length} élève(s) dans la liste : ${plan.ajoutes} à ajouter, ${plan.reconnus} déjà présent(s).`+(resultat.ignores?` ${resultat.ignores} ligne(s) vide(s) ou inactive(s) ignorée(s).`:"")+(resultat.doublons?` ${resultat.doublons} doublon(s) regroupé(s).`:"")+(plan.remplaceDefaut?" Les fiches « Élève n » de départ seront remplacées.":"");
+      apercu.hidden=false; info.textContent="Liste prête à vérifier. Rien n'a encore été enregistré.";
+    };
+    box.querySelector("#import-classe-file").onchange=async e=>{
+      const fichier=e.target.files[0], numero=++lecture; if(!fichier) return; apercu.hidden=true; info.textContent="Lecture du fichier…";
+      try {
+        if(fichier.size>ImportClasse.MAX_OCTETS) throw new Error("Le fichier doit faire au maximum 1 Mo.");
+        const texte=await new Promise((resolve,reject)=>{ const lecteur=new FileReader();lecteur.onload=()=>resolve(lecteur.result);lecteur.onerror=()=>reject(new Error("Impossible de lire ce fichier. Réessaie avec une copie locale."));lecteur.readAsText(fichier,"UTF-8"); });
+        if(numero!==lecture || !apercu.isConnected) return;
+        affiche(ImportClasse.lit(texte,fichier.name));
+      } catch(err){ if(numero===lecture && info.isConnected) info.textContent=err.message||"Ce fichier n'est pas une liste de classe valide."; }
+      finally { e.target.value=""; }
+    };
+    box.querySelector("#import-classe-annule").onclick=()=>{
+      try { const base=baseActuelle();liste.splice(0,liste.length,...base);originaux.clear();Donnees.eleves().forEach(e=>originaux.set(e.id,{...e}));dessine();info.textContent="Import annulé. Aucun changement enregistré."; }
+      catch(err){ info.textContent="Import annulé. "+err.message; }
+      apercu.hidden=true;
+    };
+    apercu.onsubmit=async e=>{
+      e.preventDefault(); const bouton=box.querySelector("#import-classe-confirme"); if(bouton.disabled) return;
+      try {
+        const noms=[...apercu.querySelectorAll("[data-import-nom]")], objectifs=[...apercu.querySelectorAll("[data-import-objectif]")];
+        const plan=prepare(noms.map((n,i)=>({nom:n.value,objectif:objectifs[i].value}))); bouton.disabled=true;
+        if(!await Donnees.enregistreEleves(plan.eleves)) throw new Error("Impossible d'enregistrer sur cet appareil. La classe précédente est conservée.");
+        apercu.hidden=true;vueEleves(box);box.querySelector("#ok").textContent=`Import enregistré : ${plan.ajoutes} élève(s) ajouté(s), ${plan.reconnus} déjà présent(s).`;
+      } catch(err){ info.textContent=err.message||"Impossible d'importer cette liste.";bouton.disabled=false; }
+    };
   }
 
   let actx = null;
@@ -851,7 +1009,7 @@ const Banc = (() => {
     if (ROLE==="tel"){ document.getElementById("app-tel").hidden = false; await Telephone.demarre(); }
     else { document.getElementById("app-ecran").hidden = false; await Ecran.demarre(); }
   }
-  return { DATA, EPS, ROLE, $, el, esc, estMot, nu, ep, estTamallette, libelleEpisode, etapesEpisode, motsDefi, DUREE, Donnees, Lien, calcule, bilan, carteResultat, motsDifficiles, courbe, vueProgres, vueEleves, bip, demarre };
+  return { DATA, EPS, ROLE, $, el, esc, estMot, nu, ep, estTamallette, libelleEpisode, etapesEpisode, motsDefi, DUREE, ImportClasse, Donnees, Lien, calcule, bilan, carteResultat, motsDifficiles, courbe, vueProgres, vueEleves, bip, demarre };
 })();
 window.Banc = Banc;
 

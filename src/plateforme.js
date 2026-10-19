@@ -12,6 +12,13 @@ const Plateforme = (() => {
   const NATIF = !!(CAP && CAP.isNativePlatform && CAP.isNativePlatform());
   const plug = n => { if (!NATIF) return null; try { return (CAP.Plugins && CAP.Plugins[n]) || (CAP.registerPlugin && CAP.registerPlugin(n)) || null; } catch(e){ return null; } };
   const Prefs = plug("Preferences");
+  let sortieSon = null;
+  // Le plugin local n'existe que dans les nouvelles versions de l'appli iPhone.
+  // Les navigateurs et les anciennes installations conservent le son WebAudio.
+  function sonNatif(){
+    try { return NATIF && CAP.isPluginAvailable?.("FluenceAudio") ? (sortieSon ||= plug("FluenceAudio")) : null; }
+    catch(e){ return null; }
+  }
   const P = "banc-des-maitres-"; // préfixe de tout ce qui est rangé sur l'appareil
   const lsG = k => { try { return localStorage.getItem(k); } catch(e){ return null; } };
   const lsS = (k,v) => { try { localStorage.setItem(k,v); } catch(e){} };
@@ -379,6 +386,6 @@ const Plateforme = (() => {
     if (name==="downloads") return Telechargements;
     return null;
   } };
-  return { NATIF, Liaison, Stock, partage:plug("Share"), eveille, rid, normalise, role, changeRole, fusionResultats, memeBilanMaison, lsG, lsS };
+  return { NATIF, Liaison, Stock, partage:plug("Share"), get son(){return sonNatif();}, eveille, rid, normalise, role, changeRole, fusionResultats, memeBilanMaison, lsG, lsS };
 })();
 window.Plateforme = Plateforme;

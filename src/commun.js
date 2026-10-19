@@ -516,7 +516,7 @@ const Banc = (() => {
   }
 
   let actx = null;
-  function bip(duree=.6){
+  function bipWeb(duree=.6){
     let annule=false, joue=false, o=null, g=null;
     const nettoie=()=>{try{o?.disconnect();g?.disconnect();}catch(e){}o=null;g=null;};
     const arrete=()=>{annule=true;try{o?.stop();}catch(e){}nettoie();};
@@ -543,6 +543,29 @@ const Banc = (() => {
       emet();
     } catch(e){}
     return arrete;
+  }
+  const instanceSon = Date.now().toString(36)+"-"+Math.random().toString(36).slice(2);
+  let sequenceSon = 0;
+  function bip(duree=.6){
+    const son=Plateforme.son;
+    if(!son)return bipWeb(duree);
+    if(document.hidden)return ()=>{};
+    const id="bip-"+instanceSon+"-"+(++sequenceSon), avant=Date.now()+400;
+    let annule=false, secours=false, arreteSecours=()=>{};
+    const repli=()=>{
+      // Une réponse tardive ne doit pas rejouer le son d'un nombre déjà passé.
+      if(annule || secours || document.hidden || Date.now()>avant)return;
+      secours=true;arreteSecours=bipWeb(duree);
+    };
+    // Chaque bip réactive la sortie native. Aucun AudioContext n'est nécessaire
+    // lorsque le plugin iPhone joue le son, même après de nombreux défis.
+    try { Promise.resolve(son.play({id,duree,avant})).then(r=>{if(r?.joue!==true)repli();},repli); }
+    catch(e){repli();}
+    return ()=>{
+      if(annule)return;
+      annule=true;arreteSecours();
+      try { Promise.resolve(son.stop({id})).catch(()=>{}); } catch(e){}
+    };
   }
   function compteRebours({surNombre,termine}){
     let actif=true, nombre=3, timer=null, arreteBip=()=>{};

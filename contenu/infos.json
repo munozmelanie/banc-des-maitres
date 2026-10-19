@@ -15,7 +15,8 @@
    "betterave",
    "produit transformé",
    "produits agricoles"
-  ]
+  ],
+  "ouvertureFamille": "2026-11-02T16:30:00+01:00"
  },
  "E2": {
   "semaine": "9 au 13 novembre",
@@ -32,7 +33,8 @@
    "affiches",
    "gaspillaient",
    "plisse"
-  ]
+  ],
+  "ouvertureFamille": "2026-11-09T16:30:00+01:00"
  },
  "E3": {
   "semaine": "16 au 20 novembre",
@@ -52,7 +54,8 @@
    "résonnent",
    "murmure",
    "fronce les sourcils"
-  ]
+  ],
+  "ouvertureFamille": "2026-11-16T16:30:00+01:00"
  },
  "E4": {
   "semaine": "23 au 27 novembre",
@@ -70,7 +73,8 @@
    "hoche la tête",
    "ils n'en reviennent pas",
    "cheffe"
-  ]
+  ],
+  "ouvertureFamille": "2026-11-23T16:30:00+01:00"
  },
  "E5": {
   "semaine": "30 novembre au 4 décembre",
@@ -88,7 +92,8 @@
    "produit laitier",
    "chronomètre",
    "cinquième"
-  ]
+  ],
+  "ouvertureFamille": "2026-11-30T16:30:00+01:00"
  },
  "E6": {
   "semaine": "7 au 11 décembre",
@@ -109,7 +114,8 @@
    "remparts",
    "tailleur de pierre",
    "cathédrale"
-  ]
+  ],
+  "ouvertureFamille": "2026-12-07T16:30:00+01:00"
  },
  "E7": {
   "semaine": "14 au 18 décembre",
@@ -129,7 +135,8 @@
    "exactement",
    "enquêteurs",
    "dépasse"
-  ]
+  ],
+  "ouvertureFamille": "2026-12-14T16:30:00+01:00"
  },
  "T1": {
   "semaine": "2 au 6 novembre",
@@ -150,6 +157,7 @@
   "source": "Extrait du livret de fluence Tamallette P2. Wlodarczyk, I., Bielecki, J. (2016). Le trafiquant d’ombres, Des histoires qui filent la trouille. Éditions Amaterra."
  },
  "T2": {
+  "fluence": false,
   "semaine": "9 au 13 novembre",
   "theme": "BD : dialogues et journal",
   "collection": "tamallette-p2",

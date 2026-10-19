@@ -17,6 +17,7 @@ function prepare(){
    if(__mode==='offline'||t==='c'.repeat(64))throw {code:'offline'};
    if(__mode==='refuse')throw {code:'acces-refuse'};
    if(__mode==='vide')return {objectif:{valeur:null,mode:'attente'},lectures:[]};
+   if(__mode==='futur')return {objectif:{valeur:55,mode:'automatique'},lectures:[{id:'futur-maison',ep:'E1',date:'2026-10-01T10:00:00Z',origine:'maison',mclm:50,lus:51,erreurs:1,secondes:60,fautes:[1]},{id:'futur-classe',ep:'E7',date:'2026-10-03T10:00:00Z',origine:'classe',mclm:90,lus:92,erreurs:2,secondes:60,fautes:[1,4]}]};
    if(t==='b'.repeat(64))return {objectif:{valeur:88,mode:'manuel'},lectures:[{id:'b-lecture',ep:'T3',date:'2026-10-03T10:00:00Z',origine:'classe',mclm:80,lus:82,erreurs:2,secondes:60,fautes:[1,4]}]};
    return {objectif:{valeur:55,mode:'automatique'},lectures:[{id:'a-maison1',ep:'E1',date:'2026-10-01T10:00:00Z',origine:'maison',mclm:50,lus:51,erreurs:1,secondes:60,fautes:[1]},{id:'a-maison2',ep:'E1',date:'2026-10-02T10:00:00Z',origine:'maison',mclm:60,lus:62,erreurs:2,secondes:60,fautes:[1,4]},{id:'a-classe',ep:'T1',date:'2026-10-03T10:00:00Z',origine:'classe',mclm:70,lus:71,erreurs:1,secondes:60,fautes:[4]}]};
  };}});
@@ -26,7 +27,7 @@ const hash=(t,nom)=>'#parents&famille='+t.repeat(64)+'&prenom='+encodeURICompone
 try{
  for(const width of [320,390,1366]){
   const c=await b.newContext({viewport:{width,height:width===320?568:width===390?844:900},isMobile:width<500,hasTouch:width<500});await c.addInitScript(prepare);
-  const p=await c.newPage();p.on('pageerror',e=>erreurs.push(e.message));await p.route('**/*',r=>r.request().url().startsWith(S.base)?r.continue():(externes.push(r.request().url()),r.abort()));
+  const p=await c.newPage();await p.clock.setFixedTime(new Date("2027-01-04T12:00:00Z"));p.on('pageerror',e=>erreurs.push(e.message));await p.route('**/*',r=>r.request().url().startsWith(S.base)?r.continue():(externes.push(r.request().url()),r.abort()));
   await p.goto(S.base+hash('a','Test Parent A'));await p.waitForSelector('[data-ep=E1]');
   vrai(await p.locator('[data-maison-rubrique]').count()===2,width+' : deux rubriques familiales visibles');
   await p.click('#maison-mes-progres');await p.waitForSelector('[data-parent-stat=lectures]');
@@ -66,6 +67,21 @@ try{
    await p.evaluate(()=>location.hash='#parents');await p.waitForSelector('[data-ep=E1]');await p.click('#maison-mes-progres');
    vrai((await p.textContent('#parents-progres')).includes('Votre lien personnel est nécessaire')&&await p.evaluate(()=>__appels===0),'le lien générique ne charge aucun progrès personnel');
   }
+  await c.close();
+ }
+ // Un ancien essai de préparation ne doit pas dévoiler les épisodes futurs.
+ {
+  const c=await b.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});await c.addInitScript(prepare);
+  const p=await c.newPage();await p.clock.setFixedTime(new Date('2026-10-19T12:00:00Z'));p.on('pageerror',e=>erreurs.push(e.message));await p.route('**/*',r=>r.request().url().startsWith(S.base)?r.continue():(externes.push(r.request().url()),r.abort()));
+  await p.goto(S.base+hash('a','Test Parent Futur'));await p.waitForSelector('button[data-ep=E1]');await p.evaluate(()=>__mode='futur');await p.click('#maison-mes-progres');await p.waitForSelector('[data-parent-stat=lectures]');
+  vrai(await p.textContent('[data-parent-stat=dernier]')==='50'&&(await p.textContent('[data-parent-lecture=futur-maison] summary')).includes('Épisode 1'),'avant novembre, le score maison reste consultable sous le seul numéro d’épisode');
+  vrai(await p.evaluate(()=>{const h=document.querySelector('#parents-progres').outerHTML;return !h.includes(Banc.ep('E1').titre)&&!h.includes(Banc.ep('E7').titre)&&document.querySelector('[data-parent-point]').getAttribute('aria-label').includes('Épisode 1')&&document.querySelector('#parents-progres-texte option[value=E7]').textContent==='Épisode 7'&&!document.querySelector('#parents-progres-texte option[value=E2]');}),'titres futurs absents du graphe, des attributs et du filtre ; seuls les épisodes déjà évalués sont proposés');
+  await p.click('[data-parent-lecture=futur-maison] summary');
+  vrai(await p.locator('[data-parent-lecture=futur-maison] .hard').count()===0,'les mots difficiles ne dévoilent pas le contenu futur dans les détails maison');
+  await p.click('[data-parent-origine=classe]');await p.click('[data-parent-lecture=futur-classe] summary');
+  vrai(await p.textContent('[data-parent-stat=dernier]')==='90'&&(await p.textContent('[data-parent-lecture=futur-classe] summary')).includes('Épisode 7')&&await p.locator('[data-parent-lecture=futur-classe] .hard').count()===0,'les résultats en classe suivent le même masque sans perdre les scores');
+  await p.clock.setFixedTime(new Date('2027-01-04T12:00:00Z'));await p.click('#parents-progres-actualiser');await p.waitForSelector('[data-parent-lecture=futur-classe]');
+  vrai(await p.evaluate(()=>document.querySelector('[data-parent-lecture=futur-classe]').textContent.includes(Banc.ep('E7').titre)&&document.querySelectorAll('[data-parent-lecture=futur-classe] .hard span').length===2),'après ouverture, le vrai titre et les mots à retravailler redeviennent disponibles');
   await c.close();
  }
  vrai(externes.length===0,'aucune requête externe, authentification ou donnée réelle');vrai(erreurs.length===0,'aucune erreur JavaScript');console.log(`\n${nb} vérifications des progrès parents réussies.`);

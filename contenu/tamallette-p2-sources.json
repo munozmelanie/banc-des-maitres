@@ -30,7 +30,12 @@
       "mots_dans_application": 191,
       "note": "Le texte de la fiche est repris avec une typographie harmonisée, sans les compteurs ni les appels de notes.",
       "elements_exclus": [],
-      "pages_application": 4
+      "pages_application": 4,
+      "mise_en_page": {
+        "reperes": "mise-en-page.json",
+        "mots_et_indices": "inchangés",
+        "source_visuelle": "9 - Fluence - textes de la P2.pdf ; paragraphes confirmés dans MANUEL_P2.pdf."
+      }
     },
     {
       "id": "T2",
@@ -68,12 +73,13 @@
       "credit": "Arleston, Albert, Mini Luvin (2021). Le grimoire d’Elfie, pp. 32–34. Drake.",
       "compteur_imprime": null,
       "mots_dans_application": 336,
-      "note": "Le livret de fluence ne contient aucune fiche pour cette BD. Cette transcription de lecture ne doit pas être présentée comme une fiche de fluence Tamallette.",
+      "note": "Le livret de fluence ne contient aucune fiche pour cette BD. Cette transcription de lecture ne doit pas être présentée comme une fiche de fluence Tamallette. Ce texte est conservé uniquement pour la lecture des résultats historiques ; il ne figure plus dans les textes proposés.",
       "elements_exclus": [
         "Bruitages et cris purement non lexicaux (croassements, souffle, cris, éclaboussure, coups à la porte).",
         "Inscriptions décoratives sur les enseignes et les tranches/couvertures des livres."
       ],
-      "pages_application": 8
+      "pages_application": 8,
+      "fluence": false
     },
     {
       "id": "T3",
@@ -103,7 +109,12 @@
       "mots_dans_application": 241,
       "note": "Le texte de la fiche est repris avec une typographie harmonisée, sans les compteurs ni les appels de notes.",
       "elements_exclus": [],
-      "pages_application": 5
+      "pages_application": 5,
+      "mise_en_page": {
+        "reperes": "mise-en-page.json",
+        "mots_et_indices": "inchangés",
+        "source_visuelle": "9 - Fluence - textes de la P2.pdf ; paragraphes confirmés dans MANUEL_P2.pdf."
+      }
     },
     {
       "id": "T4",
@@ -133,7 +144,12 @@
       "mots_dans_application": 205,
       "note": "Le texte de la fiche est repris avec une typographie harmonisée, sans les compteurs ni les appels de notes.",
       "elements_exclus": [],
-      "pages_application": 4
+      "pages_application": 4,
+      "mise_en_page": {
+        "reperes": "mise-en-page.json",
+        "mots_et_indices": "inchangés",
+        "source_visuelle": "MANUEL_P2.pdf et version DYS pour les vers et strophes ; fiche de fluence et manuel pour les paragraphes et dialogues."
+      }
     },
     {
       "id": "T5",
@@ -163,7 +179,12 @@
       "mots_dans_application": 158,
       "note": "Le texte de la fiche est repris avec une typographie harmonisée, sans les compteurs ni les appels de notes.",
       "elements_exclus": [],
-      "pages_application": 4
+      "pages_application": 4,
+      "mise_en_page": {
+        "reperes": "mise-en-page.json",
+        "mots_et_indices": "inchangés",
+        "source_visuelle": "MANUEL_P2.pdf et version DYS pour les vers et strophes ; fiche de fluence et manuel pour les paragraphes et dialogues."
+      }
     },
     {
       "id": "T6",
@@ -193,7 +214,12 @@
       "mots_dans_application": 235,
       "note": "Le texte de la fiche est repris avec une typographie harmonisée, sans les compteurs ni les appels de notes.",
       "elements_exclus": [],
-      "pages_application": 4
+      "pages_application": 4,
+      "mise_en_page": {
+        "reperes": "mise-en-page.json",
+        "mots_et_indices": "inchangés",
+        "source_visuelle": "9 - Fluence - textes de la P2.pdf ; paragraphes confirmés dans MANUEL_P2.pdf."
+      }
     }
   ]
 }

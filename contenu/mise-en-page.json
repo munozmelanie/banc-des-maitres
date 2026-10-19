@@ -1,0 +1,690 @@
+{
+  "version": 1,
+  "convention": "Indices globaux des mots hors titre, à partir de zéro. Une rupture remplace seulement un espace visuel ; aucun mot, signe, index, découpage audio ou empreinte ne change. Les pages de lecture ne créent aucune rupture dans le texte continu.",
+  "episodes": {
+    "T1": {
+      "type": "prose",
+      "tokens_sha256": "de38e0faa5e686af4ca601d9784be92bb231e4e159020ea5e7687679ae266113",
+      "breaks": [
+        {
+          "at": 0,
+          "kind": "paragraph"
+        },
+        {
+          "at": 13,
+          "kind": "line"
+        },
+        {
+          "at": 35,
+          "kind": "line"
+        },
+        {
+          "at": 43,
+          "kind": "dialogue"
+        },
+        {
+          "at": 53,
+          "kind": "paragraph"
+        },
+        {
+          "at": 55,
+          "kind": "dialogue"
+        },
+        {
+          "at": 68,
+          "kind": "line"
+        },
+        {
+          "at": 73,
+          "kind": "dialogue"
+        },
+        {
+          "at": 76,
+          "kind": "dialogue"
+        },
+        {
+          "at": 83,
+          "kind": "dialogue"
+        },
+        {
+          "at": 84,
+          "kind": "dialogue"
+        },
+        {
+          "at": 86,
+          "kind": "dialogue"
+        },
+        {
+          "at": 94,
+          "kind": "dialogue"
+        },
+        {
+          "at": 100,
+          "kind": "paragraph"
+        },
+        {
+          "at": 112,
+          "kind": "line"
+        },
+        {
+          "at": 113,
+          "kind": "dialogue"
+        },
+        {
+          "at": 121,
+          "kind": "dialogue"
+        },
+        {
+          "at": 127,
+          "kind": "paragraph"
+        },
+        {
+          "at": 139,
+          "kind": "line"
+        },
+        {
+          "at": 142,
+          "kind": "dialogue"
+        },
+        {
+          "at": 144,
+          "kind": "paragraph"
+        },
+        {
+          "at": 157,
+          "kind": "line"
+        },
+        {
+          "at": 167,
+          "kind": "paragraph"
+        },
+        {
+          "at": 179,
+          "kind": "line"
+        }
+      ],
+      "sources": [
+        {
+          "fichier": "9 - Fluence - textes de la P2.pdf",
+          "page": 1
+        },
+        {
+          "fichier": "MANUEL_P2.pdf",
+          "page": 3
+        }
+      ],
+      "notes": [
+        "La fiche coupe Sans-Retour en fin de ligne, à l’intérieur du mot existant : ce retour de césure est omis pour conserver le token et son index."
+      ]
+    },
+    "T3": {
+      "type": "prose",
+      "tokens_sha256": "5e31e0e724c08e4d8106c3f37f4e093d9b5ae6b7571eaf66386418e7deca1cb2",
+      "breaks": [
+        {
+          "at": 0,
+          "kind": "paragraph"
+        },
+        {
+          "at": 13,
+          "kind": "line"
+        },
+        {
+          "at": 25,
+          "kind": "dialogue"
+        },
+        {
+          "at": 38,
+          "kind": "line"
+        },
+        {
+          "at": 53,
+          "kind": "paragraph"
+        },
+        {
+          "at": 65,
+          "kind": "line"
+        },
+        {
+          "at": 76,
+          "kind": "paragraph"
+        },
+        {
+          "at": 92,
+          "kind": "line"
+        },
+        {
+          "at": 105,
+          "kind": "line"
+        },
+        {
+          "at": 115,
+          "kind": "dialogue"
+        },
+        {
+          "at": 130,
+          "kind": "line"
+        },
+        {
+          "at": 131,
+          "kind": "paragraph"
+        },
+        {
+          "at": 146,
+          "kind": "line"
+        },
+        {
+          "at": 148,
+          "kind": "dialogue"
+        },
+        {
+          "at": 155,
+          "kind": "paragraph"
+        },
+        {
+          "at": 161,
+          "kind": "paragraph"
+        },
+        {
+          "at": 173,
+          "kind": "line"
+        },
+        {
+          "at": 184,
+          "kind": "line"
+        },
+        {
+          "at": 185,
+          "kind": "dialogue"
+        },
+        {
+          "at": 194,
+          "kind": "dialogue"
+        },
+        {
+          "at": 204,
+          "kind": "dialogue"
+        },
+        {
+          "at": 215,
+          "kind": "line"
+        },
+        {
+          "at": 216,
+          "kind": "line"
+        },
+        {
+          "at": 229,
+          "kind": "line"
+        },
+        {
+          "at": 230,
+          "kind": "line"
+        }
+      ],
+      "sources": [
+        {
+          "fichier": "9 - Fluence - textes de la P2.pdf",
+          "page": 2
+        },
+        {
+          "fichier": "MANUEL_P2.pdf",
+          "page": 17
+        }
+      ],
+      "notes": [
+        "Le mot dit-il porte le tiret médian dans le token existant ; il reste inchangé. Les paragraphes espacés du manuel sont conservés."
+      ]
+    },
+    "T4": {
+      "type": "vers",
+      "tokens_sha256": "b2241633e10664d3e6803ed1fd574e64418cdc72e97ad736a7d383f0529b9ba4",
+      "breaks": [
+        {
+          "at": 0,
+          "kind": "stanza"
+        },
+        {
+          "at": 9,
+          "kind": "line"
+        },
+        {
+          "at": 15,
+          "kind": "line"
+        },
+        {
+          "at": 21,
+          "kind": "line"
+        },
+        {
+          "at": 25,
+          "kind": "stanza"
+        },
+        {
+          "at": 27,
+          "kind": "line"
+        },
+        {
+          "at": 30,
+          "kind": "line"
+        },
+        {
+          "at": 34,
+          "kind": "line"
+        },
+        {
+          "at": 38,
+          "kind": "line"
+        },
+        {
+          "at": 40,
+          "kind": "line"
+        },
+        {
+          "at": 45,
+          "kind": "line"
+        },
+        {
+          "at": 49,
+          "kind": "stanza"
+        },
+        {
+          "at": 52,
+          "kind": "line"
+        },
+        {
+          "at": 55,
+          "kind": "line"
+        },
+        {
+          "at": 60,
+          "kind": "line"
+        },
+        {
+          "at": 63,
+          "kind": "line"
+        },
+        {
+          "at": 66,
+          "kind": "line"
+        },
+        {
+          "at": 69,
+          "kind": "stanza"
+        },
+        {
+          "at": 78,
+          "kind": "line"
+        },
+        {
+          "at": 84,
+          "kind": "line"
+        },
+        {
+          "at": 87,
+          "kind": "line"
+        },
+        {
+          "at": 93,
+          "kind": "stanza"
+        },
+        {
+          "at": 95,
+          "kind": "line"
+        },
+        {
+          "at": 98,
+          "kind": "line"
+        },
+        {
+          "at": 101,
+          "kind": "line"
+        },
+        {
+          "at": 104,
+          "kind": "line"
+        },
+        {
+          "at": 108,
+          "kind": "line"
+        },
+        {
+          "at": 112,
+          "kind": "line"
+        },
+        {
+          "at": 118,
+          "kind": "line"
+        },
+        {
+          "at": 122,
+          "kind": "stanza"
+        },
+        {
+          "at": 125,
+          "kind": "line"
+        },
+        {
+          "at": 128,
+          "kind": "line"
+        },
+        {
+          "at": 133,
+          "kind": "line"
+        },
+        {
+          "at": 137,
+          "kind": "line"
+        },
+        {
+          "at": 139,
+          "kind": "line"
+        },
+        {
+          "at": 145,
+          "kind": "stanza"
+        },
+        {
+          "at": 149,
+          "kind": "line"
+        },
+        {
+          "at": 156,
+          "kind": "line"
+        },
+        {
+          "at": 159,
+          "kind": "line"
+        },
+        {
+          "at": 163,
+          "kind": "line"
+        },
+        {
+          "at": 169,
+          "kind": "line"
+        },
+        {
+          "at": 171,
+          "kind": "line"
+        },
+        {
+          "at": 175,
+          "kind": "line"
+        },
+        {
+          "at": 179,
+          "kind": "stanza"
+        },
+        {
+          "at": 187,
+          "kind": "line"
+        },
+        {
+          "at": 193,
+          "kind": "line"
+        },
+        {
+          "at": 200,
+          "kind": "line"
+        }
+      ],
+      "sources": [
+        {
+          "fichier": "MANUEL_P2.pdf",
+          "page": 25
+        },
+        {
+          "fichier": "4.Le_pouvoir_des_fleurs.docx",
+          "note": "Les paragraphes et sauts de ligne de la version DYS confirment les strophes du manuel ; seul l’extrait existant est utilisé."
+        }
+      ],
+      "notes": [
+        "Le livret de fluence fusionne certains vers. Les véritables vers et strophes sont repris du manuel, sans ajouter la suite de la chanson."
+      ]
+    },
+    "T5": {
+      "type": "vers",
+      "tokens_sha256": "86a9af25b2ac06e61a6d2e1bb667beb3cf446d630eb02469446cf462b91e31bd",
+      "breaks": [
+        {
+          "at": 0,
+          "kind": "stanza"
+        },
+        {
+          "at": 7,
+          "kind": "line"
+        },
+        {
+          "at": 11,
+          "kind": "line"
+        },
+        {
+          "at": 17,
+          "kind": "stanza"
+        },
+        {
+          "at": 23,
+          "kind": "line"
+        },
+        {
+          "at": 29,
+          "kind": "line"
+        },
+        {
+          "at": 33,
+          "kind": "line"
+        },
+        {
+          "at": 39,
+          "kind": "line"
+        },
+        {
+          "at": 45,
+          "kind": "stanza"
+        },
+        {
+          "at": 51,
+          "kind": "line"
+        },
+        {
+          "at": 57,
+          "kind": "line"
+        },
+        {
+          "at": 64,
+          "kind": "stanza"
+        },
+        {
+          "at": 70,
+          "kind": "line"
+        },
+        {
+          "at": 73,
+          "kind": "line"
+        },
+        {
+          "at": 77,
+          "kind": "line"
+        },
+        {
+          "at": 81,
+          "kind": "stanza"
+        },
+        {
+          "at": 88,
+          "kind": "line"
+        },
+        {
+          "at": 92,
+          "kind": "line"
+        },
+        {
+          "at": 97,
+          "kind": "line"
+        },
+        {
+          "at": 101,
+          "kind": "line"
+        },
+        {
+          "at": 105,
+          "kind": "stanza"
+        },
+        {
+          "at": 110,
+          "kind": "line"
+        },
+        {
+          "at": 116,
+          "kind": "line"
+        },
+        {
+          "at": 121,
+          "kind": "line"
+        },
+        {
+          "at": 124,
+          "kind": "line"
+        },
+        {
+          "at": 128,
+          "kind": "line"
+        },
+        {
+          "at": 134,
+          "kind": "stanza"
+        },
+        {
+          "at": 140,
+          "kind": "line"
+        },
+        {
+          "at": 145,
+          "kind": "line"
+        },
+        {
+          "at": 153,
+          "kind": "line"
+        }
+      ],
+      "sources": [
+        {
+          "fichier": "MANUEL_P2.pdf",
+          "page": 31
+        },
+        {
+          "fichier": "5.La_fée_qui_ne_voulait_pas_être_remerciée.docx",
+          "note": "Les paragraphes et sauts de ligne de la version DYS confirment les strophes du manuel ; seul l’extrait existant est utilisé."
+        }
+      ],
+      "notes": [
+        "Les vers sont ceux de la fiche de fluence ; leurs strophes sont confirmées dans le manuel et le fichier DYS."
+      ]
+    },
+    "T6": {
+      "type": "prose",
+      "tokens_sha256": "66fbc8f441bd32e028d2db5f8d7dd46873e37914885c4935d67cb158257b3b4a",
+      "breaks": [
+        {
+          "at": 0,
+          "kind": "paragraph"
+        },
+        {
+          "at": 10,
+          "kind": "line"
+        },
+        {
+          "at": 21,
+          "kind": "line"
+        },
+        {
+          "at": 33,
+          "kind": "line"
+        },
+        {
+          "at": 44,
+          "kind": "line"
+        },
+        {
+          "at": 56,
+          "kind": "line"
+        },
+        {
+          "at": 68,
+          "kind": "line"
+        },
+        {
+          "at": 79,
+          "kind": "line"
+        },
+        {
+          "at": 91,
+          "kind": "line"
+        },
+        {
+          "at": 101,
+          "kind": "paragraph"
+        },
+        {
+          "at": 113,
+          "kind": "line"
+        },
+        {
+          "at": 124,
+          "kind": "line"
+        },
+        {
+          "at": 135,
+          "kind": "line"
+        },
+        {
+          "at": 146,
+          "kind": "line"
+        },
+        {
+          "at": 155,
+          "kind": "line"
+        },
+        {
+          "at": 169,
+          "kind": "line"
+        },
+        {
+          "at": 181,
+          "kind": "line"
+        },
+        {
+          "at": 191,
+          "kind": "line"
+        },
+        {
+          "at": 201,
+          "kind": "line"
+        },
+        {
+          "at": 212,
+          "kind": "line"
+        },
+        {
+          "at": 223,
+          "kind": "line"
+        },
+        {
+          "at": 234,
+          "kind": "line"
+        }
+      ],
+      "sources": [
+        {
+          "fichier": "9 - Fluence - textes de la P2.pdf",
+          "page": 5
+        },
+        {
+          "fichier": "MANUEL_P2.pdf",
+          "page": 37
+        }
+      ]
+    }
+  }
+}

@@ -25,16 +25,17 @@ let nb=0;const vrai=(c,m)=>{if(!c)throw new Error("ÉCHEC : "+m);nb++;console.lo
       p.setDefaultTimeout(12000);
       p.on("pageerror",e=>erreurs.push(e.message));
       await p.route("**/*",r=>r.request().url().startsWith(S.base)?r.continue():r.abort());
-      await p.goto(S.base+url);await p.waitForSelector("[data-ep=E1]");
+      await p.clock.install({time:new Date("2026-12-15T12:00:00Z")});
+      await p.goto(S.base+url);await p.waitForSelector("button[data-ep=E1]");
       await service(p,actif);return p;
     }
     async function defi(p,prenom="Test Transmission"){
-      await p.evaluate(()=>Ecran.go({name:'episode',id:'T3',step:4}));await p.fill("#maison-prenom",prenom);
-      await p.click("#maison-depart");await p.click("#maison-fini");await p.click("#maison-texte [data-index='2']");
+      await p.evaluate(()=>Ecran.go({name:'episode',id:'E1',step:4}));await p.fill("#maison-prenom",prenom);
+      await p.click("#maison-depart");await p.clock.runFor(3000);await p.click("#maison-fini");await p.click("#maison-texte [data-index='2']");
       await p.waitForSelector("#maison-resultat .maison-bilan");
     }
     async function precedent(p){
-      await p.evaluate(()=>Ecran.go({name:'episode',id:'T3',step:4}));
+      await p.evaluate(()=>Ecran.go({name:'episode',id:'E1',step:4}));
       await p.waitForSelector("#maison-bilan-precedent");
       if(!await p.locator("#maison-bilan-precedent").evaluate(e=>e.open))await p.locator("#maison-bilan-precedent summary").click();
     }
@@ -57,7 +58,7 @@ let nb=0;const vrai=(c,m)=>{if(!c)throw new Error("ÉCHEC : "+m);nb++;console.lo
     const tokenA="a".repeat(64),tokenB="b".repeat(64),hashA=createHash("sha256").update(tokenA).digest("hex"),hashB=createHash("sha256").update(tokenB).digest("hex");
     const a=await ouvre(true,g.context(),"#parents&famille="+tokenA+"&prenom=Test%20Famille%20A");
     const bb=await ouvre(true,g.context(),"#parents&famille="+tokenB);
-    await a.evaluate(()=>Ecran.go({name:'episode',id:'T3',step:4}));await bb.evaluate(()=>Ecran.go({name:'episode',id:'T3',step:4}));
+    await a.evaluate(()=>Ecran.go({name:'episode',id:'E1',step:4}));await bb.evaluate(()=>Ecran.go({name:'episode',id:'E1',step:4}));
     vrai(await a.locator("#maison-bilan-precedent").count()===0&&await bb.locator("#maison-bilan-precedent").count()===0,"les anciens bilans sans contexte ne sont attribués à aucun lien personnel");
     vrai(await a.inputValue("#maison-prenom")==="Test Famille A"&&await bb.inputValue("#maison-prenom")==="","un lien préremplit son prénom ; l'autre ne reprend pas le prénom du lien commun");
     await defi(a,"Test Famille A");await defi(bb,"Test Famille B");
@@ -65,21 +66,21 @@ let nb=0;const vrai=(c,m)=>{if(!c)throw new Error("ÉCHEC : "+m);nb++;console.lo
     const stock=await bb.evaluate(()=>JSON.parse(localStorage.getItem("fluence-parents-v1")));
     vrai(stock.historique.length===3&&stock.historique.some(r=>r.prenom==="Test Héritage"&&r.contexte==="")&&stock.historique.some(r=>r.prenom==="Test Famille A"&&r.contexte===hashA)&&stock.historique.some(r=>r.prenom==="Test Famille B"&&r.contexte===hashB),"deux onglets conservent les trois historiques, avec des empreintes SHA-256 distinctes et une migration sans perte");
     vrai(!JSON.stringify(stock).includes(tokenA)&&!JSON.stringify(stock).includes(tokenB)&&stock.prenom==="Test Héritage"&&stock.profils[hashA].prenom==="Test Famille A"&&stock.profils[hashB].prenom==="Test Famille B","le stockage des bilans ne contient aucun token brut et sépare les trois prénoms");
-    await a.reload();await a.waitForSelector("[data-ep=E1]");await service(a,true);await precedent(a);
+    await a.reload();await a.waitForSelector("button[data-ep=E1]");await service(a,true);await precedent(a);
     vrai(await a.locator("#maison-bilan-precedent .maison-bilan").count()===1&&await a.locator("#maison-bilan-precedent").innerText().then(t=>t.includes("Test Famille A")&&!t.includes("Test Famille B")&&!t.includes("Test Héritage")),"le lien A ne retrouve que son propre dernier bilan du texte après rechargement");
     vrai(!await a.locator("[data-envoi-maison]").isVisible(),"un lien personnel actif garde seulement la réception automatique et ne montre pas de partage manuel");
-    await bb.reload();await bb.waitForSelector("[data-ep=E1]");await precedent(bb);
+    await bb.reload();await bb.waitForSelector("button[data-ep=E1]");await precedent(bb);
     vrai(await bb.inputValue("#maison-prenom")==="Test Famille B","le lien B sans prénom dans l'URL retrouve uniquement son propre prénom mémorisé");
-    await g.reload();await g.waitForSelector("[data-ep=E1]");await precedent(g);
+    await g.reload();await g.waitForSelector("button[data-ep=E1]");await precedent(g);
     vrai(await g.locator("#maison-bilan-precedent .maison-bilan").count()===1&&await g.locator("#maison-bilan-precedent").innerText().then(t=>t.includes("Test Héritage")&&!t.includes("Test Famille A")&&!t.includes("Test Famille B")),"l'accès commun conserve les anciens bilans mais masque tous les bilans personnels");
     vrai(await g.inputValue("#maison-prenom")==="Test Héritage","l'accès commun garde son prénom initial après les entraînements des deux liens");
     await g.evaluate(()=>{window.__partage=null;window.EnvoiMaison.partage=async r=>{window.__partage=r;return {message:"Préparé pour le test."};};});
     await g.click("[data-envoi-maison]");
     vrai(await g.evaluate(()=>__partage.prenom==="Test Héritage"&&!('contexte'in __partage)&&!('token'in __partage)&&!('famille'in __partage)),"le partage de secours sur lien générique reste possible et exclut les informations de contexte");
     await a.evaluate(token=>{window.__ancienOnglet=true;location.hash="parents&famille="+token;},tokenB);
-    await a.waitForFunction(()=>!window.__ancienOnglet&&document.querySelector("[data-ep=E1]"));await precedent(a);
+    await a.waitForFunction(()=>!window.__ancienOnglet&&document.querySelector("button[data-ep=E1]"));await precedent(a);
     vrai(await a.locator("#maison-bilan-precedent .maison-bilan").count()===1&&await a.locator("#maison-bilan-precedent").innerText().then(t=>t.includes("Test Famille B")&&!t.includes("Test Famille A")),"ouvrir le lien du frère ou de la sœur dans le même onglet change réellement le contexte visible");
-    await a.evaluate(()=>Ecran.go({name:'episode',id:'T1',step:4}));
+    await a.evaluate(()=>Ecran.go({name:'episode',id:'E2',step:4}));
     vrai(await a.locator("#maison-bilan-precedent").count()===0,"un texte sans bilan n'affiche pas le résultat d'un autre texte");
     const attente=await ouvre(true);await defi(attente,"Test Attente");await defi(attente,"Test Attente");
     await attente.evaluate(()=>Ecran.go({name:"home"}));

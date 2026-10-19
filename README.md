@@ -8,20 +8,19 @@ Appli de fluence pour les APC de CM1 : un feuilleton en épisodes d'environ 250 
 
 Les personnages (Maya, Sami, Jules, Romy, Gaspard, Marcel le cuisinier et la maîtresse) sont inventés. Chaque semaine, un papier écrit à l'encre verte attend la bande sous le banc des maîtres, le banc de la cour où s'assoient les enseignants.
 
-Une seconde collection contient les six textes Tamallette prévus dans le plan P2 de Claude. Les textes se lisent dès maintenant, avec les mots à préparer et le défi d'une minute. **T1, Le trafiquant d’ombres**, possède aussi son enregistrement, avec le surligneur, l'écho et le chœur. Les voix de T2 à T6 seront ajoutées plus tard.
+Une seconde collection contient les cinq textes de fluence Tamallette prévus en P2. Les textes se lisent dès maintenant, avec les mots à préparer et le défi d'une minute. **T1, Le trafiquant d’ombres**, possède aussi son enregistrement, avec le surligneur, l'écho et le chœur. Les voix de T3 à T6 seront ajoutées plus tard.
 
 | Identifiant | Semaine | Texte |
 |---|---|---|
 | T1 | 2 au 6 novembre | Le trafiquant d’ombres |
-| T2 | 9 au 13 novembre | Le grimoire d’Elfie |
 | T3 | 16 au 20 novembre | Le choulame |
 | T4 | 23 au 27 novembre | Le pouvoir des fleurs |
 | T5 | 30 novembre au 4 décembre | La fée qui ne voulait pas être remerciée |
 | T6 | 7 au 11 décembre | Le feuilleton d’Hermès |
 
-Les cinq extraits de fluence viennent du fichier fourni « 9 - Fluence - textes de la P2.pdf » (textes 7 à 11). Pour **Le grimoire d’Elfie**, absent de ce livret de fluence, l'application reprend les dialogues et le journal des trois pages de BD prévues en lecture (« 11 - Textes de la P2 pour la maison.pdf », pages 2 à 4), sans les bruitages ni les inscriptions décoratives. Cette transcription est identifiée comme telle. Les références, les pages et les crédits sont conservés dans `contenu/tamallette-p2-sources.json`. Le comptage des mots suit la règle habituelle de l'application ; il peut différer du compteur du livret imprimé.
+Les cinq extraits de fluence viennent du fichier fourni « 9 - Fluence - textes de la P2.pdf » (textes 7 à 11). La BD **Le grimoire d’Elfie** (T2) est retirée des textes proposés. Son identifiant reste réservé et ses éventuels anciens résultats restent consultables. Les références, les pages et les crédits sont conservés dans `contenu/tamallette-p2-sources.json`. Les paragraphes, dialogues et lignes des fiches sont conservés grâce à `contenu/mise-en-page.json` ; les vers et strophes de T4 et T5 suivent le manuel. Cette mise en page est indépendante des mots, des pages audio et des indices des anciens résultats. Les lignes longues se replient sur les petits écrans. Le comptage des mots suit la règle habituelle de l'application ; il peut différer du compteur du livret imprimé.
 
-Pour ajouter les voix de Tamallette, placer `T1.m4a` à `T6.m4a` dans `contenu/enregistrements/`, puis lancer `python3 outils/voix.py` et publier. Les résultats du feuilleton restent rattachés aux identifiants E1 à E7 ; ceux de Tamallette utilisent T1 à T6.
+Pour ajouter les voix de Tamallette, placer `T1.m4a`, `T3.m4a` à `T6.m4a` dans `contenu/enregistrements/`, puis lancer `python3 outils/voix.py` et publier. Les résultats du feuilleton restent rattachés aux identifiants E1 à E7 ; ceux de Tamallette utilisent T1 à T6.
 
 L'appli est séparée du Bateau-école, mais construite sur le même principe :
 
@@ -35,6 +34,8 @@ L'appli est séparée du Bateau-école, mais construite sur le même principe :
 2. **Élèves** : taper les prénoms du groupe. Laisser l’objectif vide pour le calcul automatique, ou saisir un objectif manuel.
 3. Depuis l'iPhone, toucher **Envoyer le lien à l’ordinateur**, puis ouvrir ce lien sur l'ordinateur de la classe : les deux appareils sont reliés. On peut aussi utiliser **Relier le téléphone** sur l'ordinateur : viser le QR code avec l'appareil photo de l'iPhone ou taper le code de l'écran (10 lettres ou chiffres) dans l'application.
 4. Sur l'iPhone, ajouter la page à l'écran d'accueil (Safari › Partager › **Sur l'écran d'accueil**) et l'ouvrir ensuite depuis son icône. Elle reste ainsi reliée, et l'iPhone garde les résultats durablement.
+
+Chaque départ de défi est précédé d’un compte à rebours de trois secondes avec trois bips, hors du temps mesuré. À la fin, un grand bandeau invite à toucher le dernier mot lu. Quitter le défi ou masquer l’application pendant le compte à rebours annule le départ.
 
 Le téléphone a quatre onglets : **Écran** (choisir l'épisode et l'étape, et toucher à distance les boutons de l'écran : écouter, pause, page suivante, phrase suivante, vitesse…), **Défi**, **Élèves** et **Progrès**. Sans écran relié, le défi marche aussi sur le téléphone seul : l'élève lit alors sur le texte imprimé.
 
@@ -62,7 +63,9 @@ Les deux appareils se recopient la classe et tous les résultats à chaque liais
 
 ### S'entraîner à la maison et transmettre les bilans
 
-L'[accès parents](https://munozmelanie.github.io/banc-des-maitres/#parents) propose des défis accompagnés par un adulte. Dans **S’entraîner**, deux boutons donnent accès aux **Textes d’entraînement** (E1 à E7) ou aux **Textes de la période** (T1 à T6). Seuls les titres de la catégorie choisie s'affichent ; choisir un texte ouvre directement son défi. Le retour à la liste conserve la catégorie. Aucun compte parent n'est nécessaire. **Imprimer le texte** prépare la feuille pour l'enfant ; le parent garde le téléphone, choisit **Démarrer**, touche les mots mal lus (un deuxième toucher annule), puis le dernier mot lu au signal. **Lecture terminée** arrête le chrono si l'enfant finit avant une minute. La lecture sur écran reste possible.
+L'[accès parents](https://munozmelanie.github.io/banc-des-maitres/#parents) propose **Textes d’entraînement** et **Textes de la période (facultatifs)**. Les épisodes E1 à E7 s’ouvrent les lundis du 2 novembre au 14 décembre 2026, à **16 h 30, heure de Paris**. Avant leur date, les cartes montrent seulement le numéro, un cadenas et la date ; les anciens épisodes restent ouverts. Les cinq textes Tamallette (T1, T3 à T6) restent disponibles à tout moment avec l’explication « Aucun entraînement obligatoire n’est demandé sur ces textes. Si vous souhaitez vous entraîner, libre à vous ! ».
+
+Choisir un texte ouvre l’écoute de la voix lorsqu’elle est disponible, le défi et **Imprimer le texte**. Le parent peut écouter, mettre en pause, reprendre ou revenir au début. **Démarrer** arrête l’écoute puis affiche le décompte sonore **3, 2, 1** ; la minute ne commence qu’ensuite. L’adulte touche les mots mal lus, puis le dernier mot lu au signal. L’enfant recopie lui-même le score que le parent lui lit. Les bilans des liens personnels sont transmis automatiquement ; les QR codes restent inchangés. Les élèves sans smartphone peuvent faire le défi sur papier ou en classe.
 
 Depuis le lien personnel, **Les progrès** affiche uniquement les lectures de l’enfant associé à ce lien, avec **En classe** et **À la maison**, une courbe, l’objectif, les statistiques et le filtre **Tous les textes** ou un texte précis. Les lectures de classe sont synchronisées lorsque l’application de l’enseignante est ouverte, connectée à son compte et à Internet. Les bilans maison sont consultables dès leur réception par le service privé. Les données distantes ne sont pas enregistrées dans le navigateur familial ; changer de lien efface la vue précédente, y compris si une ancienne requête se termine ensuite. Le lien commun sans accès individuel ne donne pas accès aux progrès.
 
@@ -130,7 +133,7 @@ python3 outils/icones.py                # décline le nouveau logo en icônes we
 sh outils/publier.sh                    # enregistre, envoie et publie (voir plus bas)
 ```
 
-`tests/app.js` essaie l'écran seul : la voix et le surligneur, la page qui se tourne, l'écho, le défi et son calcul. Il essaie ensuite le téléphone relié : code tapé, télécommande, défi mené depuis le téléphone, résultat sur l'écran, essai recopié. Il vérifie qu'un ordinateur tout neuf retrouve la classe et les essais auprès du téléphone, que la suppression d'un essai se propage, et qu'une sauvegarde de la première version s'importe. Il couvre aussi la voix et l'écho de T1, les textes T2 à T6 sans voix, le changement de source audio, et le partage du lien depuis un téléphone neuf. `#essai-rapide` à la fin de l'adresse ramène le défi à 8 secondes, pour les essais.
+`tests/app.js` essaie l'écran seul : la voix et le surligneur, la page qui se tourne, l'écho, le défi et son calcul. Il essaie ensuite le téléphone relié : code tapé, télécommande, défi mené depuis le téléphone, résultat sur l'écran, essai recopié. Il vérifie qu'un ordinateur tout neuf retrouve la classe et les essais auprès du téléphone, que la suppression d'un essai se propage, et qu'une sauvegarde de la première version s'importe. Il couvre aussi la voix et l'écho de T1, les textes T3 à T6 sans voix, le changement de source audio, et le partage du lien depuis un téléphone neuf. `#essai-rapide` à la fin de l'adresse ramène le défi à 8 secondes, pour les essais.
 
 `tests/parents.js` vérifie l'isolation de la classe et de la liaison, les deux catégories, l'accès direct au défi, la persistance familiale et les échecs de partage/stockage. `tests/envoi-maison.js` couvre l'import explicite, les doublons, les suppressions et le suivi maison synchronisé. `tests/maison-cloud.js` vérifie la file persistante, les accusés de réception, l'isolation des liens de deux enfants, l'autorisation de l'enseignante et la réception avec une API simulée. `tests/parents-cloud-ui.js` contrôle les états visibles d'envoi et de réessai ; `tests/impression.js` vérifie les feuilles imprimables. Tous utilisent des élèves fictifs, des partages simulés et aucun véritable envoi vers un compte.
 

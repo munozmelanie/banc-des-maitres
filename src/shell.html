@@ -268,6 +268,12 @@ html[data-role="parents"] .step{padding:0 10px}
 .maison-attente{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
 .maison-liste-textes{display:grid;gap:10px}
 .maison-choix-texte{width:100%;min-height:60px;justify-content:flex-start;text-align:left;padding:14px 18px;font-size:18px;line-height:1.35}
+.maison-serie{color:var(--ink-soft);margin:4px 0 20px}
+.maison-choix-texte strong,.maison-choix-texte small{display:block}
+.maison-choix-texte small{font-size:14px;font-weight:400;margin-block:3px;color:var(--ink-soft)}
+.maison-choix-texte.maison-verrouille{opacity:1;background:#f4f4f0;border-style:dashed;color:#586254;cursor:default}
+.maison-verrouille svg{width:28px;height:28px;flex:none;margin-right:12px}
+.maison-ecoute{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px}
 .maison-entete h1{font-size:clamp(24px,3vw,36px);line-height:1.2;flex:1 1 360px;margin:0}
 .maison-bilan-precedent{margin:0 0 16px}
 .maison-bilan-precedent summary{cursor:pointer;padding:12px 0;font-weight:700}
@@ -286,6 +292,19 @@ html[data-role="parents"] .step{padding:0 10px}
 .maison-bilan .row{margin-top:14px}
 .maison-bilan [data-envoi-info]{margin-bottom:0;overflow-wrap:anywhere}
 .maison-erreur{color:var(--err);font-weight:700}
+/* Les ruptures viennent du document d'origine, indépendamment des pages du lecteur. */
+.texte-espace{display:block;height:.55em}
+.textbox.lecture-structuree{align-items:flex-start;overflow:auto}
+.textbox.lecture-structuree .text{max-height:none}
+.defi-compte-rebours{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px;padding:18px 12px;border-radius:16px;background:var(--green-soft);border:2px solid var(--green);color:var(--ink);text-align:center;font-weight:700}
+.defi-compte-rebours[hidden]{display:none}
+.defi-compte-nombre{display:block;font-family:var(--font-display);font-variant-numeric:tabular-nums;font-size:clamp(76px,16vw,116px);line-height:1.05;color:var(--green)}
+.defi-consigne.etat-dernier{display:block;border:3px solid #ac7200;border-radius:14px;background:#fff0ad;color:#362800;padding:16px;font-size:clamp(22px,4vw,28px);line-height:1.3;font-weight:800;text-align:center;box-shadow:0 4px 16px #3628001a}
+.defi-consigne.etat-dernier::before{content:"☝";display:block;font-size:30px;line-height:1.1;margin-bottom:6px}
+.maison-pilotage.etat-dernier{border-color:#ac7200;background:#fff9e2}
+.maison-pilotage.etat-dernier .chrono{display:none}
+.maison-pilotage.etat-compte-rebours .chrono{display:none}
+.maison-pilotage.etat-dernier .defi-consigne{margin:0}
 #maison-impression{display:none}
 @media print{
   @page{size:A4;margin:18mm}
@@ -299,6 +318,10 @@ html[data-role="parents"] .step{padding:0 10px}
   html[data-impression="texte"] #maison-impression.texte-long{font-size:12.5pt;line-height:1.55}
   #maison-impression.texte-long h1{margin-bottom:7mm}
   #maison-impression.texte-long p{margin-bottom:3mm}
+  html[data-impression="texte"] #maison-impression{line-height:1.45}
+  html[data-impression="texte"] #maison-impression.texte-vers{font-size:11.5pt;line-height:1.4}
+  #maison-impression.texte-vers .impression-corps{columns:2;column-gap:9mm}
+  #maison-impression.texte-vers p{margin-bottom:4mm;break-inside:avoid}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 /* ---------- Progrès : choix du lieu, de l'élève et du texte ---------- */

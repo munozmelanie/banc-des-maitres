@@ -52,7 +52,7 @@ const attend=(p,f)=>p.waitForFunction(f,null,{timeout:8000});
         await p.click("[data-go=home]");await p.click("[data-ep=E1]");await p.locator(".step").nth(4).click();
         await p.click('[data-eleve="test-c"]');
         vrai(!/Objectif/.test(await p.locator("#essai").textContent()),"défi écran : pas d'objectif inventé avant la première lecture");
-        await p.click("#go");await p.click("#stop");
+        await p.click("#go");await attend(p,()=>Ecran.etat().defi?.etat==="run");await p.click("#stop");
         const premierMot=await p.evaluate(()=>Banc.motsDefi(Banc.ep("E1")).findIndex(x=>x.w));
         await p.locator("#txt .w").nth(premierMot).click();await attend(p,()=>!document.querySelector("#res").hidden&&Banc.Donnees.essaisDe("test-c").length===1);
         vrai(await p.evaluate(()=>document.querySelector("#essai").textContent.includes(`Objectif : ${Banc.Donnees.objectif("test-c")} MCLM`)),"défi écran : terminer la première lecture affiche aussitôt son objectif calculé");

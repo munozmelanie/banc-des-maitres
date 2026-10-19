@@ -12,9 +12,10 @@ const Ecran = (() => {
   let cleanup = ()=>{};
 
   function go(r){
+    if(r?.name==="episode" && !Banc.estDisponible(ep(r.id))) r={name:"home"};
     if (maison){
       const E = r && r.name === "episode" && ep(r.id);
-      r = E ? {name:"episode",id:E.id,step:4} : {name:"home"};
+      r = Banc.ouvertFamille(E) ? {name:"episode",id:E.id,step:4} : {name:"home"};
     }
     stopAudio(); route = r; render(); $("#main").scrollTop = 0;
     if (maison) window.scrollTo(0,0);
@@ -34,13 +35,13 @@ const Ecran = (() => {
 
   /* ---------- Accueil ---------- */
   function renderHome(){
-    if(maison){ if(optionsMaison.accueil) optionsMaison.accueil(view); return; }
+    if(maison){ if(optionsMaison.accueil) cleanup=optionsMaison.accueil(view)||(()=>{}); return; }
     view.innerHTML = `<h1 style="font-size:clamp(28px,3.4vw,46px)">${maison ? "Un moment de lecture ensemble" : "Le feuilleton de la période 2"}</h1>
     <p class="lead">${maison ? "Choisissez un texte. Préparez les mots, écoutez la voix et entraînez-vous à lire. Un adulte peut ensuite accompagner le défi d’une minute." : "Sept enquêtes de Maya, Sami, Jules et Romy. Chaque semaine, un papier écrit à l'encre verte attend la bande sous le banc des maîtres."}</p>
     ${maison ? '<h2 class="collection">Le banc des maîtres</h2>' : ""}
     <div class="eps" id="eps"></div>
-    ${EPS.some(estTamallette)?`<section class="collection"><h2>Tamallette · période 2</h2><p class="lead">Les textes prévus pour la période : les mots à préparer, la lecture et le défi d'une minute.</p><div class="eps" id="eps-tamallette"></div></section>`:""}`;
-    EPS.forEach(E=>{
+    ${Banc.textesDisponibles().some(estTamallette)?`<section class="collection"><h2>Tamallette · période 2</h2><p class="lead">Les textes prévus pour la période : les mots à préparer, la lecture et le défi d'une minute.</p><div class="eps" id="eps-tamallette"></div></section>`:""}`;
+    Banc.textesDisponibles().forEach(E=>{
       const n = E.pages.length-1, imgs = E.pages.slice(1).filter(p=>p.img).length, tamallette = estTamallette(E);
       const b = el("button",{class:"ep"+(tamallette ? " ep-texte" : ""), type:"button", "data-ep":E.id});
       b.innerHTML = (E.pages[1] && E.pages[1].img ? `<img class="vign" src="${esc(E.pages[1].img)}" alt="" loading="lazy">` : (tamallette ? "" : `<div class="vign"></div>`)) +
@@ -66,9 +67,9 @@ const Ecran = (() => {
     }
     view.innerHTML = `<div class="ephead"><button class="btn" id="back" aria-label="Retour aux textes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><h2>${esc(libelleEpisode(EP))} — ${esc(EP.titre)}</h2><nav class="steps" id="steps" aria-label="Étapes de la séance"></nav></div><div class="panel" id="panel"></div>`;
     $("#back").onclick = ()=>go({name:"home"});
-    if (maison){
+    {
       const imprimer = el("button",{class:"btn",id:"maison-imprimer",type:"button"},"Imprimer le texte");
-      imprimer.onclick = ()=>{ if(optionsMaison.imprime) optionsMaison.imprime(EP); };
+      imprimer.onclick = ()=>{ if(playing) togglePlay(); Banc.imprimeTexte(EP); };
       $("#steps").before(imprimer);
     }
     let numero = 0;
@@ -159,9 +160,10 @@ const Ecran = (() => {
     const box = $("#txt"); box.className = "text"+(page===0 ? " title" : ""); box.innerHTML = "";
     if (page===0) box.appendChild(el("span",{class:"muted", style:"display:block;font-size:.42em;font-family:var(--font-read);font-weight:700"}, esc(libelleEpisode(EP))));
     wordSpans = []; sentSpans = [];
+    const ruptures = new Map((P.layout?.breaks||[]).map(b=>[b.at,b.kind]));
     P.sents.forEach((s,si)=>{
       const ss = el("span",{class:"s"});
-      for (let i=s[0]; i<=s[1]; i++){ const w = el("span",{class:"w"}); w.textContent = P.toks[i][0]; w.onclick = ()=>playWord(i); ss.appendChild(w); wordSpans[i] = w; if (i<s[1]) ss.appendChild(document.createTextNode(" ")); }
+      for (let i=s[0]; i<=s[1]; i++){ if(i>0) Banc.ajouteRupture(ss,{rupture:ruptures.get(i)}); const w = el("span",{class:"w"}); w.textContent = P.toks[i][0]; w.onclick = ()=>playWord(i); ss.appendChild(w); wordSpans[i] = w; if (i<s[1]) ss.appendChild(document.createTextNode(" ")); }
       box.appendChild(ss); sentSpans[si] = ss; if (si<P.sents.length-1) box.appendChild(document.createTextNode(" "));
     });
     if (page===0 && EP.source) box.appendChild(el("small", {class:"muted", style:"display:block;margin-top:18px;font-size:15px;font-family:var(--font-read);font-weight:400;line-height:1.5"}, esc(EP.source)));
@@ -172,6 +174,9 @@ const Ecran = (() => {
   function fit(box, k){
     if (maison){ box.style.removeProperty("--fs"); return; }
     const holder = box.parentElement;
+    const structure = !!EP?.layout && !box.classList.contains("title");
+    holder.classList.toggle("lecture-structuree",structure);
+    if(structure){box.style.setProperty("--fs","clamp(22px,2.2vw,34px)");return;}
     const avail = holder.clientHeight-parseFloat(getComputedStyle(holder).paddingTop)*2;
     let fs = Math.max(18, Math.min(window.innerHeight*k, window.innerWidth*k*0.56));
     box.style.setProperty("--fs", fs+"px"); let g = 0;
@@ -229,70 +234,79 @@ const Ecran = (() => {
   let Defi = null; // l'état du défi affiché, pour le téléphone et les messages reçus
   function stepDefi(P){
     const DUR = DUREE();
-    let who = null, state = "idle", t0 = 0, tick = null, errs = new Set(), last = -1, elapsed = 0, distant = false, resultatAffiche = null;
+    let who = null, state = "idle", t0 = 0, tick = null, errs = new Set(), last = -1, elapsed = 0, distant = false, resultatAffiche = null, annuleCompte = null, vivant = true;
     const toks = motsDefi(EP);
     P.innerHTML = `<div class="defi"><div class="textbox"><div class="text" id="txt" lang="fr"></div></div>
      <div class="side">
        <div class="card"><div class="label">Qui lit ?</div><div class="who" id="who" style="margin-top:8px"></div><div class="muted" id="essai" style="margin-top:8px"></div></div>
-       <div class="card"><div class="timer"><i id="bar"></i></div><div class="row start" style="margin-top:10px"><button class="btn big primary" id="go" disabled>Départ</button><button class="btn" id="stop" hidden>Il a fini</button></div><p class="hint" id="hint" style="margin:10px 0 0"></p></div>
+       <div class="card"><div class="defi-compte-rebours" id="defi-decompte" role="status" aria-live="polite" hidden><span>Prêt ? La lecture commence dans</span><strong class="defi-compte-nombre" id="defi-nombre">3</strong><span>secondes</span></div><div class="timer"><i id="bar"></i></div><div class="row start" style="margin-top:10px"><button class="btn big primary" id="go" disabled>Départ</button><button class="btn" id="defi-annule" hidden>Annuler le départ</button><button class="btn" id="stop" hidden>Il a fini</button></div><p class="defi-depart-info">Le départ est précédé de 3 secondes : 3, 2, 1, avec un bip.</p><p class="hint defi-consigne" id="hint" tabindex="-1" style="margin:10px 0 0"></p></div>
        <div class="card" id="res" hidden></div>
      </div></div>`;
     const box = $("#txt"), spans = [];
-    toks.forEach((x,i)=>{ if (x.brk) box.appendChild(el("br")); const s = el("span",{class:"w"}); s.textContent = x.t; s.onclick = ()=>tapWord(i); box.appendChild(s); box.appendChild(document.createTextNode(" ")); spans[i] = s; });
+    toks.forEach((x,i)=>{ Banc.ajouteRupture(box,x); const s = el("span",{class:"w"}); s.textContent = x.t; s.onclick = ()=>tapWord(i); box.appendChild(s); box.appendChild(document.createTextNode(" ")); spans[i] = s; });
     fit(box, 0.05);
     const conseil = () => Lien.relie() ? "Lance le défi depuis le téléphone, ou choisis l'élève ici." : "Choisis l'élève, puis appuie sur Départ.";
-    $("#hint").textContent = conseil();
+    function consigne(texte,finale=false){const h=$("#hint");h.textContent=texte;h.classList.toggle("etat-dernier",finale);h.setAttribute("role",finale?"alert":"status");box.classList.toggle("defi-attente-dernier",finale);if(finale){h.scrollIntoView({block:"nearest"});if(!distant)h.focus({preventScroll:true});}}
+    consigne(conseil());
     const essaiNum = id => Donnees.essaisDe(id, EP.id).length;
     Donnees.eleves().forEach(s=>{ const b = el("button",{type:"button", "aria-pressed":"false", "data-eleve":s.id}); b.textContent = s.nom||"Élève";
-      b.onclick = ()=>{ if (state==="run" || distant) return; choisit(s.id); reset(); }; $("#who").appendChild(b); });
+      b.onclick = ()=>{ if (["countdown","run","saving"].includes(state) || distant) return; choisit(s.id); reset(); }; $("#who").appendChild(b); });
     function afficheEssai(){ const objectif=Donnees.objectif(who); $("#essai").textContent = who ? `Essai n° ${essaiNum(who)+1} sur ce texte`+(objectif===null ? "" : ` · Objectif : ${objectif} MCLM`) : ""; }
     function choisit(id){ who = id; $("#who").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed", String(x.dataset.eleve===id))); $("#go").disabled = false; afficheEssai(); }
-    function reset(){ state = "idle"; resultatAffiche = null; afficheEssai(); errs.clear(); last = -1; spans.forEach(s=>s.className = "w"); $("#bar").style.width = "0"; $("#res").hidden = true; $("#hint").textContent = who ? "Appuie sur Départ quand l'élève est prêt." : conseil(); $("#go").textContent = "Départ"; $("#go").disabled = !who; $("#stop").hidden = true; publie(); }
+    function arreteCompte(){if(annuleCompte)annuleCompte();annuleCompte=null;$("#defi-decompte").hidden=true;$("#defi-annule").hidden=true;}
+    function reset(){ arreteCompte();clearInterval(tick);Plateforme.eveille(false);state = "idle"; resultatAffiche = null; afficheEssai(); errs.clear(); last = -1; spans.forEach(s=>s.className = "w"); $("#bar").style.width = "0"; $("#res").hidden = true; consigne(who ? "Appuie sur Départ quand l'élève est prêt." : conseil()); $("#go").textContent = "Départ"; $("#go").disabled = !who; $("#stop").hidden = true; publie(); }
     function tapWord(i){
       if (distant) return;
       if (state==="run"){ if (!toks[i].w) return; errs.has(i) ? errs.delete(i) : errs.add(i); spans[i].classList.toggle("err"); }
-      else if (state==="pick"){ last = i; montreFin(i, null); finish(); }
+      else if (state==="pick"&&toks[i].w){ last = i; montreFin(i, null); finish(); }
     }
     function montreFin(i, fautes){ spans.forEach((s,j)=>{ s.classList.toggle("after", j>i); s.classList.toggle("last", j===i); if (fautes) s.classList.toggle("err", fautes.includes(j)); }); }
-    function lanceChrono(debut){ clearInterval(tick); t0 = debut; tick = setInterval(()=>{ const s = (performance.now()-t0)/1000; $("#bar").style.width = Math.min(100, s/DUR*100)+"%"; if (s>=DUR && !distant) endTime(DUR); }, 200); }
+    function lanceChrono(debut){ clearInterval(tick); t0 = debut; tick = setInterval(()=>{ if(!vivant)return;const s = (performance.now()-t0)/1000; $("#bar").style.width = Math.min(100, s/DUR*100)+"%"; if (s>=DUR && !distant) endTime(DUR); }, 200); }
     $("#go").onclick = ()=>{
-      if (state==="run" || distant) return;
+      if (["countdown","run","saving"].includes(state) || distant || !who) return;
       if (state==="done" || state==="pick"){ reset(); return; }
-      state = "run"; lanceChrono(performance.now()); $("#go").textContent = "En cours…"; $("#stop").hidden = false;
-      $("#hint").textContent = "Touche les mots mal lus (un deuxième toucher annule)."; publie();
+      state="countdown";elapsed=0;$("#bar").style.width="0";$("#go").disabled=true;$("#go").textContent="Prépare-toi…";$("#defi-annule").hidden=false;Plateforme.eveille(true);
+      consigne("La lecture commencera après 3 secondes.");publie();
+      annuleCompte=Banc.compteRebours({surNombre:n=>{if(!vivant||state!=="countdown")return;$("#defi-decompte").hidden=false;$("#defi-nombre").textContent=n;$("#defi-decompte").scrollIntoView({block:"nearest"});},termine:()=>{
+        if(!vivant||state!=="countdown"||distant)return;annuleCompte=null;$("#defi-decompte").hidden=true;$("#defi-annule").hidden=true;
+        state="run";lanceChrono(performance.now());$("#go").textContent="En cours…";$("#stop").hidden=false;consigne("Touche les mots mal lus (un deuxième toucher annule).");publie();
+      }});
     };
+    $("#defi-annule").onclick=()=>{if(state==="countdown"&&!distant)reset();};
     $("#stop").onclick = ()=>{ if (state==="run") endTime((performance.now()-t0)/1000); };
-    function endTime(s){ clearInterval(tick); elapsed = Math.min(DUR, s); state = "pick"; $("#stop").hidden = true; $("#go").textContent = "Recommencer"; $("#hint").textContent = "Temps écoulé ! Touche le dernier mot lu."; bip(); publie(); }
+    function endTime(s){ clearInterval(tick); elapsed = Math.min(DUR, s); state = "pick"; $("#stop").hidden = true; $("#go").disabled=false;$("#go").textContent = "Recommencer"; consigne("Temps écoulé ! Touche le dernier mot lu.",true); bip(); publie(); }
     async function finish(){
-      state = "done";
-      const r = calcule(EP, who, elapsed, last, errs);
-      const b = bilan(r);
-      const ok = await Donnees.ajoute(r);
-      montreResultat(r, b, ok);
-      $("#hint").textContent = "Choisis un autre élève, ou appuie sur Recommencer.";
-      afficheEssai(); publie();
+      state = "saving";$("#go").disabled=true;$("#go").textContent="Enregistrement…";Plateforme.eveille(false);publie();
+      const r = calcule(EP, who, elapsed, last, errs),b = bilan(r),ok = await Donnees.ajoute(r);
+      if(!vivant)return;state="done";$("#go").disabled=false;$("#go").textContent="Recommencer";montreResultat(r, b, ok);
+      consigne("Choisis un autre élève, ou appuie sur Recommencer.");afficheEssai(); publie();
     }
     function montreResultat(r, b, ok){ resultatAffiche={r,b,ok}; $("#res").hidden = false; $("#res").innerHTML = carteResultat(r, b, Donnees.nom(r.eleve), ok); P.querySelector(".side").scrollTop = 0; }
     function actualiseObjectif(){
-      if (state==="run" || state==="pick") return;
+      if (["countdown","run","pick","saving"].includes(state)) return;
       afficheEssai();
       if (state==="done" && resultatAffiche && !$("#res").hidden){ const {r,b,ok}=resultatAffiche; $("#res").innerHTML=carteResultat(r,b,Donnees.nom(r.eleve),ok); }
     }
-    /* le téléphone mène le défi : l'écran suit */
+    /* Le téléphone est le seul pilote : les nombres sont reçus, jamais redécomptés ici. */
     function recoit(d){
-      if (d.etat==="repos"){ distant = false; clearInterval(tick); reset(); return; }
-      distant = d.etat!=="fini";
+      if(!distant&&["countdown","run","pick","saving"].includes(state))return;
+      if (d.etat==="repos"){ distant = false; reset(); return; }
+      arreteCompte();distant = d.etat!=="fini";
       if (d.eleve && d.eleve!==who) choisit(d.eleve);
       $("#go").disabled = true; $("#stop").hidden = true;
-      if (d.etat==="pret"){ clearInterval(tick); state = "idle"; spans.forEach(s=>s.className = "w"); $("#bar").style.width = "0"; $("#res").hidden = true; $("#hint").textContent = `${Donnees.nom(d.eleve)} se prépare. Départ sur le téléphone.`; }
-      else if (d.etat==="lecture"){ if (state!=="run"){ state = "run"; spans.forEach(s=>s.className = "w"); $("#res").hidden = true; lanceChrono(performance.now()-Math.max(0, Math.min(5000, d.depuis||0))); } $("#go").textContent = "En cours…"; $("#hint").textContent = `${Donnees.nom(d.eleve)} lit. La maîtresse note sur son téléphone.`; }
-      else if (d.etat==="choix"){ if (state==="run"){ clearInterval(tick); bip(); } state = "pick"; $("#bar").style.width = "100%"; $("#hint").textContent = "Temps écoulé !"; }
+      if (d.etat==="pret"){ clearInterval(tick); state = "idle"; spans.forEach(s=>s.className = "w"); $("#bar").style.width = "0"; $("#res").hidden = true; consigne(`${Donnees.nom(d.eleve)} se prépare. Départ sur le téléphone.`); }
+      else if(d.etat==="decompte"&&[1,2,3].includes(d.nombre)){clearInterval(tick);state="countdown";spans.forEach(s=>s.className="w");$("#res").hidden=true;$("#bar").style.width="0";$("#defi-decompte").hidden=false;$("#defi-nombre").textContent=d.nombre;$("#defi-decompte").scrollIntoView({block:"nearest"});$("#go").textContent="Prépare-toi…";consigne(`${Donnees.nom(d.eleve)} commence après le décompte.`);}
+      else if (d.etat==="lecture"){ if (state!=="run"){ state = "run"; spans.forEach(s=>s.className = "w"); $("#res").hidden = true; lanceChrono(performance.now()-Math.max(0, Math.min(DUR*1000, d.depuis||0))); } $("#go").textContent = "En cours…"; consigne(`${Donnees.nom(d.eleve)} lit. La maîtresse note sur son téléphone.`); }
+      else if (d.etat==="choix"){ clearInterval(tick);state = "pick"; $("#bar").style.width = "100%";consigne("Temps écoulé ! Touche le dernier mot lu sur le téléphone.",true); }
       else if (d.etat==="fini" && d.resultat){ clearInterval(tick); state = "done"; $("#bar").style.width = Math.min(100, d.resultat.secondes/DUR*100)+"%"; montreFin(d.resultat.dernier, d.resultat.fautes||[]);
-        montreResultat(d.resultat, bilan(d.resultat), true); afficheEssai(); $("#go").textContent = "Recommencer"; $("#go").disabled = false; $("#hint").textContent = "Résultat enregistré sur le téléphone et ici."; distant = false; }
+        montreResultat(d.resultat, bilan(d.resultat), true); afficheEssai(); $("#go").textContent = "Recommencer"; $("#go").disabled = false; consigne("Résultat enregistré sur le téléphone et ici."); distant = false; }
+      publie();
     }
-    function publie(){ Defi = {ep:EP.id, etat:state, eleve:who, local:!distant && (state==="run" || state==="pick"), recoit, actualiseObjectif}; annonce(); }
-    publie();
-    cleanup = ()=>{ clearInterval(tick); Defi = null; };
+    function annuleDistant(){if(distant&&state==="countdown"){distant=false;reset();}}
+    function publie(){ Defi = {ep:EP.id, etat:state, eleve:who, local:!distant && ["countdown","run","pick","saving"].includes(state), recoit, actualiseObjectif, annuleDistant}; annonce(); }
+    function masque(){if(document.hidden&&state==="countdown"&&!distant)reset();}
+    document.addEventListener("visibilitychange",masque);publie();
+    cleanup = ()=>{vivant=false;arreteCompte();clearInterval(tick);Plateforme.eveille(false);document.removeEventListener("visibilitychange",masque);Defi = null;};
   }
 
   /* 6. Les progrès sur cet épisode */
@@ -345,8 +359,15 @@ const Ecran = (() => {
     if (d.clic){ const b = document.getElementById(String(d.clic)); if (b && b.matches("[data-tele]") && !b.disabled) b.click(); return; }
     if (d.etat) relance();
   }
+  let tourDefiDistant=null,sequenceDefiDistante=-1;const toursDefiPasses=new Set();
   function recoitDefi(d){
-    if (!d || !ep(d.ep)) return;
+    if (!d || !Banc.estDisponible(ep(d.ep)) || !["repos","pret","decompte","lecture","choix","fini"].includes(d.etat)) return;
+    if(typeof d.tour==="string"&&Number.isSafeInteger(d.sequence)){
+      if(toursDefiPasses.has(d.tour))return;
+      if(tourDefiDistant!==d.tour){if(tourDefiDistant)toursDefiPasses.add(tourDefiDistant);tourDefiDistant=d.tour;sequenceDefiDistante=-1;}
+      if(d.sequence<=sequenceDefiDistante)return;sequenceDefiDistante=d.sequence;
+    }
+    if(Defi?.local&&["countdown","run","pick","saving"].includes(Defi.etat))return;
     if (route.name!=="episode" || route.id!==d.ep || route.step!==4){ if (d.etat==="repos") return; go({name:"episode", id:d.ep, step:4}); }
     if (Defi && Defi.recoit) Defi.recoit(d);
   }
@@ -379,13 +400,13 @@ const Ecran = (() => {
 
   async function demarre(){
     if (maison) return demarreMaison(optionsMaison);
-    Donnees.surChange(q=>{ if (q==="classe" || q==="resultats"){ if (route.name==="students"){ if(q==="classe" && !document.activeElement?.closest("#f")) vueEleves(view); Banc.actualiseObjectifs(view); } else if (route.name==="progress") vueProgres(view); else if (route.name==="episode" && route.step===5) renderEpisode(); else if (route.name==="episode" && route.step===4){ if(q==="classe" && !Defi?.etat?.match(/run|pick/)) renderEpisode(); else if(q==="resultats") Defi?.actualiseObjectif?.(); } } });
+    Donnees.surChange(q=>{ if (q==="classe" || q==="resultats"){ if (route.name==="students"){ if(q==="classe" && !document.activeElement?.closest("#f")) vueEleves(view); Banc.actualiseObjectifs(view); } else if (route.name==="progress") vueProgres(view); else if (route.name==="episode" && route.step===5) renderEpisode(); else if (route.name==="episode" && route.step===4){ if(q==="classe" && !Defi?.etat?.match(/countdown|run|pick|saving/)) renderEpisode(); else if(q==="resultats") Defi?.actualiseObjectif?.(); } } });
     render();
     const room = await Lien.init();
     if (room){
       Lien.on("cmd", m=>commande(m.data));
       Lien.on("defi", m=>recoitDefi(m.data));
-      Lien.surEtat(on=>{ majPastille(); if (on) relance(); });
+      Lien.surEtat(on=>{ majPastille(); if (on) relance(); else Defi?.annuleDistant?.(); });
       majPastille();
     } else $("#b-tel").hidden = true;
   }

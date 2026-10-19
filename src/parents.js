@@ -124,36 +124,93 @@ const Parents = (() => {
     actualiseRubriques();
     if(rubrique==="progres"){window.ParentsProgres?.ouvre(view,{prenom:profil().prenom});return;}
     window.ParentsProgres?.ferme();
-    view.innerHTML='<h1>Choisissez un texte</h1><nav class="maison-categories" aria-label="Catégories de textes"></nav><div id="maison-attente" class="card maison-attente" hidden><span role="status"></span><button type="button" class="btn" id="maison-reessayer">Réessayer l’envoi</button></div><section class="maison-categorie" id="maison-textes"><div class="maison-liste-textes"></div></section>';
-    const categories=view.querySelector(".maison-categories"), liste=view.querySelector(".maison-liste-textes");
-    [["entrainement","Textes d’entraînement"],["periode","Textes de la période"]].forEach(([id,titre])=>{
-      const bouton=el("button",{class:"btn maison-choix-categorie",id:"maison-categorie-"+id,type:"button","data-categorie":id,"aria-pressed":String(categorie===id),"aria-controls":"maison-textes"});bouton.textContent=titre;
-      bouton.onclick=()=>{categorie=id;accueil(view);view.querySelector("#maison-categorie-"+id).focus();};categories.appendChild(bouton);
+    view.innerHTML='<h1>Choisissez un texte</h1><nav class="maison-categories" aria-label="Catégories de textes"></nav><p class="maison-serie"></p><div id="maison-attente" class="card maison-attente" hidden><span role="status"></span><button type="button" class="btn" id="maison-reessayer">Réessayer l’envoi</button></div><section class="maison-categorie" id="maison-textes" aria-label="Les épisodes"><div class="maison-liste-textes"></div></section>';
+    const liste=view.querySelector(".maison-liste-textes"),categories=view.querySelector(".maison-categories");
+    [["entrainement","Textes d’entraînement"],["periode","Textes de la période (facultatifs)"]].forEach(([id,titre])=>{
+      const bouton=el("button",{class:"btn maison-choix-categorie",type:"button","data-categorie":id,"aria-pressed":String(categorie===id)});bouton.textContent=titre;
+      bouton.onclick=()=>{categorie=id;dessineTextes();};categories.appendChild(bouton);
     });
-    view.querySelector("#maison-textes").setAttribute("aria-labelledby","maison-categorie-"+categorie);
-    Banc.EPS.filter(E=>!!Banc.estTamallette(E)===(categorie==="periode")).forEach(E=>{
-      const bouton=el("button",{class:"btn maison-choix-texte",type:"button","data-ep":E.id});bouton.textContent=E.titre;
-      bouton.onclick=()=>Ecran.go({name:"episode",id:E.id,step:4});liste.appendChild(bouton);
-    });
+    let prochain=null;
+    function dessineTextes(){
+      if(!liste.isConnected)return;
+      liste.replaceChildren();clearTimeout(prochain);
+      categories.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.categorie===categorie)));
+      view.querySelector(".maison-serie").textContent=categorie==="periode"?"Aucun entraînement obligatoire n’est demandé sur ces textes. Si vous souhaitez vous entraîner, libre à vous !":"Le banc des maîtres";
+      Banc.textesFamille().filter(E=>!!Banc.estTamallette(E)===(categorie==="periode")).forEach(E=>{
+        const ouvert=Banc.ouvertFamille(E),bouton=el("button",{class:"btn maison-choix-texte"+(ouvert?"":" maison-verrouille"),type:"button","data-ep":E.id});
+        if(ouvert){bouton.innerHTML=`<span>${Banc.estTamallette(E)?"":`<small>Épisode ${E.num}</small>`}<strong>${esc(E.titre)}</strong></span>`;bouton.onclick=()=>Ecran.go({name:"episode",id:E.id,step:4});}
+        else{bouton.disabled=true;bouton.innerHTML=`<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg><span><strong>Épisode ${E.num}</strong><small class="maison-date-ouverture">${esc(Banc.dateFamille(E))}</small></span>`;}
+        liste.appendChild(bouton);
+      });
+      const dates=Banc.textesFamille().map(E=>Date.parse(E.ouvertureFamille)).filter(t=>t>Date.now());
+      if(dates.length)prochain=setTimeout(dessineTextes,Math.min(86400000,Math.max(1,Math.min(...dates)-Date.now()+1)));
+    }
+    const reveil=()=>{if(!document.hidden)dessineTextes();};
+    dessineTextes();document.addEventListener("visibilitychange",reveil);
     const reessayer=view.querySelector("#maison-reessayer");reessayer.onclick=async()=>{reessayer.disabled=true;try{for(const r of enAttente())await transmet(r,null);}finally{reessayer.disabled=false;actualiseAttente();}};
     actualiseAttente();afficheStockage();
+    return ()=>{clearTimeout(prochain);document.removeEventListener("visibilitychange",reveil);};
   }
   function defi(P,E){
     rubrique="entrainement";actualiseRubriques();window.ParentsProgres?.ferme();
     const duree = Banc.DUREE(), mots = motsDefi(E), fautes = new Set(), contexteDefi=contexte;
-    let etat = "pret", depart = 0, ecoule = 0, timer = null, prenom = "";
-    P.innerHTML = `<p class="lead">L’enfant lit. Touchez les mots mal lus.</p>
+    let etat = "pret", depart = 0, ecoule = 0, timer = null, prenom = "", annuleCompte = ()=>{};
+    P.innerHTML = `${E.audio ? '<div class="maison-ecoute"><div class="row start"><button class="btn" type="button" id="maison-ecouter">Écouter le texte</button><button class="btn" type="button" id="maison-ecouter-debut" hidden>Depuis le début</button></div><p class="muted" id="maison-ecoute-info" role="status" hidden></p></div>' : ""}<p class="lead">L’enfant lit. Touchez les mots mal lus.</p>
       <div class="maison-identite"><label for="maison-prenom">Prénom de l’enfant</label><input id="maison-prenom" autocomplete="off" autocapitalize="words" maxlength="80" value="${esc(profil().prenom)}"><p id="maison-prenom-erreur" class="maison-erreur" role="status" hidden></p></div>
       <div class="maison-pilotage"><div class="chrono"><div><strong class="big-num" id="maison-chrono">${duree}</strong> secondes</div>
       <div class="row"><button class="btn primary" id="maison-depart" type="button">Démarrer</button><button class="btn" id="maison-fini" type="button" hidden>Lecture terminée</button></div></div>
-      <p id="maison-consigne" role="status">Démarrez quand l’enfant est prêt.</p></div>
+      <div class="defi-compte-rebours" id="maison-compte-rebours" role="status" aria-live="assertive" aria-atomic="true" hidden><span>La lecture commence dans</span><strong class="defi-compte-nombre" id="maison-compte-nombre"></strong></div>
+      <p class="defi-consigne" id="maison-consigne" role="status">Après Démarrer : 3 secondes de préparation, avec trois bips (3, 2, 1).</p></div>
       <div id="maison-resultat" tabindex="-1" hidden></div><div class="maison-texte"><div class="text" id="maison-texte" lang="fr"></div></div>`;
     const champ = P.querySelector("#maison-prenom"), erreur = P.querySelector("#maison-prenom-erreur"), bouton = P.querySelector("#maison-depart"), fini = P.querySelector("#maison-fini"), chrono = P.querySelector("#maison-chrono"), consigne = P.querySelector("#maison-consigne"), texte = P.querySelector("#maison-texte"), resultat = P.querySelector("#maison-resultat"), spans = [];
+    const pilotage=P.querySelector(".maison-pilotage"), compte=P.querySelector("#maison-compte-rebours"), nombre=P.querySelector("#maison-compte-nombre");
+    // La voix reste dans cet écran ; le défi et la navigation arrêtent toute écoute.
+    const audio=E.audio ? $("#audio") : null, ecouter=P.querySelector("#maison-ecouter"), debut=P.querySelector("#maison-ecouter-debut"), infoEcoute=P.querySelector("#maison-ecoute-info");
+    let souhaiteEcoute=false, commandeEcoute=0;
+    function ecoutePossible(){return etat==="pret" || etat==="fini";}
+    function actualiseEcoute(){
+      if(!audio)return;
+      ecouter.disabled=debut.disabled=!ecoutePossible();
+      ecouter.textContent=souhaiteEcoute ? "Pause" : audio.currentTime>0&&!audio.ended ? "Reprendre l’écoute" : "Écouter le texte";
+      debut.hidden=!souhaiteEcoute && !(audio.currentTime>0&&!audio.ended);
+    }
+    function messageEcoute(message){if(infoEcoute){infoEcoute.textContent=message;infoEcoute.hidden=!message;}}
+    function arreteEcoute(){
+      if(!audio)return;
+      commandeEcoute++;souhaiteEcoute=false;audio.pause();
+      try{audio.currentTime=0;}catch(e){}
+      messageEcoute("");actualiseEcoute();
+    }
+    async function joueEcoute(recommence=false){
+      if(!audio || !ecoutePossible() || !P.isConnected)return;
+      const commande=++commandeEcoute;
+      if(audio.error)audio.load(); // Un échec de téléchargement peut être réessayé après retour du réseau.
+      if(recommence || audio.ended){try{audio.currentTime=0;}catch(e){}}
+      souhaiteEcoute=true;messageEcoute("");actualiseEcoute();
+      try{await audio.play();}
+      catch(e){if(commande===commandeEcoute && etat!=="annule"){souhaiteEcoute=false;actualiseEcoute();messageEcoute("Impossible de lire la voix. Vérifiez votre connexion, puis touchez Écouter le texte.");}}
+    }
+    function ecouteCommence(){if(!souhaiteEcoute || !ecoutePossible()){audio.pause();return;}actualiseEcoute();}
+    function ecouteFinit(){arreteEcoute();messageEcoute("Écoute terminée.");}
+    function ecouteEchoue(){if(souhaiteEcoute){souhaiteEcoute=false;actualiseEcoute();messageEcoute("Impossible de lire la voix. Vérifiez votre connexion, puis touchez Écouter le texte.");}}
+    if(audio){
+      audio.pause();audio.src=E.audio;audio.dataset.maisonEp=E.id;
+      audio.defaultPlaybackRate=audio.playbackRate=1;
+      try{audio.currentTime=0;}catch(e){}
+      ecouter.onclick=()=>{
+        if(!ecoutePossible())return;
+        if(souhaiteEcoute){commandeEcoute++;souhaiteEcoute=false;audio.pause();actualiseEcoute();messageEcoute("Écoute en pause.");}
+        else joueEcoute();
+      };
+      debut.onclick=()=>joueEcoute(true);
+      audio.addEventListener("play",ecouteCommence);audio.addEventListener("ended",ecouteFinit);audio.addEventListener("error",ecouteEchoue);
+      window.addEventListener("beforeprint",arreteEcoute);
+    }
     // Un seul résultat replié par texte, avec sa transmission, sans liste sur l'accueil.
     const precedent=donnees.historique.filter(r=>(r.contexte||"")===contexte && r.ep===E.id).slice().reverse()[0];
     if(precedent){const detail=el("details",{id:"maison-bilan-precedent",class:"maison-bilan-precedent"});detail.appendChild(el("summary",{},"Dernier résultat"));detail.appendChild(carte(precedent));resultat.after(detail);}
     mots.forEach((mot,i)=>{
-      if (mot.brk) texte.appendChild(el("br"));
+      Banc.ajouteRupture(texte,mot);
       const span = el("span",{class:"w","data-index":String(i)}); span.textContent = mot.t;
       if (mot.w){
         span.setAttribute("role","button"); span.setAttribute("tabindex","0"); span.setAttribute("aria-pressed","false");
@@ -172,7 +229,8 @@ const Parents = (() => {
       if (etat !== "lecture") return;
       clearInterval(timer); timer=null; ecoule=Math.max(1,Math.min(duree,s)); etat="dernier";
       chrono.textContent=String(Math.max(0,Math.ceil(duree-ecoule))); fini.hidden=true; bouton.disabled=true;
-      consigne.textContent="Touchez le dernier mot lu."; bip();
+      pilotage.classList.add("etat-dernier");consigne.classList.add("etat-dernier");
+      consigne.textContent="Touchez maintenant le dernier mot lu."; bip();
     }
     function touche(i){
       actualise();
@@ -182,8 +240,8 @@ const Parents = (() => {
       } else if (etat === "dernier") termine(i);
     }
     function termine(dernier){
-      etat="fini"; Plateforme.eveille(false);
-      P.querySelector(".maison-pilotage").classList.add("termine");
+      etat="fini"; actualiseEcoute(); Plateforme.eveille(false);
+      pilotage.classList.remove("etat-dernier");consigne.classList.remove("etat-dernier");pilotage.classList.add("termine");
       const secondes = Math.max(1,Math.min(60,Math.round(ecoule)));
       const {eleve, ...mesures} = calcule(E,null,secondes,dernier,fautes);
       const r = {...mesures,formatVersion:1,origine:"maison",contexte:contexteDefi,prenom, titre:E.titre};
@@ -201,35 +259,39 @@ const Parents = (() => {
       if(etat !== "pret") return;
       try {prenom=validePrenom(champ.value);} catch(e){erreur.hidden=false;erreur.textContent=e.message;champ.focus();return;}
       erreur.hidden=true; profil().prenom=prenom; sauve(); champ.value=prenom; champ.disabled=true;
-      etat="lecture"; depart=performance.now(); bouton.disabled=true; fini.hidden=false;
-      consigne.textContent="Touchez les mots mal lus. Un deuxième toucher annule.";
-      bip(); Plateforme.eveille(true); timer=setInterval(actualise,100); actualise();
+      etat="compte-rebours";arreteEcoute();bouton.disabled=true;fini.hidden=true;pilotage.classList.add("etat-compte-rebours");
+      spans.filter(s=>s.getAttribute("role")==="button").forEach(s=>s.setAttribute("aria-disabled","true"));
+      consigne.textContent="Préparez-vous. Attendez la fin du compte à rebours pour lire.";
+      Plateforme.eveille(true);
+      annuleCompte=Banc.compteRebours({
+        surNombre:n=>{if(etat!=="compte-rebours")return;nombre.textContent=String(n);compte.hidden=false;},
+        termine:()=>{
+          if(etat!=="compte-rebours"||!P.isConnected)return;
+          annuleCompte=()=>{};compte.hidden=true;pilotage.classList.remove("etat-compte-rebours");
+          spans.forEach(s=>s.removeAttribute("aria-disabled"));
+          etat="lecture";depart=performance.now();fini.hidden=false;
+          consigne.textContent="Touchez les mots mal lus. Un deuxième toucher annule.";
+          timer=setInterval(actualise,100);actualise();
+        }
+      });
     };
     fini.onclick = ()=>termineTemps((performance.now()-depart)/1000);
-    document.addEventListener("visibilitychange",actualise);
-    return ()=>{clearInterval(timer);document.removeEventListener("visibilitychange",actualise);Plateforme.eveille(false);};
+    function visibilite(){
+      if(document.hidden&&etat==="compte-rebours"){
+        annuleCompte();annuleCompte=()=>{};etat="pret";compte.hidden=true;pilotage.classList.remove("etat-compte-rebours");
+        spans.forEach(s=>s.removeAttribute("aria-disabled"));champ.disabled=false;bouton.disabled=false;
+        consigne.textContent="Départ interrompu. Appuyez sur Démarrer quand l’enfant est prêt : 3, 2, 1 annonceront le départ.";
+        actualiseEcoute();Plateforme.eveille(false);return;
+      }
+      actualise();
+    }
+    document.addEventListener("visibilitychange",visibilite);
+    return ()=>{
+      etat="annule";arreteEcoute();annuleCompte();clearInterval(timer);document.removeEventListener("visibilitychange",visibilite);Plateforme.eveille(false);
+      if(audio){audio.removeEventListener("play",ecouteCommence);audio.removeEventListener("ended",ecouteFinit);audio.removeEventListener("error",ecouteEchoue);window.removeEventListener("beforeprint",arreteEcoute);}
+    };
   }
-  function prepareImpression(E){
-    const feuille = $("#maison-impression");
-    feuille.replaceChildren(); feuille.dataset.ep=E.id;
-    feuille.classList.toggle("texte-long",E.nbMots>300);
-    const titre=el("h1");titre.textContent=E.titre;feuille.appendChild(titre);
-    let index=0;
-    E.pages.slice(1).forEach((page,pi)=>{
-      const p=el("p",{"data-page":String(pi+1)});
-      page.toks.forEach((t,i)=>{
-        if(i) p.appendChild(document.createTextNode(" "));
-        const mot=el("span",{class:"impression-mot","data-index":String(index++)});mot.textContent=t[0];p.appendChild(mot);
-      });
-      feuille.appendChild(p);
-    });
-    if(E.source){const source=el("footer");source.textContent=E.source;feuille.appendChild(source);}
-    document.documentElement.dataset.impression="texte";
-  }
-  function imprime(E){
-    prepareImpression(E);
-    window.print();
-  }
+  function imprime(E){Banc.imprimeTexte(E);}
   async function demarre(){
     if (Banc.ROLE !== "parents") return;
     charge();
@@ -245,8 +307,7 @@ const Parents = (() => {
     Ecran.demarreMaison({accueil,defi,imprime,vitesse:()=>profil().vitesse,fixeVitesse:v=>{if([0.6,0.8,1].includes(v)){profil().vitesse=v;sauve();}}});
     if(stopCloud)stopCloud();stopCloud=window.MaisonCloud?.surChange?.(actualiseCartesCloud)||null;
     if(!ecoutesInstallees){ecoutesInstallees=true;
-      window.addEventListener("beforeprint",()=>{const r=Ecran.route();if(r.name==="episode"){const E=Banc.ep(r.id);if(E)prepareImpression(E);}});
-      window.addEventListener("afterprint",()=>{delete document.documentElement.dataset.impression;});
+      window.addEventListener("beforeprint",()=>{const r=Ecran.route();if(r.name==="episode"){const E=Banc.ep(r.id);if(E)Banc.prepareImpression(E);}});
       window.addEventListener("hashchange",()=>{if(tokenLien()!==tokenSession){window.ParentsProgres?.ferme();$("#view").replaceChildren(el("p",{role:"status"},"Ouverture du lien personnel…"));location.reload();}});
     }
     afficheStockage();

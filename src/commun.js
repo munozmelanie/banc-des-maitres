@@ -10,12 +10,30 @@ const Banc = (() => {
   const estMot = t => /[0-9A-Za-zÀ-ÖØ-öø-ÿœŒ]/.test(t);
   const nu = t => String(t).replace(/^[«“(\s ]+|[\s »”).,;:!?…]+$/g, ""); // le mot sans la ponctuation autour
   const ep = id => EPS.find(e=>e.id===id) || null;
+  const estDisponible = E => !!E && E.fluence!==false;
+  const textesDisponibles = () => EPS.filter(estDisponible);
+  const textesFamille = () => textesDisponibles().filter(E=>E.collection==="tamallette-p2" || (E.collection==="feuilleton" && Number.isFinite(Date.parse(E.ouvertureFamille))));
+  const ouvertFamille = (E,maintenant=Date.now()) => estDisponible(E) && (E.collection==="tamallette-p2" || (E.collection==="feuilleton" && Number.isFinite(Date.parse(E.ouvertureFamille)) && maintenant>=Date.parse(E.ouvertureFamille)));
+  const dateFamille = E => new Intl.DateTimeFormat("fr-FR",{timeZone:"Europe/Paris",weekday:"long",day:"numeric",month:"long"}).format(new Date(E.ouvertureFamille))+" · 16 h 30";
   const estTamallette = E => E && E.collection==="tamallette-p2";
   const libelleEpisode = E => `${estTamallette(E) ? "Tamallette · texte" : "Épisode"} ${E.num}`;
   const codeEpisode = id => String(id).replace(/^E/, "É");
   const etapesEpisode = E => ["Les mots", E.audio ? "J'écoute" : "Je lis", "L'écho", "Le chœur", "Le défi", "Les progrès"];
   /* les mots du défi : toutes les pages du texte (sans le titre), dans l'ordre */
-  function motsDefi(E){ const t = []; E.pages.slice(1).forEach((p,pi)=>p.toks.forEach((x,i)=>t.push({t:x[0], w:estMot(x[0]), pi, brk:i===0 && pi>0}))); return t; }
+  function motsDefi(E){
+    const t = [], ruptures = new Map((E.layout?.breaks||[]).map(b=>[b.at,b.kind]));
+    E.pages.slice(1).forEach((p,pi)=>p.toks.forEach((x,i)=>{
+      const rupture = E.layout ? (t.length ? ruptures.get(t.length)||null : null) : (i===0 && pi>0 ? "paragraph" : null);
+      t.push({t:x[0], w:estMot(x[0]), pi, brk:!!rupture, rupture});
+    }));
+    return t;
+  }
+  function ajouteRupture(box, mot){
+    const genre = mot.rupture || (mot.brk ? "paragraph" : null);
+    if (!genre) return;
+    box.appendChild(el("br",{class:"texte-retour", "data-rupture":genre}));
+    if (genre==="paragraph" || genre==="stanza") box.appendChild(el("span",{class:"texte-espace", "aria-hidden":"true"}));
+  }
   const DUREE = () => /essai-rapide/.test(location.hash) ? 8 : 60;
 
   /* Import de classe : lecture locale uniquement ; aucun identifiant du fichier n'est repris. */
@@ -335,7 +353,7 @@ const Banc = (() => {
       ${eleves.map(e=>{const a=Donnees.progres(e.id,etat.origine);return `<button type="button" class="progression-eleve" data-progress-eleve="${esc(e.id)}" aria-pressed="${etat.eleve===e.id}"${normalise(e.nom).includes(normalise(etat.recherche))?"":" hidden"}><span class="progression-avatar" aria-hidden="true">${esc(lettres(e.nom))}</span><span class="progression-eleve-nom">${esc(e.nom)}<small>${a.nombre?`${a.nombre} lecture${a.nombre>1?"s":""}`:"Aucune lecture"}</small></span><span class="progression-eleve-score">${score(a.dernier)}${a.dernier!==null?"<small>MCLM</small>":""}</span></button>`;}).join("")}
       </div><p class="muted progression-aucun-eleve" id="progression-recherche-vide" hidden>Aucun élève trouvé.</p>${!eleves.length?'<p class="muted">Ajoute les élèves depuis l’onglet Élèves.</p>':""}</aside>
       <div class="progression-detail" id="progression-detail">${st?`<button class="btn progression-retour" id="progression-retour" type="button">← Tous les élèves</button><section class="progression-carte"><div class="progression-fiche-entete"><div><p class="progression-surtitre">${lieu}</p><h2 id="progression-titre" tabindex="-1">${esc(st.nom)}</h2></div><div class="progression-objectif" id="progression-objectif">${p.objectif.valeur!==null?`<span>Objectif${p.objectif.mode==="automatique"?" automatique":" manuel"}</span><strong><span data-progress-objectif-valeur>${esc(p.objectif.valeur)}</span> <small>MCLM</small></strong>`:"<span>Objectif automatique</span><strong class=\"progression-objectif-attente\">Après la première lecture</strong>"}</div></div>
-      <div class="progression-filtre"><label for="progression-texte">Texte</label><select id="progression-texte"><option value="">Tous les textes</option>${EPS.map(e=>`<option value="${esc(e.id)}"${etat.texte===e.id?" selected":""}>${esc(e.titre)}</option>`).join("")}</select></div>
+      <div class="progression-filtre"><label for="progression-texte">Texte</label><select id="progression-texte"><option value="">Tous les textes</option>${EPS.filter(e=>estDisponible(e)||Donnees.progres(st.id,etat.origine).lectures.some(r=>r.ep===e.id)).map(e=>`<option value="${esc(e.id)}"${etat.texte===e.id?" selected":""}>${esc(e.titre)}</option>`).join("")}</select></div>
       <div class="progression-stats"><div><span>Dernière lecture</span><strong data-progress-stat="dernier">${score(p.dernier)}</strong><small>MCLM</small></div><div><span>Meilleur résultat</span><strong data-progress-stat="meilleur">${score(p.meilleur)}</strong><small>MCLM</small></div><div><span>Depuis la première</span><strong data-progress-stat="evolution" class="${p.evolution>0?"progression-hausse":""}">${p.evolution===null?"—":(p.evolution>0?"+":"")+p.evolution}</strong><small>MCLM</small></div><div><span>Lectures</span><strong data-progress-stat="lectures">${p.nombre}</strong><small>${lieu.toLocaleLowerCase("fr")}</small></div></div>
       <div class="progression-graphique"><div class="progression-legende"><span><i></i> Mots corrects par minute</span>${p.objectif.valeur!==null?'<span><i class="progression-tiret"></i> Objectif</span>':""}</div>${p.mesures.length?grapheProgres(p.mesures,p.objectif.valeur,compacte||innerWidth<680):`<div class="progression-vide"><span aria-hidden="true">↗</span><h3>${p.nombre?"Pas encore de mesure à tracer":"Pas encore de lecture"}</h3><p>${etat.texte?"Aucune lecture pour ce texte":"Les lectures "+(foyer?"faites à la maison":"faites en classe")} ${p.nombre?"avec un score et une date valides.":etat.texte?" "+lieu.toLocaleLowerCase("fr")+".":"apparaîtront ici."}</p></div>`}</div><p class="progression-note">${etat.texte?"Lectures de ce texte, dans l’ordre chronologique.":"Plusieurs textes peuvent avoir des difficultés différentes. Choisis un texte pour comparer ses lectures."}${foyer?" Bilans déclarés par la famille.":""}</p>
       </section><details class="progression-carte progression-lectures" id="tous"${etat.tous?" open":""}><summary>Les lectures <span>${p.nombre}</span></summary><div id="progression-lectures">${p.lectures.length?p.lectures.slice().reverse().map(r=>{const durs=motsDifficiles(r);return `<details class="progression-lecture" data-progress-lecture="${esc(r.id)}"${etat.ouverts.has(r.id)?" open":""}><summary><span class="progression-lecture-texte">${esc(titreProgres(r))}<small>${esc(dateProgres(r.date))} · lecture ${r.essai}</small></span><span class="progression-lecture-score">${Number.isSafeInteger(r.mclm)&&r.mclm>=0?r.mclm:"—"}<small>MCLM</small></span></summary><div class="progression-lecture-detail"><dl><div><dt>Mots lus</dt><dd>${esc(r.lus??"—")}</dd></div><div><dt>Erreurs</dt><dd>${esc(r.erreurs??"—")}</dd></div><div><dt>Temps</dt><dd>${esc(r.secondes??"—")} s</dd></div></dl>${durs.length?`<p class="label">Mots à retravailler</p><div class="hard">${durs.map(m=>`<span>${esc(m)}</span>`).join("")}</div>`:""}<button type="button" class="btn danger" data-suppr="${esc(r.id)}">Supprimer cette lecture</button><p class="muted progression-suppression-info" role="status"></p></div></details>`;}).join(""):'<p class="muted">Les prochaines lectures seront consultables ici.</p>'}</div></details>`:`<section class="progression-carte progression-bienvenue"><div class="progression-bienvenue-icone" aria-hidden="true"><svg viewBox="0 0 80 80"><path d="M14 60h54M18 54V38m18 16V27m18 27V15"/><path class="progression-fleche" d="m17 28 18-13 15 3 17-12m-10 0h10v10"/></svg></div><h2>Choisis un élève</h2><p>Retrouve ses lectures ${foyer?"à la maison":"en classe"},<br>ses progrès et son objectif.</p></section>`}</div></div>
@@ -441,16 +459,63 @@ const Banc = (() => {
     EnvoiMaison.ajouteBouton(box);
   }
 
+  function prepareImpression(E){
+    if(!estDisponible(E)||(ROLE==="parents"&&!ouvertFamille(E)))return false;
+    const feuille = $("#maison-impression");
+    feuille.replaceChildren(); feuille.dataset.ep=E.id;
+    feuille.classList.toggle("texte-long",E.nbMots>300);
+    const titre=el("h1");titre.textContent=E.titre;feuille.appendChild(titre);
+    feuille.classList.toggle("texte-vers",E.layout?.type==="vers");
+    const corps=el("div",{class:"impression-corps"});feuille.appendChild(corps);
+    let p=null;
+    motsDefi(E).forEach((t,i)=>{
+      if(!p || ["paragraph","stanza"].includes(t.rupture)){
+        p=el("p",{"data-debut":String(i)});corps.appendChild(p);
+      } else if(t.rupture) ajouteRupture(p,t);
+      else p.appendChild(document.createTextNode(" "));
+      const mot=el("span",{class:"impression-mot","data-index":String(i)});mot.textContent=t.t;p.appendChild(mot);
+    });
+    if(E.source){const source=el("footer");source.textContent=E.source;feuille.appendChild(source);}
+    document.documentElement.dataset.impression="texte";
+    return true;
+  }
+  function imprimeTexte(E){
+    if(prepareImpression(E)) window.print();
+  }
+
   let actx = null;
-  function bip(){ try { actx = actx || new (window.AudioContext||window.webkitAudioContext)(); const o = actx.createOscillator(), g = actx.createGain(); o.frequency.value = 880; g.gain.setValueAtTime(.25, actx.currentTime); g.gain.exponentialRampToValueAtTime(.001, actx.currentTime+.6); o.connect(g).connect(actx.destination); o.start(); o.stop(actx.currentTime+.6); } catch(e){} }
+  function bip(duree=.6){
+    try {
+      actx = actx || new (window.AudioContext||window.webkitAudioContext)();
+      // Le premier bip est appelé directement par le clic : il déverrouille aussi le son sur iPhone.
+      if (actx.state==="suspended") actx.resume()?.catch(()=>{});
+      const o = actx.createOscillator(), g = actx.createGain();
+      o.frequency.value = 880; g.gain.setValueAtTime(.25, actx.currentTime);
+      g.gain.exponentialRampToValueAtTime(.001, actx.currentTime+duree);
+      o.connect(g).connect(actx.destination); o.start(); o.stop(actx.currentTime+duree);
+      o.onended=()=>{o.disconnect();g.disconnect();};
+    } catch(e){}
+  }
+  function compteRebours({surNombre,termine}){
+    let actif=true, nombre=3, timer=null;
+    const suivant=()=>{
+      if(!actif) return;
+      if(nombre===0){actif=false;termine();return;}
+      bip(.18);surNombre(nombre--);
+      if(actif) timer=setTimeout(suivant,1000);
+    };
+    suivant();
+    return ()=>{actif=false;clearTimeout(timer);};
+  }
 
   async function demarre(){
+    window.addEventListener("afterprint",()=>{delete document.documentElement.dataset.impression;});
     if (ROLE==="parents"){ await MaisonCloud.init(); await Parents.demarre(); return; }
     await Donnees.init();
     if (ROLE==="tel"){ document.getElementById("app-tel").hidden = false; await Telephone.demarre(); }
     else { document.getElementById("app-ecran").hidden = false; await Ecran.demarre(); }
     await MaisonCloud.init(); EnvoiMaison.recoitLien();
   }
-  return { DATA, EPS, ROLE, $, el, esc, estMot, nu, ep, estTamallette, libelleEpisode, etapesEpisode, motsDefi, DUREE, ImportClasse, Donnees, Lien, calcule, bilan, carteResultat, motsDifficiles, courbe, vueProgres, vueEleves, actualiseObjectifs, bip, demarre };
+  return { DATA, EPS, ROLE, $, el, esc, estMot, nu, ep, estDisponible, textesDisponibles, textesFamille, ouvertFamille, dateFamille, estTamallette, libelleEpisode, etapesEpisode, motsDefi, ajouteRupture, DUREE, ImportClasse, Donnees, Lien, calcule, bilan, carteResultat, motsDifficiles, courbe, vueProgres, vueEleves, actualiseObjectifs, prepareImpression, imprimeTexte, bip, compteRebours, demarre };
 })();
 window.Banc = Banc;

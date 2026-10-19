@@ -46,12 +46,16 @@ def donnees():
                 rapport.append(f'{e["id"]} : calage impossible ({x}), voix laissée de côté'); pages = None
         if pages is None:
             pages = [dict(a=None, b=None, toks=[[t, None, None] for t in tokens(p)], sents=[[a, b, None, None] for a, b in phrases(tokens(p))]) for p in e["pages"]]
-        sortie = []
+        sortie = []; offset = 0
         for k, p in enumerate(pages):
             img = S / "img" / f'{e["id"]}-{k}.webp'
-            sortie.append(dict(img=f'img/{e["id"]}-{k}.webp' if k and img.exists() else None, a=p["a"], b=p["b"], toks=p["toks"], sents=p["sents"]))
+            layout = None
+            if k and e["layout"]:
+                layout = dict(type=e["layout"]["type"], breaks=[dict(at=r["at"]-offset, kind=r["kind"]) for r in e["layout"]["breaks"] if offset <= r["at"] < offset + len(p["toks"])])
+            sortie.append(dict(img=f'img/{e["id"]}-{k}.webp' if k and img.exists() else None, a=p["a"], b=p["b"], toks=p["toks"], sents=p["sents"], layout=layout))
+            if k: offset += len(p["toks"])
         eps.append(dict(id=e["id"], num=e["num"], titre=e["titre"], semaine=e["semaine"], theme=e["theme"], mots=e["mots"],
-                        collection=e["collection"], source=e["source"],
+                        collection=e["collection"], source=e["source"], fluence=e["fluence"], ouvertureFamille=e["ouvertureFamille"], layout=e["layout"],
                         audio=f'audio/{e["id"]}.mp3' if sortie[1]["a"] is not None else None,
                         nbMots=sum(1 for p in sortie[1:] for t in p["toks"] if est_mot(t[0])), pages=sortie))
     return eps, rapport

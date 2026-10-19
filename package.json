@@ -6,11 +6,12 @@
   "scripts": {
     "build": "python3 outils/build.py",
     "hors-ligne": "python3 outils/build.py --hors-ligne",
-    "test": "python3 outils/build.py && node tests/import-classe.js && node tests/app.js",
+    "test": "python3 outils/build.py && node tests/import-classe.js && node tests/app.js && node tests/vitesse.js --chromium",
     "voix": "python3 outils/voix.py",
     "images": "python3 outils/images.py",
     "sync": "python3 outils/build.py && npx cap sync",
-    "test:classe": "python3 outils/build.py && node tests/import-classe.js"
+    "test:classe": "python3 outils/build.py && node tests/import-classe.js",
+    "test:vitesse": "python3 outils/build.py && node tests/vitesse.js"
   },
   "dependencies": {
     "@capacitor-community/keep-awake": "^8.0.1",

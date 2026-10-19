@@ -1,0 +1,145 @@
+-- Cas entièrement synthétiques, annulés à la fin de la transaction.
+begin;
+create extension if not exists pgtap with schema extensions;
+grant usage on schema extensions to anon, authenticated, service_role;
+set local search_path=public,extensions;
+select no_plan();
+insert into auth.users(id,email) values
+ ('11111111-1111-4111-8111-111111111111','a@example.invalid'),
+ ('22222222-2222-4222-8222-222222222222','b@example.invalid'),
+ ('33333333-3333-4333-8333-333333333333','parent@example.invalid');
+insert into private.fluence_teachers(user_id) values
+ ('11111111-1111-4111-8111-111111111111'),('22222222-2222-4222-8222-222222222222');
+insert into public.fluence_accesses(owner,child_ref,token_hash) values
+ ('11111111-1111-4111-8111-111111111111','child-a',repeat('a',64)),
+ ('11111111-1111-4111-8111-111111111111','child-sibling',repeat('b',64)),
+ ('22222222-2222-4222-8222-222222222222','child-a',repeat('c',64)),
+ ('11111111-1111-4111-8111-111111111111','child-empty',repeat('d',64)),
+ ('11111111-1111-4111-8111-111111111111','child-tie',repeat('e',64));
+create function pg_temp.lecture(i text,c text default 'child-a',score int default 50,stamp text default '2025-01-02T10:00:00.000Z') returns jsonb language sql immutable as $$
+ select jsonb_build_object('id',i,'child_ref',c,'origine','classe','ep','T1','date',stamp,'mclm',score,'lus',50,'erreurs',0,'secondes',60);
+$$;
+create function pg_temp.paquet(i text,score int default 40,stamp text default '2025-01-01T10:00:00.000Z') returns jsonb language sql immutable as $$
+ select jsonb_build_object('format','fluence/bilan-maison','version',1,'texte','1234abcd','bilan',jsonb_build_object('id',i,'origine','maison','prenom','Test Parent','ep','T1','titre','Texte fictif','date',stamp,'mclm',score,'lus',score,'erreurs',0,'secondes',60,'dernier',score-1,'fautes','[]'::jsonb));
+$$;
+create function pg_temp.lit(t text) returns jsonb language sql volatile as $$select public.fluence_read_progress(repeat(t,64));$$;
+
+select ok((select bool_and(relrowsecurity) from pg_class where relnamespace='private'::regnamespace and relkind='r' and relname like 'fluence_progress_%'),'toutes les tables de projection ont RLS');
+select ok(not exists(select 1 from pg_class where relnamespace='private'::regnamespace and relname like 'fluence_progress_%' and (has_table_privilege('anon',oid,'select,insert,update,delete') or has_table_privilege('authenticated',oid,'select,insert,update,delete') or has_table_privilege('service_role',oid,'select,insert,update,delete'))),'aucun accès direct aux tables privées');
+select ok(has_function_privilege('authenticated','public.fluence_sync_progress(jsonb,jsonb,jsonb)','execute'),'sync réservée au rôle authentifié');
+select ok(not has_function_privilege('anon','public.fluence_sync_progress(jsonb,jsonb,jsonb)','execute'),'sync interdite à anon');
+select ok(not has_function_privilege('service_role','public.fluence_sync_progress(jsonb,jsonb,jsonb)','execute'),'Edge ne possède pas la sync enseignante');
+select ok(has_function_privilege('service_role','public.fluence_read_progress(text,text,integer)','execute'),'lecture disponible au serveur Edge');
+select ok(not has_function_privilege('authenticated','public.fluence_read_progress(text,text,integer)','execute'),'lecture par hash inaccessible au client authentifié');
+select ok(not has_function_privilege('anon','public.fluence_read_progress(text,text,integer)','execute'),'lecture par hash inaccessible à anon');
+select ok((select bool_and(prosecdef and proconfig @> array['search_path=""']) from pg_proc where proname in ('fluence_sync_progress','fluence_read_progress','fluence_visible_progress')),'fonctions privilégiées avec search_path vide');
+set local role anon;
+select throws_ok($$select public.fluence_sync_progress('[]','[]','[]')$$,'42501',null,'anon ne peut synchroniser');
+select throws_ok($$select public.fluence_read_progress(repeat('a',64))$$,'42501',null,'anon ne peut sonder le hash');
+reset role;
+set local role authenticated;
+set local request.jwt.claim.sub='33333333-3333-4333-8333-333333333333';
+select throws_ok($$select public.fluence_sync_progress('[]','[]','[]')$$,'PT401','invalid_access','compte parent sans allowlist refusé');
+set local request.jwt.claim.sub='11111111-1111-4111-8111-111111111111';
+select is(public.fluence_sync_progress('[{"child_ref":"child-a","objectif_manuel":null,"maj":1}]',jsonb_build_array(pg_temp.lecture('class-first')),'[]'),' {"ok":true}'::jsonb,'enseignante A projette sa lecture');
+select lives_ok($$select public.fluence_sync_progress('[]',jsonb_build_array(pg_temp.lecture('class-first')),'[]')$$,'rejeu strict idempotent');
+select throws_ok($$select public.fluence_sync_progress('[]',jsonb_build_array(pg_temp.lecture('class-first','child-a',60)),'[]')$$,'PT409','idempotency_conflict','même identifiant autre contenu refusé');
+select throws_ok($$select public.fluence_sync_progress('[]',jsonb_build_array(pg_temp.lecture('forged')||'{"owner":"22222222-2222-4222-8222-222222222222"}'),'[]')$$,'PT400','invalid_payload','owner fourni rejeté');
+select throws_ok($$select public.fluence_sync_progress('[{"child_ref":"child-a","objectif_manuel":null,"maj":2,"email":"fake@example.invalid"}]','[]','[]')$$,'PT400','invalid_payload','champs élève privés interdits');
+select lives_ok($$select public.fluence_sync_progress('[]',jsonb_build_array(pg_temp.lecture('legacy')||'{"secondes":0,"erreurs":2,"mclm":77}'),'[]')$$,'legacy sans indices et score historique conservé');
+select throws_ok($$select public.fluence_sync_progress('[]',jsonb_build_array(pg_temp.lecture('bad-date')||'{"date":"2025-02-31T10:00:00Z"}'),'[]')$$,'PT400','invalid_payload','date impossible refusée');
+select throws_ok($$select public.fluence_sync_progress('[]',jsonb_build_array(pg_temp.lecture('bad-last')||'{"dernier":10}'),'[]')$$,'PT400','invalid_payload','mots lus ne dépassent pas dernier mot');
+select throws_ok($$select public.fluence_sync_progress('[]',jsonb_build_array(pg_temp.lecture('bad-fault')||'{"erreurs":2,"fautes":[1,1]}'),'[]')$$,'PT400','invalid_payload','indices répétés refusés');
+select throws_ok($$select public.fluence_sync_progress('[]',jsonb_build_array(pg_temp.lecture('ok-before-bad'),pg_temp.lecture('bad')||'{"mclm":-1}'),'[]')$$,'PT400','invalid_payload','lot invalide atomiquement refusé');
+select throws_ok($$select public.fluence_sync_progress('[]',(select jsonb_agg(pg_temp.lecture('many-'||i)) from generate_series(1,201)i),'[]')$$,'PT400','invalid_payload','201 lectures refusées');
+select throws_ok($$select public.fluence_sync_progress('[]',jsonb_build_array(pg_temp.lecture('large')||jsonb_build_object('extra',repeat('x',33000))),'[]')$$,'PT400','invalid_payload','lot de plus de 32 Kio refusé');
+select lives_ok($$select public.fluence_sync_progress('[]',jsonb_build_array(pg_temp.lecture('sibling','child-sibling',90)),'[]')$$,'autre enfant du même compte');
+set local request.jwt.claim.sub='22222222-2222-4222-8222-222222222222';
+select lives_ok($$select public.fluence_sync_progress('[]',jsonb_build_array(pg_temp.lecture('class-first','child-a',100)),'[]')$$,'autre compte peut réutiliser les mêmes identifiants locaux');
+reset role;
+select is((select count(*) from private.fluence_progress_items where local_id='ok-before-bad'),0::bigint,'aucune écriture partielle');
+select is(jsonb_array_length(pg_temp.lit('a')->'lectures'),2,'un enfant ne voit ni sa fratrie ni autre enseignante');
+select is(pg_temp.lit('b')#>>'{lectures,0,mclm}','90','fratrie isolée');
+select is(pg_temp.lit('c')#>>'{lectures,0,mclm}','100','identifiant local partagé ne traverse pas propriétaire');
+select is(pg_temp.lit('a')->'objectif','{"valeur":55,"mode":"automatique"}'::jsonb,'première classe calcule +10%');
+select is(pg_temp.lit('d')->'objectif','{"valeur":null,"mode":"attente"}'::jsonb,'aucune lecture reste en attente');
+select is(pg_temp.lit('d')->'lectures','[]'::jsonb,'enfant vide reçoit liste vide');
+select ok(not (pg_temp.lit('a')::text ~ '(child-a|owner|child_ref|local_id|source_id|email|prenom|titre|example.invalid|class-first)'),'réponse sans identifiants locaux ni données personnelles');
+select is((select count(*) from private.fluence_progress_items where owner='11111111-1111-4111-8111-111111111111'),3::bigint,'échecs ne perdent pas les autres projections');
+select lives_ok($$select public.fluence_receive_result(repeat('a',64),pg_temp.paquet('home-original'))$$,'bilan maison reçu');
+select is(jsonb_array_length(pg_temp.lit('a')->'lectures'),3,'maison visible sans import enseignante');
+select is(pg_temp.lit('a')->'objectif','{"valeur":45,"mode":"automatique"}'::jsonb,'première lecture toutes origines');
+select is(pg_temp.lit('a')#>>'{lectures,0,origine}','maison','lectures ordonnées par date croissante');
+select is(pg_temp.lit('a')#>>'{lectures,0,date}','2025-01-01T10:00:00.000Z','horodatage garde UTC Z compatible client');
+set local role authenticated;
+set local request.jwt.claim.sub='11111111-1111-4111-8111-111111111111';
+select lives_ok($$select public.fluence_sync_progress('[]',jsonb_build_array(pg_temp.lecture('maison:child-a:home-original')||'{"origine":"maison","source_id":"home-original","date":"2025-01-01T10:00:00.000Z","lus":40,"mclm":40}'),'[]')$$,'projection de la maison importée');
+select lives_ok($$select public.fluence_sync_progress('[{"child_ref":"child-a","objectif_manuel":0,"maj":5}]','[]','[]')$$,'objectif manuel zéro');
+reset role;
+select is(jsonb_array_length(pg_temp.lit('a')->'lectures'),3,'maison brute et importée ne sont pas doublonnées');
+select is(pg_temp.lit('a')->'objectif','{"valeur":0,"mode":"manuel"}'::jsonb,'zéro manuel prioritaire');
+set local role authenticated;
+select public.fluence_sync_progress('[{"child_ref":"child-a","objectif_manuel":99,"maj":4}]','[]','[]');
+reset role;
+select is(pg_temp.lit('a')#>>'{objectif,valeur}','0','ancien appareil ne remplace pas objectif récent');
+set local role authenticated;
+select public.fluence_sync_progress('[{"child_ref":"child-a","objectif_manuel":null,"maj":6}]','[]','[]');
+select public.fluence_sync_progress('[]','[]','[{"id":"class-first"},{"id":"class-before"},{"id":"maison:child-a:home-before","child_ref":"child-a","source_id":"home-before"}]');
+select public.fluence_sync_progress('[]',jsonb_build_array(pg_temp.lecture('class-before')),'[]');
+reset role;
+select is(jsonb_array_length(pg_temp.lit('a')->'lectures'),2,'tombstones classe avant et après projection appliqués');
+select public.fluence_receive_result(repeat('a',64),pg_temp.paquet('home-before'));
+select is(jsonb_array_length(pg_temp.lit('a')->'lectures'),2,'suppression maison précédant envoi reste définitive');
+set local role authenticated;
+select public.fluence_sync_progress('[]','[]','[{"id":"maison:child-a:home-original","child_ref":"child-a","source_id":"home-original"}]');
+reset role;
+select is(jsonb_array_length(pg_temp.lit('a')->'lectures'),1,'suppression masque aussi maison brute');
+select is(pg_temp.lit('a')#>>'{objectif,valeur}','85','suppression de référence recalcule depuis première active');
+select public.fluence_receive_result(repeat('b',64),pg_temp.paquet('home-original'));
+select is(jsonb_array_length(pg_temp.lit('b')->'lectures'),2,'source_id identique autre enfant reste visible');
+set local role authenticated;
+select public.fluence_sync_progress('[]','[]','[{"id":"legacy-home-id"}]');
+select public.fluence_sync_progress('[]',jsonb_build_array(pg_temp.lecture('legacy-home-id')||'{"origine":"maison","source_id":"legacy-home","date":"2025-01-01T10:00:00.000Z","lus":40,"mclm":40}'),'[]');
+reset role;
+select public.fluence_receive_result(repeat('a',64),pg_temp.paquet('legacy-home'));
+select is(jsonb_array_length(pg_temp.lit('a')->'lectures'),1,'ancien tombstone id seul récupère source maison de la projection ultérieure');
+set local role authenticated;
+select public.fluence_sync_progress('[]',jsonb_build_array(pg_temp.lecture('future-catalogue','child-a',1,'2024-01-01T00:00:00Z')||'{"ep":"E8"}'),'[]');
+select public.fluence_sync_progress('[]',jsonb_build_array(pg_temp.lecture('a-tie','child-tie',50,'2025-01-01T10:00:00.000Z'),pg_temp.lecture('z-tie','child-tie',90,'2025-01-01T10:00:00.000Z')),'[]');
+reset role;
+select is(jsonb_array_length(pg_temp.lit('a')->'lectures'),1,'hors catalogue conservé mais non publié');
+select is(pg_temp.lit('a')#>>'{objectif,valeur}','85','hors catalogue exclu de la référence automatique');
+select is((select count(*) from private.fluence_progress_items where local_id='future-catalogue'),1::bigint,'projection hors catalogue non détruite');
+select public.fluence_receive_result(repeat('e',64),pg_temp.paquet('home-tie'));
+select is(pg_temp.lit('e')#>>'{objectif,valeur}','55','dates égales départagées par ID local comme application');
+set local role authenticated;
+select public.fluence_sync_progress('[]','[]','[{"id":"a-tie"}]');
+reset role;
+select is(pg_temp.lit('e')#>>'{objectif,valeur}','45','ID maison canonique précède z à date égale');
+create temporary table pages(n int,p jsonb);
+insert into pages values(1,public.fluence_read_progress(repeat('b',64),null,1));
+insert into pages select 2,public.fluence_read_progress(repeat('b',64),p->>'suivant',1) from pages where n=1;
+select is((select jsonb_array_length(p->'lectures') from pages where n=1),1,'pagination limite respectée');
+select ok((select p->>'suivant' is not null from pages where n=1),'curseur fourni si une autre page existe');
+select is((select p->'suivant' from pages where n=2),'null'::jsonb,'dernière page sans curseur');
+select is((select count(distinct x->>'id') from pages,jsonb_array_elements(p->'lectures')x),2::bigint,'pages sans doublon ni perte');
+select ok((select (p#>>'{lectures,0,date}') < (select p#>>'{lectures,0,date}' from pages where n=2) from pages where n=1),'ordre chronologique entre pages');
+select throws_ok($$select public.fluence_read_progress(repeat('a',64),'invalid',1)$$,'PT400','invalid_payload','curseur mal formé refusé');
+select throws_ok($$select public.fluence_read_progress(repeat('a',64),null,201)$$,'PT400','invalid_payload','limite supérieure refusée');
+select throws_ok($$select public.fluence_read_progress(repeat('f',64))$$,'PT401','invalid_access','hash inconnu erreur uniforme');
+select throws_ok($$select public.fluence_read_progress('x')$$,'PT401','invalid_access','hash mal formé erreur uniforme');
+update public.fluence_accesses set revoked=true where token_hash=repeat('b',64);
+select throws_ok($$select public.fluence_read_progress(repeat('b',64))$$,'PT401','invalid_access','révocation enlève immédiatement la lecture');
+update private.fluence_teachers set enabled=false where user_id='22222222-2222-4222-8222-222222222222';
+select throws_ok($$select public.fluence_read_progress(repeat('c',64))$$,'PT401','invalid_access','désactivation enseignante erreur uniforme');
+set local role authenticated;
+set local request.jwt.claim.sub='22222222-2222-4222-8222-222222222222';
+select throws_ok($$select public.fluence_sync_progress('[]','[]','[]')$$,'PT401','invalid_access','enseignante désactivée ne synchronise plus');
+reset role;
+update private.fluence_progress_read_limits set compteur=120 where access_id=(select id from public.fluence_accesses where token_hash=repeat('d',64));
+select throws_ok($$select public.fluence_read_progress(repeat('d',64))$$,'PT429','rate_limited','121e lecture minute refusée');
+update private.fluence_progress_read_limits set minute=now()-interval '2 minutes' where access_id=(select id from public.fluence_accesses where token_hash=repeat('d',64));
+select lives_ok($$select public.fluence_read_progress(repeat('d',64))$$,'minute suivante libère quota');
+select is((select compteur from private.fluence_progress_read_limits where access_id=(select id from public.fluence_accesses where token_hash=repeat('d',64))),1,'compteur nouvelle minute réinitialisé');
+select * from finish();
+rollback;

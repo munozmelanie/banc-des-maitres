@@ -1,6 +1,6 @@
 # Réception privée des bilans Fluence
 
-Ce backend reçoit les bilans déclarés à la maison et les rend accessibles uniquement au compte enseignant autorisé. Le site public ne contient aucun élève, résultat, secret d’invitation ou identifiant de compte enseignant. La clé publique du projet peut être utilisée dans le site ; la clé serveur reste exclusivement dans l’environnement de la fonction Supabase.
+Ce backend reçoit les bilans déclarés à la maison et les rend accessibles au compte enseignant autorisé. Le lien personnel d’une famille permet aussi de consulter les progrès de son seul enfant, en classe et à la maison. Le site public ne contient aucun élève, résultat, secret d’invitation ou identifiant de compte enseignant. La clé publique du projet peut être utilisée dans le site ; la clé serveur reste exclusivement dans l’environnement de la fonction Supabase.
 
 ## Contrat avec l’application
 
@@ -39,7 +39,7 @@ La famille envoie `POST /functions/v1/fluence-bilan` avec `Content-Type: applica
 
 L’exemple de secret est volontairement invalide : aucun secret utilisable n’est publié. Les valeurs du bilan sont fictives. Les champs sont strictement limités à ce schéma. `owner`, `child_ref` et `access_id` ne sont jamais acceptés du parent : la fonction retrouve l’invitation active par le hash du secret et déduit son propriétaire. Le corps entier doit faire au plus 32 Kio. L’Edge Function et la base vérifient les bornes, la date, les erreurs, les doublons d’indices et le calcul du score. L’application enseignante vérifie aussi l’empreinte et les indices avec sa version exacte du texte. Le bilan reste une déclaration de la famille, distincte des essais de classe.
 
-Chaque succès, y compris une retransmission strictement identique, retourne HTTP 200 et seulement `{"id":"UUID","received_at":"horodatage serveur"}`. La réponse ne contient ni prénom, résultat, identifiant d’enfant, propriétaire, invitation ou données d’autres élèves. Aucun endpoint de lecture n’est offert aux parents.
+Chaque succès d’envoi, y compris une retransmission strictement identique, retourne HTTP 200 et seulement `{"id":"UUID","received_at":"horodatage serveur"}`. Ce reçu ne contient ni prénom, résultat, identifiant d’enfant, propriétaire, invitation ou données d’autres élèves. Le contrat d’envoi existant reste inchangé.
 
 | Statut | `error` | Sens |
 |---|---|---|
@@ -50,18 +50,59 @@ Chaque succès, y compris une retransmission strictement identique, retourne HTT
 | 409 | `idempotency_conflict` | Même `bilan.id` pour cette invitation avec un autre contenu ; aucune écriture. |
 | 413 | `too_large` | Corps supérieur à 32 Kio, même sans Content-Length. |
 | 415 | `json_required` | Content-Type JSON requis. |
-| 429 | `rate_limited` | Déjà 60 nouveaux bilans reçus pour cette invitation sur 24 heures glissantes. |
+| 429 | `rate_limited` | Envoi : 60 nouveaux bilans par invitation sur 24 heures glissantes. Consultation : 120 pages par invitation et minute. |
 | 503 | `service_unavailable` | Configuration, réseau ou serveur indisponible ; ne pas afficher un envoi confirmé. |
 
 La clé d’idempotence est `(access_id, bilan.id)`. Le quota et l’insertion sont protégés par un verrou PostgreSQL sur l’invitation ; les requêtes simultanées sont sérialisées. Un rejeu identique ne consomme pas le quota. Une invitation révoquée refuse même les rejeux. Un nouvel accès est nécessaire après révocation : le client ne peut réactiver l’ancien, changer son propriétaire ou le rattacher à un autre enfant.
 
 Le client enseignant peut lire ses invitations, les créer et les révoquer par PATCH `{"revoked":true}`. Il lit ses bilans avec `select=id,access_id,payload,received_at&order=received_at.asc` et doit paginer si nécessaire. Les politiques RLS filtrent toujours sur `auth.uid()` et l’allowlist, même si le filtre `owner` est absent du client. Les bilans reçus sont immuables par les clients ; les tombstones de suppression locale restent dans Fluence pour empêcher une nouvelle importation. Une purge distante éventuelle est réservée à l’administration, après sauvegarde.
 
+## Consultation familiale des progrès
+
+Le même lien individuel existant autorise cette lecture ; il constitue donc un secret donnant accès aux résultats de l’enfant. Ne pas le publier ni le partager hors de sa famille. Une révocation ou la désactivation de l’enseignante bloque immédiatement les nouvelles consultations. Aucun compte parent n’est nécessaire.
+
+```json
+{"token":"secret-hex64-généré-par-l-application","action":"progression","curseur":null,"limite":200}
+```
+
+La requête utilise le même POST `/functions/v1/fluence-bilan`. `curseur` et `limite` sont facultatifs ; la limite vaut 200 par défaut, entre 1 et 200. Les champs supplémentaires, notamment `owner`, `child_ref` et `access_id`, sont refusés. Le serveur déduit l’unique enfant de l’invitation active, puis retourne :
+
+```json
+{
+  "version": 1,
+  "objectif": {"valeur":55,"mode":"automatique"},
+  "lectures": [
+    {"id":"11111111-1111-4111-8111-111111111111","origine":"classe","ep":"T1","date":"2025-01-02T10:00:00.000Z","mclm":50,"lus":50,"erreurs":0,"secondes":60}
+  ],
+  "suivant": null
+}
+```
+
+Les valeurs ci-dessus sont fictives. Chaque `id` retourné est un UUID opaque, différent des identifiants locaux de classe. Aucun prénom, email, propriétaire, identifiant d’enfant, identifiant d’invitation, titre libre ou liste de classe n’est renvoyé. `dernier` et `fautes` sont facultatifs pour les anciennes lectures. Les dates sont en UTC avec `Z` et au plus trois décimales. Les pages sont ordonnées par date puis UUID ; passer `suivant` tel quel comme prochain `curseur`, jusqu’à `null`. Une actualisation recommence à la première page pour retrouver une lecture ancienne synchronisée depuis un autre appareil. Une pagination ne constitue pas un instantané figé de la base.
+
+L’objectif manuel est prioritaire, y compris zéro. Sinon, la première lecture active, toutes origines confondues, fournit `score + max(5, ceil(score × 0,10))`. À dates égales, le serveur utilise l’identifiant local, comme l’application ; un bilan maison utilise `maison:<child_ref>:<source_id>`. Sans lecture, la valeur est `null` et le mode `attente`. Supprimer la référence fait utiliser la première lecture encore active. La valeur manuelle est bornée à 60000 ; l’objectif automatique à 66000.
+
+Les bilans maison reçus sont visibles immédiatement, même si l’application enseignante est fermée. Leur projection après import ne crée pas de doublon. Les lectures de classe, objectifs manuels et suppressions apparaissent après synchronisation par une application enseignante connectée à son compte et à Internet. Jusqu’à cette synchronisation, les familles peuvent encore voir l’état précédent. Les suppressions reçues restent définitives, même si un appareil ancien renvoie ensuite sa sauvegarde. La consultation est sans cache et son quota est distinct de celui des envois (`Retry-After: 60` au lieu de 86400).
+
+Le catalogue publié est explicitement limité à **E1–E7 et T1–T6**. Les anciennes projections ou les bilans hors catalogue restent conservés en base, mais ne sont ni affichés ni utilisés pour l’objectif familial. Lors de l’ajout d’un texte, étendre ensemble le filtre de `private.fluence_visible_progress`, le validateur `valideProgression` de l’Edge Function et le test de concordance avec `contenu/infos.json`.
+
+## Projection par l’enseignante
+
+`POST /rest/v1/rpc/fluence_sync_progress` exige une session Auth et un compte actif dans l’allowlist. Son corps contient exactement les paramètres `p_eleves`, `p_lectures` et `p_suppressions`, chacun un tableau de 200 éléments au plus. Le lot JSONB entier est limité à 32 Kio ; le client utilise des lots d’au plus 24 Kio pour tenir compte des espaces de sérialisation PostgreSQL. Les lots sont additifs : une absence dans un lot ne supprime rien.
+
+- `p_eleves` : `{child_ref, objectif_manuel:null|entier, maj}`. La révision `maj` vient de la classe et seule une révision strictement plus récente modifie l’objectif. Aucun prénom n’est envoyé.
+- `p_lectures` : `{id, child_ref, origine, ep, date, mclm, lus, erreurs, secondes, dernier?, fautes?, source_id?}`. `source_id` est obligatoire pour `maison` et interdit pour `classe`. Une projection est immuable : un rejeu identique est accepté, un contenu différent sous le même ID retourne 409. Un client doit écarter ses anciennes entrées invalides avant de former les lots ; un lot invalide est intégralement refusé.
+- `p_suppressions` : `{id}` pour un ancien tombstone de classe, ou `{id, child_ref, source_id}` pour un bilan maison. La suppression d’un ID est enregistrée même si sa lecture n’a pas encore été projetée. Un tombstone maison masque aussi le bilan reçu directement du parent.
+
+`id` local accepte `[A-Za-z0-9:_.%+-]` sur 1 à 240 caractères ; `child_ref`, `[A-Za-z0-9_-]` sur 1 à 80 ; `source_id`, le même alphabet sur 8 à 80. Score entier 0–60000, mots lus entiers 0–1000, erreurs entières 0–mots lus, durée 0–60 secondes. La durée zéro et l’absence d’indices sont admises pour les anciens résultats ; leur score enregistré n’est pas recalculé. Les indices présents sont uniques, cohérents avec le dernier mot et le nombre d’erreurs. Les dates valides vont de 2000 à maintenant plus un jour. `maj` est un entier de 0 à 9×10¹⁵.
+
+La RPC retourne seulement `{"ok":true}` après la transaction. Elle ne prend aucun propriétaire en paramètre : celui-ci vient de `auth.uid()`. Les tables de projection vivent dans `private`, sans aucun accès direct des rôles clients ou Edge ; leurs RLS sont activées. Les fonctions privilégiées ont un `search_path` vide et des grants explicites. Seule l’Edge Function peut exécuter `fluence_read_progress`, et seule une session authentifiée autorisée peut synchroniser.
+
 ## Mise en service d’un projet dédié
 
 1. Créer ou sélectionner un projet Supabase dédié, puis lier localement la CLI avec son project ref. Aucun compte ni projet n’est créé par ces sources.
-2. Garder uniquement les schémas attendus dans les schémas exposés de la Data API. **Ne jamais exposer `private`.** Ne jamais accorder de grants supplémentaires à `anon`, notamment sur les deux tables ou la RPC serveur.
-3. Exécuter les tests ci-dessous, puis appliquer la migration avec `supabase db push`. Les grants par défaut sont explicitement retirés de chaque objet créé.
+2. Garder uniquement les schémas attendus dans les schémas exposés de la Data API. **Ne jamais exposer `private`.** Ne jamais accorder de grants supplémentaires à `anon`, notamment sur les tables ou les RPC serveur.
+3. Exécuter les tests ci-dessous, puis appliquer les migrations dans l’ordre avec `supabase db push`. La migration `202610190002_fluence_family_progress.sql` ajoute la consultation sans modifier les invitations existantes. Les grants par défaut sont explicitement retirés de chaque objet créé. Déployer ensuite l’Edge Function correspondante avant de publier le nouveau client.
 4. Dans Supabase Auth, créer le compte de l’enseignante via l’administration, avec son adresse vérifiée, puis désactiver les inscriptions publiques. L’application ne fait pas de signup. Configurer le Site URL sur l’adresse publiée de Fluence. Conserver le sujet et le modèle d’email par défaut : le parcours accepte le lien complet et fonctionne sans personnaliser le mail ni ajouter de fournisseur SMTP. Supabase refuse actuellement cette personnalisation sur le projet Free avec son fournisseur par défaut. Si un fournisseur autorise ultérieurement un modèle à code, `{{ .Token }}` peut être utilisé ; ce réglage reste facultatif.
 5. Dans le SQL Editor administrateur, ajouter **l’UUID Auth de ce compte existant** à l’allowlist. L’UUID doit rester dans la configuration privée du projet, pas dans une migration publique :
 
@@ -90,7 +131,7 @@ Sur un environnement Supabase local déjà démarré et migré :
 supabase test db
 ```
 
-Les tests pgTAP dans `tests/database/fluence.test.sql` passent dans une transaction annulée. Ils couvrent anon, un compte parent authentifié sans autorisation, deux enseignants isolés, un enseignant désactivé, immutabilité des identités, révocation, validation, déduction du propriétaire, idempotence et quota.
+Les tests pgTAP dans `tests/database/*.test.sql` passent dans des transactions annulées. Ils couvrent anon, un compte parent authentifié sans autorisation, deux enseignants isolés et deux enfants d’une même classe, un enseignant désactivé, immutabilité des identités, révocation, validation, déduction du propriétaire, idempotence et quotas. La progression vérifie aussi les objectifs, dates et IDs, suppressions avant et après projection, dédoublonnage des bilans maison, ancienne sauvegarde, pagination et champs minimaux.
 
 Sans Docker, le même SQL peut aussi être testé dans PostgreSQL WASM (PGlite) avec pgTAP, entièrement localement :
 

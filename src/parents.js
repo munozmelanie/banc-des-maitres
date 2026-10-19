@@ -4,7 +4,7 @@ const Parents = (() => {
   const { $, el, esc, motsDefi, calcule, motsDifficiles, bip } = Banc;
   const CLE = "fluence-parents-v1";
   let donnees = {version:1, prenom:"", vitesse:0.8, historique:[], profils:{}}, lectureImpossible = false, erreurStockage = "";
-  let stopCloud = null, contexte = "", tokenSession = "", ecoutesInstallees = false, categorie = "entrainement";
+  let stopCloud = null, contexte = "", tokenSession = "", ecoutesInstallees = false, categorie = "entrainement", rubrique = "entrainement";
   const tokenLien = ()=>{const t=new URLSearchParams(location.hash.slice(1)).get("famille");return /^[a-f0-9]{64}$/.test(t||"")?t:"";};
   const profil = ()=>contexte ? (donnees.profils[contexte] ||= {prenom:"",vitesse:0.8}) : donnees;
   const copieBilan = r=>{const {contexte, ...bilan}=r;return {...bilan,fautes:r.fautes.slice()};};
@@ -106,7 +106,24 @@ const Parents = (() => {
     };
     return c;
   }
+  function actualiseRubriques(){
+    document.querySelectorAll("[data-maison-rubrique]").forEach(b=>b.setAttribute("aria-current",b.dataset.maisonRubrique===rubrique?"page":"false"));
+  }
+  function installeRubriques(){
+    if($("#maison-rubriques"))return;
+    const entrainer=$("#app-ecran [data-go=home]"), nav=el("nav",{id:"maison-rubriques",class:"maison-rubriques","aria-label":"Espace famille"});
+    entrainer.before(nav);nav.appendChild(entrainer);entrainer.textContent="S’entraîner";entrainer.dataset.maisonRubrique="entrainement";
+    const retourAccueil=()=>{rubrique="entrainement";window.ParentsProgres?.ferme();};
+    entrainer.addEventListener("click",retourAccueil,true);
+    $("#home-link").addEventListener("click",retourAccueil,true);
+    $("#home-link").addEventListener("keydown",e=>{if(e.key==="Enter")retourAccueil();},true);
+    const progres=el("button",{type:"button",class:"btn","data-maison-rubrique":"progres",id:"maison-mes-progres"},"Les progrès");
+    progres.onclick=()=>{rubrique="progres";Ecran.go({name:"home"});};nav.appendChild(progres);actualiseRubriques();
+  }
   function accueil(view){
+    actualiseRubriques();
+    if(rubrique==="progres"){window.ParentsProgres?.ouvre(view,{prenom:profil().prenom});return;}
+    window.ParentsProgres?.ferme();
     view.innerHTML='<h1>Choisissez un texte</h1><nav class="maison-categories" aria-label="Catégories de textes"></nav><div id="maison-attente" class="card maison-attente" hidden><span role="status"></span><button type="button" class="btn" id="maison-reessayer">Réessayer l’envoi</button></div><section class="maison-categorie" id="maison-textes"><div class="maison-liste-textes"></div></section>';
     const categories=view.querySelector(".maison-categories"), liste=view.querySelector(".maison-liste-textes");
     [["entrainement","Textes d’entraînement"],["periode","Textes de la période"]].forEach(([id,titre])=>{
@@ -122,6 +139,7 @@ const Parents = (() => {
     actualiseAttente();afficheStockage();
   }
   function defi(P,E){
+    rubrique="entrainement";actualiseRubriques();window.ParentsProgres?.ferme();
     const duree = Banc.DUREE(), mots = motsDefi(E), fautes = new Set(), contexteDefi=contexte;
     let etat = "pret", depart = 0, ecoule = 0, timer = null, prenom = "";
     P.innerHTML = `<p class="lead">L’enfant lit. Touchez les mots mal lus.</p>
@@ -223,12 +241,13 @@ const Parents = (() => {
     const prenomDuLien = window.EnvoiMaison?.prenomLien?.();
     if (prenomDuLien){ try { profil().prenom=validePrenom(prenomDuLien); } catch(e){} }
     await window.MaisonCloud?.init?.(); // Relire la file avant de montrer les éventuels envois en attente.
+    installeRubriques();
     Ecran.demarreMaison({accueil,defi,imprime,vitesse:()=>profil().vitesse,fixeVitesse:v=>{if([0.6,0.8,1].includes(v)){profil().vitesse=v;sauve();}}});
     if(stopCloud)stopCloud();stopCloud=window.MaisonCloud?.surChange?.(actualiseCartesCloud)||null;
     if(!ecoutesInstallees){ecoutesInstallees=true;
       window.addEventListener("beforeprint",()=>{const r=Ecran.route();if(r.name==="episode"){const E=Banc.ep(r.id);if(E)prepareImpression(E);}});
       window.addEventListener("afterprint",()=>{delete document.documentElement.dataset.impression;});
-      window.addEventListener("hashchange",()=>{if(tokenLien()!==tokenSession)location.reload();});
+      window.addEventListener("hashchange",()=>{if(tokenLien()!==tokenSession){window.ParentsProgres?.ferme();$("#view").replaceChildren(el("p",{role:"status"},"Ouverture du lien personnel…"));location.reload();}});
     }
     afficheStockage();
   }

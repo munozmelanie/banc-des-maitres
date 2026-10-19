@@ -32,10 +32,12 @@ function installe(o){
     if(__cloudTest.mode==="attend")return new Promise(resolve=>{window.__reponseCloud=resolve;});
     if(__cloudTest.mode==="401")return new Response(JSON.stringify({error:"Lien révoqué"}),{status:401,headers:{"content-type":"application/json"}});
     let reponse={id:o.recu,received_at:new Date().toISOString()};
-    if(url.includes("/auth/v1/otp")||url.includes("/auth/v1/logout"))reponse={};
+    if(body.action==="progression")reponse=__cloudTest.progression||{version:1,objectif:{valeur:null,mode:"attente"},lectures:[],suivant:null};
+    else if(url.includes("/auth/v1/otp")||url.includes("/auth/v1/logout"))reponse={};
     else if(url.includes("/auth/v1/user"))reponse={id:"test-enseignante",email:"enseignante@example.test"};
     else if(url.includes("/auth/v1/verify")||url.includes("/auth/v1/token"))reponse={access_token:"test-access-token",refresh_token:"test-refresh-token",expires_in:3600,user:{id:"test-enseignante",email:"enseignante@example.test"}};
     else if(url.includes("/rest/v1/rpc/fluence_teacher_enabled"))reponse=__cloudTest.permis;
+    else if(url.includes("/rest/v1/rpc/fluence_sync_progress"))reponse={ok:true};
     else if(url.includes("/rest/v1/fluence_results")){const offset=+(new URL(url).searchParams.get("offset")||0);reponse=__cloudTest.rows.slice(offset,offset+500);}
     else if(url.includes("/rest/v1/fluence_accesses")){
       if(init.method==="POST"){__cloudTest.acces.push({...body,id:"33333333-3333-4333-8333-333333333333",revoked:false,created_at:new Date().toISOString()});reponse=[__cloudTest.acces.at(-1)];}
@@ -206,6 +208,18 @@ function installe(o){
     const stockageAuth=await ouvre({enseignante:true});await stockageAuth.evaluate(lien=>MaisonCloud.connecteCode("enseignante@example.test",lien),lienConnexion);
     const logout=await stockageAuth.evaluate(async()=>{const avant=__cloudTest.requetes.length,stock=Plateforme.Stock.set;Plateforme.Stock.set=async(k,v)=>{if(k==="fluence-cloud-auth-v1"&&v==="null")throw new Error("Stockage de test indisponible");return stock(k,v);};let message="";try{await MaisonCloud.deconnecte();}catch(e){message=e.message;}return {message,connectee:MaisonCloud.connectee(),tente:__cloudTest.requetes.slice(avant).some(r=>r.url.endsWith("/auth/v1/logout?scope=local")&&r.method==="POST")};});
     vrai(logout.tente&&!logout.connectee&&!!logout.message,"même si l'effacement local échoue, la déconnexion serveur est tentée et l'échec est signalé");
+    const consultation=await ouvre();
+    const lecturePrivee=await bilan(consultation,"test-consultation-privee");
+    await consultation.evaluate(({r,id})=>{const {ep,date,mclm,lus,erreurs,secondes,dernier,fautes}=r;__cloudTest.progression={version:1,objectif:{valeur:70,mode:"manuel"},lectures:[{id,origine:"classe",ep,date,mclm,lus,erreurs,secondes,dernier,fautes}],suivant:null};},{r:lecturePrivee,id:RECU});
+    const progression=await consultation.evaluate(()=>MaisonCloud.progressionParents());
+    vrai(progression.lectures.length===1&&progression.objectif.valeur===70&&await isolation(consultation),"la consultation privée fonctionne dans le navigateur sans lire la classe ni la session");
+    vrai(await consultation.evaluate(()=>{const r=__cloudTest.requetes.at(-1);return r.body.action==="progression"&&!r.headers.authorization&&!localStorage.getItem("fluence-parents-progres");}),"la consultation utilise le secret personnel sans conserver les progrès distants");
+    const projection=await ouvre({enseignante:true});await projection.evaluate(()=>MaisonCloud.connecteCode("enseignante@example.test","123456"));
+    const lectureClasse=await bilan(projection,"test-projection-classe");
+    await projection.evaluate(async r=>{const d={...r,origine:"classe",eleve:"test-prive"};delete d.prenom;await Banc.Donnees.ajoute(d);await MaisonCloud.synchronise();},lectureClasse);
+    vrai(await projection.evaluate(id=>__cloudTest.requetes.filter(r=>r.url.endsWith("/fluence_sync_progress")).some(r=>r.body.p_lectures.some(x=>x.id===id&&x.origine==="classe")&&!!r.headers.authorization),lectureClasse.id),"une lecture ajoutée dans Donnees est projetée avec la connexion enseignante");
+    await projection.evaluate(async id=>{await Banc.Donnees.supprime(id);await MaisonCloud.synchronise();},lectureClasse.id);
+    vrai(await projection.evaluate(id=>__cloudTest.requetes.filter(r=>r.url.endsWith("/fluence_sync_progress")).some(r=>r.body.p_suppressions.some(x=>x.id===id))&&Banc.Donnees.contientResultat(id),lectureClasse.id),"une suppression est publiée sans effacer sa marque locale");
     vrai(requêtesExtérieures.length===0,"aucune requête ne quitte les doublures de l'API et le site local");
     vrai(erreurs.length===0,"aucune erreur JavaScript"+(erreurs.length?" : "+erreurs.join(" | "):""));
     console.log(`\n${nb} vérifications de connexion familiale privée réussies.`);

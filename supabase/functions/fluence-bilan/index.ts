@@ -1,4 +1,4 @@
-/** Envoi privé d'un bilan : le secret parent autorise l'écriture, jamais la lecture. */
+/** Bilan et progrès privés : le secret parent désigne un seul enfant. */
 type Objet = Record<string, unknown>;
 type Config = {
   url: string;
@@ -9,6 +9,8 @@ type Config = {
 };
 const MAX_BYTES = 32768;
 const TOKENS = /^[0-9a-f]{64}$/;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const CURSOR = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z\|[0-9a-f-]{36}$/;
 const objet = (v: unknown): v is Objet => v !== null && typeof v === "object" && !Array.isArray(v);
 function cles(v: unknown, attendues: string[]): v is Objet {
   return objet(v) && Object.keys(v).length === attendues.length && attendues.every(k => Object.hasOwn(v, k));
@@ -39,6 +41,27 @@ export function validePaquet(value: unknown, now = Date.now()): Objet | null {
     bilan: { id: b.id, origine: "maison", prenom: b.prenom, ep: b.ep, titre: b.titre, date: b.date,
       secondes: b.secondes, dernier: b.dernier, fautes: b.fautes.slice(), lus: b.lus, erreurs: b.erreurs, mclm: score }
   };
+}
+
+/** Reconstruire une réponse minimale même si la base ajoute des colonnes. */
+export function valideProgression(value: unknown, limite = 200): Objet | null {
+  if (!objet(value) || value.version !== 1 || !objet(value.objectif) || !Array.isArray(value.lectures) || value.lectures.length > limite ||
+    (value.suivant !== null && (typeof value.suivant !== "string" || !CURSOR.test(value.suivant)))) return null;
+  const objectif = value.objectif;
+  if (!["manuel", "automatique", "attente"].includes(String(objectif.mode)) ||
+    (objectif.mode === "attente" ? objectif.valeur !== null : !entier(objectif.valeur, 0, objectif.mode === "manuel" ? 60000 : 66000))) return null;
+  const lectures: Objet[] = [], ids = new Set<string>();
+  for (const r of value.lectures) {
+    if (!objet(r) || typeof r.id !== "string" || !UUID.test(r.id) || ids.has(r.id) || !["classe", "maison"].includes(String(r.origine)) ||
+      typeof r.ep !== "string" || !/^(E[1-7]|T[1-6])$/.test(r.ep) || typeof r.date !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(r.date) || !Number.isFinite(Date.parse(r.date)) ||
+      !entier(r.mclm, 0, 60000) || !entier(r.lus, 0, 1000) || !entier(r.erreurs, 0, r.lus) || typeof r.secondes !== "number" || !Number.isFinite(r.secondes) || r.secondes < 0 || r.secondes > 60) return null;
+    if (Object.hasOwn(r, "dernier") && (!entier(r.dernier, 0, 5000) || r.lus > r.dernier + 1)) return null;
+    if (Object.hasOwn(r, "fautes") && (!Array.isArray(r.fautes) || r.fautes.length !== r.erreurs || r.fautes.length > 1000 || new Set(r.fautes).size !== r.fautes.length || r.fautes.some(f => !entier(f, 0, typeof r.dernier === "number" ? r.dernier : 5000)))) return null;
+    ids.add(r.id);
+    lectures.push({ id: r.id, origine: r.origine, ep: r.ep, date: r.date, mclm: r.mclm, lus: r.lus, erreurs: r.erreurs, secondes: r.secondes,
+      ...(Object.hasOwn(r, "dernier") ? { dernier: r.dernier } : {}), ...(Object.hasOwn(r, "fautes") ? { fautes: (r.fautes as number[]).slice() } : {}) });
+  }
+  return { version: 1, objectif: { valeur: objectif.valeur, mode: objectif.mode }, lectures, suivant: value.suivant };
 }
 
 async function litCorps(request: Request): Promise<unknown> {
@@ -83,18 +106,24 @@ export function createHandler(config: Config): (request: Request) => Promise<Res
     let body: unknown;
     try { body = await litCorps(request); }
     catch (e) { return reponse(e instanceof Error && e.message === "too_large" ? 413 : 400, { error: e instanceof Error && e.message === "too_large" ? "too_large" : "invalid_json" }); }
-    if (!cles(body, ["token", "paquet"])) return reponse(400, { error: "invalid_request" });
+    const lecture = objet(body) && body.action === "progression";
+    if (lecture) {
+      if (!objet(body) || !Object.hasOwn(body, "token") || Object.keys(body).some(k => !["token", "action", "curseur", "limite"].includes(k)) ||
+        (Object.hasOwn(body, "curseur") && body.curseur !== null && (typeof body.curseur !== "string" || !CURSOR.test(body.curseur))) ||
+        (Object.hasOwn(body, "limite") && !entier(body.limite, 1, 200))) return reponse(400, { error: "invalid_request" });
+    } else if (!cles(body, ["token", "paquet"])) return reponse(400, { error: "invalid_request" });
+    if (!objet(body)) return reponse(400, { error: "invalid_request" });
     if (typeof body.token !== "string" || !TOKENS.test(body.token)) return reponse(401, { error: "invalid_access" });
-    const paquet = validePaquet(body.paquet, config.now?.() ?? Date.now());
-    if (!paquet) return reponse(400, { error: "invalid_payload" });
+    const paquet = lecture ? null : validePaquet(body.paquet, config.now?.() ?? Date.now());
+    if (!lecture && !paquet) return reponse(400, { error: "invalid_payload" });
     if (!config.url || !config.serviceKey) return reponse(503, { error: "service_unavailable" });
     const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(body.token));
     const hash = Array.from(new Uint8Array(digest), octet => octet.toString(16).padStart(2, "0")).join("");
     try {
-      const response = await transport(config.url.replace(/\/$/, "") + "/rest/v1/rpc/fluence_receive_result", {
+      const response = await transport(config.url.replace(/\/$/, "") + "/rest/v1/rpc/" + (lecture ? "fluence_read_progress" : "fluence_receive_result"), {
         method: "POST", signal: AbortSignal.timeout(15000),
         headers: { "Content-Type": "application/json", "apikey": config.serviceKey, "Authorization": "Bearer " + config.serviceKey },
-        body: JSON.stringify({ p_token_hash: hash, p_payload: paquet })
+        body: JSON.stringify(lecture ? { p_token_hash: hash, p_cursor: body.curseur ?? null, p_limit: body.limite ?? 200 } : { p_token_hash: hash, p_payload: paquet })
       });
       const data = await response.json();
       if (!response.ok) {
@@ -103,8 +132,12 @@ export function createHandler(config: Config): (request: Request) => Promise<Res
           PT409: [409, "idempotency_conflict"], PT429: [429, "rate_limited"]
         };
         const erreur = erreurs[objet(data) && typeof data.code === "string" ? data.code : ""];
-        if (erreur) return reponse(erreur[0], { error: erreur[1] }, erreur[0] === 429 ? { "Retry-After": "86400" } : {});
+        if (erreur) return reponse(erreur[0], { error: erreur[1] }, erreur[0] === 429 ? { "Retry-After": lecture ? "60" : "86400" } : {});
         return reponse(503, { error: "service_unavailable" });
+      }
+      if (lecture) {
+        const progression = valideProgression(data, typeof body.limite === "number" ? body.limite : 200);
+        return progression ? reponse(200, progression) : reponse(503, { error: "service_unavailable" });
       }
       const recu = Array.isArray(data) && data.length === 1 ? data[0] : null;
       if (!objet(recu) || typeof recu.id !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(recu.id) || typeof recu.received_at !== "string" || !Number.isFinite(Date.parse(recu.received_at))) return reponse(503, { error: "service_unavailable" });

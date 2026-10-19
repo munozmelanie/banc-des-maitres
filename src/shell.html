@@ -413,6 +413,24 @@ html[data-role="parents"] .step{padding:0 10px}
   .progression-legende{font-size:10px;gap:8px 12px}.progression-note{font-size:11px}.progression-lectures{margin-top:14px;padding:0 15px}.progression-lecture>summary{gap:10px}
   .progression-lecture-texte{font-size:14px}.progression-lecture-texte small{font-size:11px}.progression-lecture-score{font-size:23px}.progression-sauvegarde{margin-top:16px}
 }
+/* Progrès familiaux : une seule fiche, sans liste ni actions de classe. */
+.maison-rubriques{display:flex;gap:10px;flex-wrap:wrap;width:100%;margin:2px 0 8px}
+.maison-rubriques .btn{flex:1;max-width:260px}
+.maison-rubriques [aria-current="page"]{background:var(--green);border-color:var(--green);color:var(--green-ink)}
+.maison-progres{max-width:1000px;margin:10px auto 32px}
+.maison-progres-entete{margin-bottom:24px}
+.maison-progres-entete h1{font-size:clamp(28px,4vw,42px);overflow-wrap:anywhere}
+.maison-progres-entete p{margin-top:8px}
+.maison-progres .progression-fiche-entete h2{font-size:26px!important;margin:0}
+.maison-progres-graphe{display:block;width:100%;height:auto;overflow:visible}
+.maison-progres-graphe text{font-size:14px;fill:var(--ink-soft);font-family:var(--font-read)}
+.maison-progres-message{max-width:720px}
+.maison-progres-message h2{font-size:24px;line-height:1.3;margin-top:0}
+.maison-progres-message p{line-height:1.6}
+.maison-progres-lectures>h2{font-size:23px;padding:20px 0 16px;margin:0}
+.maison-progres-lectures>h2 span{font-family:var(--font-read);font-size:14px;color:var(--ink-soft);font-weight:400;margin-left:8px}
+.maison-progres-note{font-size:14px;line-height:1.6;margin:20px 0 14px}
+@media(max-width:759px){.maison-progres-entete{margin-bottom:18px}.maison-progres-entete p{font-size:15px}.maison-progres .progression-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.maison-rubriques{gap:8px}.maison-rubriques .btn{padding-inline:10px;min-width:0;font-size:16px}.maison-progres .progression-objectif{max-width:49%}.maison-progres .progression-fiche-entete{align-items:center}}
 </style>
 </head>
 <body>

@@ -30,8 +30,11 @@ try {
   `);
   const migrations = path.join(here, '..', 'migrations');
   for (const file of (await readdir(migrations)).filter(f=>f.endsWith('.sql')).sort()) await pg.exec(await readFile(path.join(migrations,file),'utf8'));
-  const results = await pg.exec(await readFile(path.join(here,'database','fluence.test.sql'),'utf8'));
+  for (const file of (await readdir(path.join(here,'database'))).filter(f=>f.endsWith('.test.sql')).sort()) {
+  console.log('# '+file);
+  const results = await pg.exec(await readFile(path.join(here,'database',file),'utf8'));
   const tap = results.flatMap(r=>r.rows).flatMap(row=>Object.values(row)).filter(v=>typeof v==='string' && /^(ok |not ok |#|\d+\.\.)/.test(v));
   for (const line of tap) console.log(line);
   if (!tap.some(v=>/^\d+\.\./.test(v)) || tap.some(v=>/^not ok /m.test(v) || /Looks like you failed/.test(v))) throw new Error('Échec pgTAP.');
+  }
 } finally { await pg.close(); }

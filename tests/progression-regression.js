@@ -97,7 +97,7 @@ async function ouvreLecture(p,id){
           vrai(eq(await points(p),["reg-class-01","reg-class-02","reg-class-03","reg-class-04"]),label+" : la courbe classe suit date puis identifiant, sans bilans maison ni suppression");
           vrai(eq(await lectures(p),["reg-class-04","reg-class-03","reg-class-02","reg-class-01"]),label+" : la liste des lectures présente les plus récentes d'abord");
           vrai(await valeur(p,"dernier",75)&&await valeur(p,"meilleur",90)&&await valeur(p,"evolution",25)&&await valeur(p,"lectures",4),label+" : les statistiques portent seulement sur les lectures classe de l'élève");
-          vrai((await p.locator("[data-progress-objectif-valeur]").textContent()).trim()==="45"&&/automatique/i.test(await p.locator("#progression-objectif").textContent()),label+" : l'objectif commun utilise la première lecture maison malgré le mode classe");
+          vrai((await p.locator("[data-progress-objectif-valeur]").textContent()).trim()==="99"&&/automatique/i.test(await p.locator("#progression-objectif").textContent()),label+" : l’objectif commun utilise le meilleur score des deux origines, indépendamment du mode choisi");
           await p.selectOption("#progression-texte","E1");
           vrai(eq(await points(p),["reg-class-01","reg-class-02","reg-class-04"])&&await valeur(p,"meilleur",75)&&await valeur(p,"lectures",3),label+" : le filtre E1 modifie ensemble courbe, statistiques et lectures");
           vrai(eq((await lectures(p)).slice().sort(),["reg-class-01","reg-class-02","reg-class-04"]),label+" : aucun autre texte n'apparaît dans la liste filtrée");
@@ -113,7 +113,7 @@ async function ouvreLecture(p,id){
           await p.click('[data-progress-origine="maison"]');
           vrai(eq(await points(p),["reg-house-01","reg-house-02"])&&await valeur(p,"meilleur",65)&&await valeur(p,"lectures",2),label+" : le mode maison exclut tous les résultats de classe");
           await p.selectOption("#progression-texte","E1");
-          vrai(eq(await points(p),["reg-house-02"])&&(await p.locator("[data-progress-objectif-valeur]").textContent()).trim()==="45",label+" : filtrer les bilans maison ne recalcule pas l'objectif sur le seul texte");
+          vrai(eq(await points(p),["reg-house-02"])&&(await p.locator("[data-progress-objectif-valeur]").textContent()).trim()==="99",label+" : filtrer les bilans maison ne recalcule pas l'objectif sur le seul texte");
           if(tel){
             await p.click("#progression-retour");
             vrai(await p.locator("#progression-eleves").isVisible(),label+" : Retour rend la liste d'élèves accessible sur téléphone");
@@ -155,7 +155,7 @@ async function ouvreLecture(p,id){
           await attend(p,()=>Banc.Donnees.sauvegarde().resultats.liste.some(r=>r.id==="reg-house-01"&&r.suppr));
           vrai(await p.locator("#progression-texte").inputValue()==="T1"&&await p.locator('[data-progress-origine="maison"]').getAttribute("aria-pressed")==="true"&&(await points(p)).length===0,label+" : la suppression garde la fiche et son filtre, avec une courbe vide");
           vrai(await p.evaluate(()=>{const r=Banc.Donnees.sauvegarde().resultats.liste.find(r=>r.id==="reg-house-01");return r.suppr&&r.origine==="maison"&&r.sourceId==="source-reg-house-01"&&r.eleve==="test-alpha"&&Banc.Donnees.essais().length===5;}),label+" : la marque de suppression maison garde son identité sans toucher aux cinq résultats classe");
-          vrai((await p.locator("[data-progress-objectif-valeur]").textContent()).trim()==="55",label+" : supprimer la première référence fait prendre la prochaine lecture valide pour l'objectif");
+          vrai((await p.locator("[data-progress-objectif-valeur]").textContent()).trim()==="99",label+" : supprimer un score inférieur ne change pas l’objectif fondé sur le meilleur score");
           if(!await p.locator(".progression-sauvegarde").evaluate(e=>e.open))await p.locator(".progression-sauvegarde > summary").click();
           await p.locator("#progression-importer").focus();
           const choixFichier=p.waitForEvent("filechooser");await p.keyboard.press("Enter");

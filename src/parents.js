@@ -3,9 +3,13 @@
 const Parents = (() => {
   const { $, el, esc, motsDefi, calcule, motsDifficiles, bip } = Banc;
   const CLE = "fluence-parents-v1";
+  // Empreinte dédiée au lien de démonstration : jamais le secret ni son empreinte d’accès aux bilans.
+  const EMPREINTE_APERCU = "d22921451b224db9d886cdd5fc5c658d263d8a4fa63a0ccc023a8907c56b01f8";
+  let apercu = false;
   let donnees = {version:1, prenom:"", vitesse:0.8, historique:[], profils:{}}, lectureImpossible = false, erreurStockage = "";
   let stopCloud = null, contexte = "", tokenSession = "", ecoutesInstallees = false, categorie = "entrainement", rubrique = "entrainement";
-  const tokenLien = ()=>{const t=new URLSearchParams(location.hash.slice(1)).get("famille");return /^[a-f0-9]{64}$/.test(t||"")?t:"";};
+  const tokenLien = ()=>{const p=new URLSearchParams(location.hash.slice(1)),t=p.get("famille");return p.getAll("famille").length===1&&/^[a-f0-9]{64}$/.test(t||"")?t:"";};
+  const apercuEpisodes = ()=>Banc.ROLE==="parents"&&apercu===true&&!!tokenSession&&tokenLien()===tokenSession;
   const profil = ()=>contexte ? (donnees.profils[contexte] ||= {prenom:"",vitesse:0.8}) : donnees;
   const copieBilan = r=>{const {contexte, ...bilan}=r;return {...bilan,fautes:r.fautes.slice()};};
 
@@ -295,14 +299,21 @@ const Parents = (() => {
   async function demarre(){
     if (Banc.ROLE !== "parents") return;
     charge();
-    tokenSession=tokenLien();contexte="";
+    tokenSession=tokenLien();contexte="";apercu=false;
     if(tokenSession){
-      try{contexte=Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(tokenSession))),b=>b.toString(16).padStart(2,"0")).join("");}
+      try{
+        const empreinte=async texte=>Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(texte))),b=>b.toString(16).padStart(2,"0")).join("");
+        const valeurs=await Promise.all([empreinte(tokenSession),empreinte("fluence:apercu-episodes:v1:"+tokenSession)]);
+        if(tokenLien()!==tokenSession){location.reload();return;}
+        contexte=valeurs[0];apercu=valeurs[1]===EMPREINTE_APERCU;
+      }
       catch(e){contexte="indisponible";lectureImpossible=true;erreurStockage="Impossible d’isoler l’historique de ce lien personnel sur cet appareil. Les anciens bilans restent conservés. Aucun nouveau bilan ne sera sauvegardé ici.";}
     }
+    if(tokenLien()!==tokenSession){location.reload();return;}
     const prenomDuLien = window.EnvoiMaison?.prenomLien?.();
     if (prenomDuLien){ try { profil().prenom=validePrenom(prenomDuLien); } catch(e){} }
     await window.MaisonCloud?.init?.(); // Relire la file avant de montrer les éventuels envois en attente.
+    if(tokenLien()!==tokenSession){location.reload();return;}
     installeRubriques();
     Ecran.demarreMaison({accueil,defi,imprime,vitesse:()=>profil().vitesse,fixeVitesse:v=>{if([0.6,0.8,1].includes(v)){profil().vitesse=v;sauve();}}});
     if(stopCloud)stopCloud();stopCloud=window.MaisonCloud?.surChange?.(actualiseCartesCloud)||null;
@@ -312,6 +323,6 @@ const Parents = (() => {
     }
     afficheStockage();
   }
-  return {demarre};
+  return {demarre,apercuEpisodes};
 })();
 window.Parents = Parents;

@@ -34,7 +34,7 @@ async function ouvre(liste=[],eleves=[{id:'test-a',nom:'Test A',objectif:''},{id
   egal(p.lectures.map(r=>r.id),['classe-a','classe-b','classe-c','classe-z'],'classe : origines historique, null et classe, sans maison ni autre élève');
   egal(p.lectures.map(r=>r.essai),[1,1,2,3],'les lectures sont numérotées par texte dans leur origine');
   egal([p.nombre,p.dernier,p.meilleur,p.evolution],[4,80,80,30],'statistiques sur les seules lectures de classe visibles');
-  egal(p.objectif.valeur,45,'objectif unique issu de la première lecture maison, même dans la vue classe');
+  egal(p.objectif.valeur,99,'objectif issu du meilleur score maison, même dans la vue classe');
   const f=t.d.progres('test-a','classe','E1');
   egal(f.lectures.map(r=>r.id),['classe-a','classe-c','classe-z'],'le filtre texte n’ajoute aucune lecture d’un autre texte');
   egal([f.nombre,f.dernier,f.meilleur,f.evolution],[3,80,80,30],'statistiques recalculées pour le texte filtré');
@@ -43,7 +43,7 @@ async function ouvre(liste=[],eleves=[{id:'test-a',nom:'Test A',objectif:''},{id
   egal([maison.nombre,maison.dernier,maison.meilleur,maison.evolution],[2,90,90,50],'un meilleur score maison ne devient pas un record de classe');
   const une=t.d.progres('test-a','maison','T1');
   egal([une.nombre,une.dernier,une.meilleur,une.evolution],[1,40,40,null],'une seule lecture n’invente pas une progression');
-  egal(une.objectif.valeur,45,'changer de texte ne change pas l’objectif de l’élève');
+  egal(une.objectif.valeur,99,'changer de texte ne change pas l’objectif de l’élève');
   const vide=t.d.progres('test-b','maison');
   egal([vide.nombre,vide.dernier,vide.meilleur,vide.evolution],[0,null,null,null],'aucune lecture maison : les statistiques restent vides');
   egal(vide.objectif.valeur,1099,'l’objectif reste affichable sans lecture dans le mode sélectionné');

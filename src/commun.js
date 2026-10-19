@@ -13,7 +13,7 @@ const Banc = (() => {
   const estDisponible = E => !!E && E.fluence!==false;
   const textesDisponibles = () => EPS.filter(estDisponible);
   const textesFamille = () => textesDisponibles().filter(E=>E.collection==="tamallette-p2" || (E.collection==="feuilleton" && Number.isFinite(Date.parse(E.ouvertureFamille))));
-  const ouvertFamille = (E,maintenant=Date.now()) => estDisponible(E) && (E.collection==="tamallette-p2" || (E.collection==="feuilleton" && Number.isFinite(Date.parse(E.ouvertureFamille)) && maintenant>=Date.parse(E.ouvertureFamille)));
+  const ouvertFamille = (E,maintenant=Date.now()) => estDisponible(E) && (E.collection==="tamallette-p2" || (E.collection==="feuilleton" && Number.isFinite(Date.parse(E.ouvertureFamille)) && (window.Parents?.apercuEpisodes?.()===true || maintenant>=Date.parse(E.ouvertureFamille))));
   const dateFamille = E => new Intl.DateTimeFormat("fr-FR",{timeZone:"Europe/Paris",weekday:"long",day:"numeric",month:"long"}).format(new Date(E.ouvertureFamille))+" · 16 h 30";
   const estTamallette = E => E && E.collection==="tamallette-p2";
   const libelleEpisode = E => `${estTamallette(E) ? "Tamallette · texte" : "Épisode"} ${E.num}`;
@@ -181,10 +181,10 @@ const Banc = (() => {
       if (!eleve) return {valeur:null, mode:"attente", reference:null};
       const saisie = String(manuel===undefined ? (eleve.objectif ?? "") : manuel).trim();
       if (saisie!=="" && /^\d+$/.test(saisie) && Number.isSafeInteger(+saisie)) return {valeur:+saisie, mode:"manuel", reference:null};
-      const premier = valides().filter(r=>r.eleve===id && typeof r.id==="string" && ep(r.ep) && Number.isSafeInteger(r.mclm) && r.mclm>=0 && typeof r.date==="string" && Number.isFinite(Date.parse(r.date)))
-        .sort((a,b)=>Date.parse(a.date)-Date.parse(b.date) || (a.id<b.id ? -1 : a.id>b.id ? 1 : 0))[0];
-      if (!premier) return {valeur:null, mode:"attente", reference:null};
-      return {valeur:premier.mclm+Math.max(5,Math.ceil(premier.mclm/10)), mode:"automatique", reference:{id:premier.id,date:premier.date,mclm:premier.mclm}};
+      const meilleur = valides().filter(r=>r.eleve===id && typeof r.id==="string" && ep(r.ep) && (r.origine==null || r.origine==="classe" || r.origine==="maison") && Number.isSafeInteger(r.mclm) && r.mclm>=0 && r.mclm<=60000 && typeof r.date==="string" && Number.isFinite(Date.parse(r.date)))
+        .sort((a,b)=>b.mclm-a.mclm || Date.parse(a.date)-Date.parse(b.date) || (a.id<b.id ? -1 : a.id>b.id ? 1 : 0))[0];
+      if (!meilleur) return {valeur:null, mode:"attente", reference:null};
+      return {valeur:meilleur.mclm+Math.max(5,Math.ceil(meilleur.mclm/10)), mode:"automatique", reference:{id:meilleur.id,date:meilleur.date,mclm:meilleur.mclm}};
     }
     /* les essais, avec leur numéro (par élève et par épisode, dans l'ordre des dates) */
     function essais(){
@@ -384,7 +384,7 @@ const Banc = (() => {
     box.querySelectorAll("[data-objectif-info]").forEach(info=>{
       const champ=box.querySelector("#"+info.dataset.champ), cible=Donnees.objectifInfo(info.dataset.objectifInfo,champ.value);
       info.textContent=champ.value.trim()!=="" ? "Objectif manuel" : cible.valeur===null ? "Après la première lecture" : `Automatique : ${cible.valeur} MCLM`;
-      info.title=cible.reference ? `Première lecture valide : ${cible.reference.mclm} MCLM, le ${new Date(cible.reference.date).toLocaleDateString("fr-FR")}` : "";
+      info.title=cible.reference ? `Meilleur score valide : ${cible.reference.mclm} MCLM, le ${new Date(cible.reference.date).toLocaleDateString("fr-FR")}` : "";
       champ.placeholder=cible.mode==="automatique" ? `Auto : ${cible.valeur}` : "Automatique";
     });
   }
@@ -400,7 +400,7 @@ const Banc = (() => {
       <form class="card" id="import-classe-apercu" hidden autocomplete="off" style="margin-top:16px"><h2 style="font-size:24px">Vérifier la liste à importer</h2><p id="import-classe-compte" class="muted"></p>
         <p class="muted">Corrige les noms si besoin ; efface un nom pour l'écarter. Les élèves déjà présents conservent leur identifiant, leur objectif et leurs résultats. Pour distinguer deux élèves de même prénom, ajoute leur nom.</p>
         <div class="form" id="import-classe-champs"></div><div class="row start" style="margin-top:16px"><button class="btn primary" id="import-classe-confirme" type="submit">Importer et enregistrer</button><button class="btn" id="import-classe-annule" type="button">Annuler</button></div></form>
-      <p class="muted" style="margin-top:14px">Objectif automatique : première lecture valide + 10 %, avec au moins 5 MCLM de plus. Si cette lecture est supprimée, la suivante devient la référence. Tu peux modifier l’objectif à tout moment.</p><form class="form" id="f" autocomplete="off"></form><div class="row start" style="margin-top:16px"><button class="btn primary" id="sv" type="button">Enregistrer</button><button class="btn" id="add" type="button">Ajouter un élève</button><span class="saved" id="ok" role="status"></span></div>`;
+      <p class="muted" style="margin-top:14px">Objectif automatique : meilleur score valide, en classe ou à la maison, + 10 %, avec au moins 5 MCLM de plus. Il augmente à chaque nouveau record et ne baisse pas après une lecture moins réussie. Tu peux saisir un objectif manuel à tout moment.</p><form class="form" id="f" autocomplete="off"></form><div class="row start" style="margin-top:16px"><button class="btn primary" id="sv" type="button">Enregistrer</button><button class="btn" id="add" type="button">Ajouter un élève</button><span class="saved" id="ok" role="status"></span></div>`;
     const f = box.querySelector("#f");
     box.querySelector("#import-classe-choisir").onclick=()=>box.querySelector("#import-classe-file").click();
     f.onsubmit = e=>e.preventDefault();
@@ -485,27 +485,44 @@ const Banc = (() => {
 
   let actx = null;
   function bip(duree=.6){
+    let annule=false, joue=false, o=null, g=null;
+    const nettoie=()=>{try{o?.disconnect();g?.disconnect();}catch(e){}o=null;g=null;};
+    const arrete=()=>{annule=true;try{o?.stop();}catch(e){}nettoie();};
     try {
-      actx = actx || new (window.AudioContext||window.webkitAudioContext)();
-      // Le premier bip est appelé directement par le clic : il déverrouille aussi le son sur iPhone.
-      if (actx.state==="suspended") actx.resume()?.catch(()=>{});
-      const o = actx.createOscillator(), g = actx.createGain();
-      o.frequency.value = 880; g.gain.setValueAtTime(.25, actx.currentTime);
-      g.gain.exponentialRampToValueAtTime(.001, actx.currentTime+duree);
-      o.connect(g).connect(actx.destination); o.start(); o.stop(actx.currentTime+duree);
-      o.onended=()=>{o.disconnect();g.disconnect();};
+      // Safari/WKWebView utilisent sinon « ambient » : les voix restent audibles,
+      // mais le commutateur silencieux coupe WebAudio (WebKit 237322, iOS 17+).
+      try{const session=window.navigator?.audioSession;if(session&&session.type!=="playback")session.type="playback";}catch(e){}
+      if(!actx || actx.state==="closed")actx=new (window.AudioContext||window.webkitAudioContext)();
+      const contexte=actx;
+      const emet=()=>{
+        if(annule || joue || contexte!==actx || contexte.state!=="running" || document.hidden)return;
+        joue=true;
+        try{
+          const t=contexte.currentTime;o=contexte.createOscillator();g=contexte.createGain();
+          o.frequency.value=880;g.gain.setValueAtTime(.25,t);g.gain.exponentialRampToValueAtTime(.001,t+duree);
+          o.connect(g);g.connect(contexte.destination);o.onended=nettoie;o.start();o.stop(t+duree);
+        }catch(e){nettoie();}
+      };
+      // Le resume reste dans le geste du clic, y compris après interruption iOS.
+      // Aucun son n'est mis en attente dans un contexte encore suspendu.
+      if(contexte.state!=="running"){
+        const reprise=contexte.resume();reprise?.then(emet).catch(()=>{});
+      }
+      emet();
     } catch(e){}
+    return arrete;
   }
   function compteRebours({surNombre,termine}){
-    let actif=true, nombre=3, timer=null;
+    let actif=true, nombre=3, timer=null, arreteBip=()=>{};
     const suivant=()=>{
       if(!actif) return;
+      arreteBip();
       if(nombre===0){actif=false;termine();return;}
-      bip(.18);surNombre(nombre--);
+      arreteBip=bip(.18);surNombre(nombre--);
       if(actif) timer=setTimeout(suivant,1000);
     };
     suivant();
-    return ()=>{actif=false;clearTimeout(timer);};
+    return ()=>{actif=false;clearTimeout(timer);arreteBip();};
   }
 
   async function demarre(){

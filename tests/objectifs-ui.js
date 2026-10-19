@@ -1,12 +1,12 @@
 // Parcours réels Élèves/Progrès avec des données inventées, écran et téléphone.
 // Usage : python3 outils/build.py && node tests/objectifs-ui.js
-const {chromium}=require("playwright"),{site,relais}=require("./serveurs"),fs=require("node:fs"),path=require("node:path");
+const {chromium,webkit}=require("playwright"),{site,relais}=require("./serveurs"),fs=require("node:fs"),path=require("node:path");
 const CAPT="/private/tmp/fluence-objectifs-captures";
 let nb=0;
 const vrai=(ok,message)=>{if(!ok)throw new Error(message);nb++;console.log("  ✓ "+message);};
 const attend=(p,f)=>p.waitForFunction(f,null,{timeout:8000});
 (async()=>{
-  const S=await site(),R=await relais(),b=await chromium.launch(),erreurs=[];
+  const S=await site(),R=await relais(),b=await (process.argv.includes("--webkit")?webkit:chromium).launch(),erreurs=[];
   fs.mkdirSync(CAPT,{recursive:true,mode:0o700});
   try{
     for(const tel of [false,true]){
@@ -26,22 +26,22 @@ const attend=(p,f)=>p.waitForFunction(f,null,{timeout:8000});
       await attend(p,()=>Banc.Donnees.eleve("test-a").nom==="Test Renommé");
       vrai(await p.evaluate(()=>Banc.Donnees.eleve("test-a").objectif===""&&Banc.Donnees.objectif("test-a")===55),mode+" : Enregistrer conserve le mode automatique, sans transformer 55 en valeur manuelle");
       await p.locator("#f").scrollIntoViewIfNeeded();await p.screenshot({path:path.join(CAPT,tel?"objectifs-mobile.png":"objectifs-ecran.png"),fullPage:true});
-      await p.evaluate(()=>Banc.Donnees.ajoute({id:"test-maison",eleve:"test-a",ep:"T1",date:"2026-10-17T10:00:00Z",mclm:30,lus:30,erreurs:0,secondes:60,fautes:[],origine:"maison",sourceId:"test-source-maison"}));
-      await attend(p,()=>document.querySelector('[data-objectif-info="test-a"]').textContent==="Automatique : 35 MCLM");
-      vrai(await p.locator("#g0").inputValue()==="",mode+" : le bilan maison plus ancien actualise l'indication tout en gardant le champ vide");
+      await p.evaluate(()=>Banc.Donnees.ajoute({id:"test-maison",eleve:"test-a",ep:"T1",date:"2026-10-17T10:00:00Z",mclm:70,lus:70,erreurs:0,secondes:60,fautes:[],origine:"maison",sourceId:"test-source-maison"}));
+      await attend(p,()=>document.querySelector('[data-objectif-info="test-a"]').textContent==="Automatique : 77 MCLM");
+      vrai(await p.locator("#g0").inputValue()===""&&/Meilleur score valide : 70 MCLM/.test(await p.locator('[data-objectif-info="test-a"]').getAttribute("title")),mode+" : le meilleur bilan maison actualise l’indication et sa référence tout en gardant le champ vide");
       await p.fill("#g0","91");
-      vrai(await p.locator('[data-objectif-info="test-a"]').textContent()==="Objectif manuel"&&await p.evaluate(()=>Banc.Donnees.objectif("test-a")===35),mode+" : le brouillon manuel est annoncé sans être enregistré avant confirmation");
+      vrai(await p.locator('[data-objectif-info="test-a"]').textContent()==="Objectif manuel"&&await p.evaluate(()=>Banc.Donnees.objectif("test-a")===77),mode+" : le brouillon manuel est annoncé sans être enregistré avant confirmation");
       await p.click("#sv");await attend(p,()=>Banc.Donnees.objectif("test-a")===91);
-      await p.evaluate(()=>Banc.Donnees.ajoute({id:"test-encore-plus-ancien",eleve:"test-a",ep:"E1",date:"2026-10-01T10:00:00Z",mclm:0,lus:0,erreurs:0,secondes:60,fautes:[]}));
-      vrai(await p.evaluate(()=>Banc.Donnees.objectif("test-a")===91)&&await p.locator("#g0").inputValue()==="91",mode+" : la valeur manuelle reste prioritaire après l'arrivée d'une référence plus ancienne");
-      await p.fill("#g0","");await p.click("#sv");await attend(p,()=>Banc.Donnees.objectif("test-a")===5);
-      vrai(await p.locator('[data-objectif-info="test-a"]').textContent()==="Automatique : 5 MCLM",mode+" : effacer puis enregistrer réactive le calcul automatique");
+      await p.evaluate(()=>Banc.Donnees.ajoute({id:"test-encore-plus-ancien",eleve:"test-a",ep:"E1",date:"2026-10-01T10:00:00Z",mclm:100,lus:100,erreurs:0,secondes:60,fautes:[]}));
+      vrai(await p.evaluate(()=>Banc.Donnees.objectif("test-a")===91)&&await p.locator("#g0").inputValue()==="91",mode+" : la valeur manuelle reste prioritaire après l’arrivée d’un score plus élevé");
+      await p.fill("#g0","");await p.click("#sv");await attend(p,()=>Banc.Donnees.objectif("test-a")===110);
+      vrai(await p.locator('[data-objectif-info="test-a"]').textContent()==="Automatique : 110 MCLM",mode+" : effacer puis enregistrer réactive le calcul automatique");
       await p.click("#sv");await p.evaluate(()=>Banc.Donnees.supprime("test-encore-plus-ancien"));
-      await attend(p,()=>document.querySelector('[data-objectif-info="test-a"]').textContent==="Automatique : 35 MCLM");
+      await attend(p,()=>document.querySelector('[data-objectif-info="test-a"]').textContent==="Automatique : 77 MCLM");
       vrai(await p.evaluate(()=>Banc.Donnees.eleve("test-a").objectif===""),mode+" : un second Enregistrer ne fige pas la référence, même avant sa suppression");
       await p.click(tel?"[data-tab=progres]":"[data-go=progress]");
       await p.click('[data-progress-eleve="test-a"]');
-      vrai((await p.locator("[data-progress-objectif-valeur]").textContent()).trim()==="35"&&/automatique/i.test(await p.locator("#progression-objectif").textContent()),mode+" : le détail de l'élève dans Progrès affiche l'objectif automatique calculé");
+      vrai((await p.locator("[data-progress-objectif-valeur]").textContent()).trim()==="77"&&/automatique/i.test(await p.locator("#progression-objectif").textContent()),mode+" : le détail de l'élève dans Progrès affiche l'objectif automatique calculé");
       await eleves();await p.fill("#g0","0");await p.click("#sv");await attend(p,()=>Banc.Donnees.objectif("test-a")===0);
       await p.click(tel?"[data-tab=progres]":"[data-go=progress]");
       vrai((await p.locator("[data-progress-objectif-valeur]").textContent()).trim()==="0"&&/manuel/i.test(await p.locator("#progression-objectif").textContent()),mode+" : le détail sélectionné et l'objectif manuel zéro sont conservés dans Progrès");
@@ -52,14 +52,14 @@ const attend=(p,f)=>p.waitForFunction(f,null,{timeout:8000});
         await p.click("[data-go=home]");await p.click("[data-ep=E1]");await p.locator(".step").nth(4).click();
         await p.click('[data-eleve="test-c"]');
         vrai(!/Objectif/.test(await p.locator("#essai").textContent()),"défi écran : pas d'objectif inventé avant la première lecture");
-        await p.click("#go");await attend(p,()=>Ecran.etat().defi?.etat==="run");await p.click("#stop");
+        await p.click("#go");await attend(p,()=>Ecran.etat().defi?.etat==="run");await p.waitForTimeout(1600);await p.click("#stop");
         const premierMot=await p.evaluate(()=>Banc.motsDefi(Banc.ep("E1")).findIndex(x=>x.w));
         await p.locator("#txt .w").nth(premierMot).click();await attend(p,()=>!document.querySelector("#res").hidden&&Banc.Donnees.essaisDe("test-c").length===1);
         vrai(await p.evaluate(()=>document.querySelector("#essai").textContent.includes(`Objectif : ${Banc.Donnees.objectif("test-c")} MCLM`)),"défi écran : terminer la première lecture affiche aussitôt son objectif calculé");
         vrai(await p.evaluate(()=>[...document.querySelectorAll("#res dt")].find(e=>e.textContent==="Objectif automatique")?.nextElementSibling.textContent===String(Banc.Donnees.objectif("test-c"))),"la carte du résultat affiche le même objectif que la préparation du défi");
         await p.evaluate(async()=>{const db=await claude.use("db");await db._ecritDistant("banc/resultats",{liste:[{id:"test-reference-distante-c",eleve:"test-c",ep:"T1",date:"2020-10-01T10:00:00Z",mclm:50,lus:50,erreurs:0,secondes:60,fautes:[],origine:"maison",sourceId:"test-reference-source-c"}]});});
         await attend(p,()=>document.querySelector("#essai").textContent.includes("Objectif : 55 MCLM"));
-        vrai(await p.evaluate(()=>!document.querySelector("#res").hidden&&[...document.querySelectorAll("#res dt")].find(e=>e.textContent==="Objectif automatique")?.nextElementSibling.textContent==="55"),"une référence distante reçue après le défi actualise l'objectif sans fermer le résultat");
+        vrai(await p.evaluate(()=>!document.querySelector("#res").hidden&&[...document.querySelectorAll("#res dt")].find(e=>e.textContent==="Objectif automatique")?.nextElementSibling.textContent==="55"),"un meilleur score distant reçu après le défi actualise l'objectif sans fermer le résultat");
         await p.click("#go");
         vrai(await p.locator("#go").textContent()==="Départ"&&/Objectif : 55 MCLM/.test(await p.locator("#essai").textContent()),"Recommencer conserve l'objectif automatique dans la préparation suivante");
       }

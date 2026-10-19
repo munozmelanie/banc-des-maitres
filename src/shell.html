@@ -192,6 +192,23 @@ details.all summary{cursor:pointer;font-weight:700;min-height:44px;display:flex;
 #maison-dialogue textarea{resize:vertical;overflow-wrap:anywhere;line-height:1.45}
 #maison-dialogue .btn{max-width:100%;white-space:normal;line-height:1.3;padding-block:10px}
 #maison-dialogue .maison-dialogue-entete{padding-bottom:8px}
+/* Chaque bilan reste lisible sur téléphone, sans comprimer six colonnes. */
+.maison-bilans-liste{list-style:none;margin:16px 0 0;padding:0;display:grid;gap:12px}
+.maison-bilan-enregistre{min-width:0;border:1.5px solid var(--line);border-radius:14px;padding:14px;background:var(--paper)}
+.fenetre .maison-bilan-enregistre+.maison-bilan-enregistre{margin-top:0}
+.maison-bilan-identite{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 14px}
+.maison-bilan-identite h3{min-width:0;font-size:20px;line-height:1.3;text-wrap:wrap;flex:1 1 180px}
+.maison-bilan-identite time{font-size:14px;color:var(--ink-soft);white-space:nowrap;font-variant-numeric:tabular-nums}
+.maison-bilan-texte{margin:8px 0 3px;line-height:1.45}
+.maison-bilan-type{margin:0;font-size:14px;color:var(--ink-soft)}
+.maison-bilan-pied{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 16px;margin-top:12px}
+.maison-bilan-mesures{display:flex;flex-wrap:wrap;gap:12px 24px;margin:0;font-variant-numeric:tabular-nums}
+.maison-bilan-mesures dt{font-size:13px;color:var(--ink-soft);white-space:nowrap}
+.maison-bilan-mesures dd{margin:0;font-size:24px;font-weight:700;line-height:1.25;color:var(--green);white-space:nowrap}
+#maison-dialogue .maison-bilan-pied .btn{white-space:nowrap;overflow-wrap:normal}
+#maison-dialogue .cloud-message{padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;background:var(--green-soft);font-weight:700}
+#maison-dialogue .cloud-message[data-etat="erreur"]{background:var(--err-soft);border-color:var(--err);color:var(--ink)}
+#maison-dialogue .cloud-message:empty{display:none}
 
 /* ---------- Téléphone : la télécommande de la maîtresse ---------- */
 .tel{height:100%;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px)}

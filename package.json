@@ -6,7 +6,7 @@
   "scripts": {
     "build": "python3 outils/build.py",
     "hors-ligne": "python3 outils/build.py --hors-ligne",
-    "test": "python3 outils/build.py && python3 -B tests/voix.py && python3 -B tests/mise-en-page.py && node tests/compte-rebours.js && node tests/concurrence-resultats.js && node tests/import-classe.js && node tests/objectifs.js && node tests/objectifs-ui.js && node tests/progression.js && node tests/progression-regression.js --chromium && node tests/app.js && node tests/vitesse.js --chromium && node tests/defi-decompte.js && node tests/depart-parents.js && node tests/calendrier-parents.js && node tests/apercu-parents.js && node tests/ecoute-parents.js && node tests/mise-en-page-ui.js && node tests/parents.js && node tests/envoi-maison.js && node tests/maison-cloud.js && node tests/progres-cloud.js && node tests/parents-progres.js --chromium && node tests/dialogue-mobile.js --chromium && node tests/impression.js && node tests/parents-cloud-ui.js && node tests/quatre-soirs-suivi.js && node tests/quatre-soirs-parents.js && node tests/reception-progres.js && node tests/type-lecture-sync.js",
+    "test": "python3 outils/build.py && python3 -B tests/voix.py && python3 -B tests/mise-en-page.py && node tests/compte-rebours.js && node tests/concurrence-resultats.js && node tests/import-classe.js && node tests/objectifs.js && node tests/objectifs-ui.js && node tests/progression.js && node tests/progression-regression.js --chromium && node tests/app.js && node tests/vitesse.js --chromium && node tests/defi-decompte.js && node tests/depart-parents.js && node tests/calendrier-parents.js && node tests/apercu-parents.js && node tests/ecoute-parents.js && node tests/mise-en-page-ui.js && node tests/parents.js && node tests/envoi-maison.js && node tests/maison-cloud.js && node tests/progres-cloud.js && node tests/parents-progres.js --chromium && node tests/dialogue-mobile.js --chromium && node tests/impression.js && node tests/parents-cloud-ui.js && node tests/quatre-soirs-suivi.js && node tests/quatre-soirs-parents.js && node tests/reception-progres.js && node tests/type-lecture-sync.js && node tests/connexion-feedback.js && node tests/bilans-maison-mobile.js --chromium",
     "voix": "python3 outils/voix.py",
     "images": "python3 outils/images.py",
     "sync": "python3 outils/build.py && npx cap sync",
@@ -18,7 +18,9 @@
     "test:dialogue": "python3 outils/build.py && node tests/dialogue-mobile.js",
     "test:progression": "python3 outils/build.py && node tests/progression.js && node tests/progression-regression.js",
     "test:apercu": "python3 outils/build.py && node tests/apercu-parents.js",
-    "test:quatre-soirs": "python3 outils/build.py && node tests/quatre-soirs-suivi.js && node tests/quatre-soirs-parents.js && node tests/type-lecture-sync.js"
+    "test:quatre-soirs": "python3 outils/build.py && node tests/quatre-soirs-suivi.js && node tests/quatre-soirs-parents.js && node tests/type-lecture-sync.js",
+    "test:connexion-mobile": "python3 outils/build.py && node tests/connexion-feedback.js && node tests/connexion-feedback.js --webkit",
+    "test:bilans-mobile": "python3 outils/build.py && node tests/bilans-maison-mobile.js"
   },
   "dependencies": {
     "@capacitor-community/keep-awake": "^8.0.1",

@@ -232,7 +232,9 @@ const MaisonCloud = (() => {
     if(Banc.ROLE==="parents")throw Error("Accès enseignante uniquement.");
     const corps=verification(email,texte);
     const version=++generation;actualisation=null;dejaPublie.clear();
-    const d=await requete("/auth/v1/verify",{method:"POST",body:JSON.stringify(corps)});
+    let d;
+    try{d=await requete("/auth/v1/verify",{method:"POST",body:JSON.stringify(corps)});}
+    catch(e){if([400,401,403].includes(e.status))e.message="Ce lien ou ce code est expiré, déjà utilisé ou invalide. Demande un nouveau lien, puis copie-le sans l’ouvrir.";throw e;}
     await autoriseSession(d,version);await recoit();
   }
   async function deconnecte(){
@@ -306,18 +308,43 @@ const MaisonCloud = (() => {
   }
   function vue(box){
     if(Banc.ROLE==="parents")return ()=>{};
-    const {esc,Donnees}=Banc;let vivant=true,afficheFormulaire=null;
+    const {esc,Donnees}=Banc;let vivant=true,afficheFormulaire=null,messageFormulaire=null,actionEnCours=false;
     const besoinConnexion=()=>!connectee()||infos.reconnexionNecessaire;
+    function messageConnexion(texte,etat="attente",montre=true){
+      messageFormulaire={texte,etat};const info=box.querySelector("#cloud-info");
+      if(!vivant||!afficheFormulaire||!info)return;
+      info.dataset.etat=etat;info.setAttribute("role",etat==="erreur"?"alert":"status");info.textContent=texte;
+      if(montre){info.focus({preventScroll:true});info.scrollIntoView({block:"nearest",inline:"nearest"});requestAnimationFrame(()=>{if(vivant&&info.isConnected)info.scrollIntoView({block:"nearest",inline:"nearest"});});}
+    }
     async function rend(){if(!vivant)return;
       afficheFormulaire=besoinConnexion();
       if(!configure()){box.innerHTML="<h2>Réception automatique privée</h2><p>La connexion au service privé est en préparation. Les liens personnels seront disponibles ici après son activation.</p>";return;}
       if(afficheFormulaire){
-        box.innerHTML=`<h2>Connecter l'espace de l'enseignante</h2><p>Une seule connexion pour recevoir les résultats de tous tes élèves. Les bilans sont privés : seul ton compte autorisé peut les recevoir.</p><label class="label" for="cloud-email">Adresse e-mail</label><input id="cloud-email" type="email" autocomplete="email" style="width:100%"><div class="row start" style="margin-top:12px"><button class="btn primary" id="cloud-code">Recevoir un lien de connexion</button></div><p>Dans le navigateur, ouvre le lien du mail. Dans l’application iPhone : dans le mail reçu, fais un appui long sur le lien de connexion, choisis « Copier le lien », puis colle-le ici. Ne l’ouvre pas avant de le coller : il ne sert qu’une fois.</p><div id="cloud-verification"><label class="label" for="cloud-otp">Lien de connexion reçu par e-mail (ou code)</label><input id="cloud-otp" type="text" autocapitalize="off" spellcheck="false" autocomplete="off" aria-describedby="cloud-aide-lien" style="width:100%"><p class="muted" id="cloud-aide-lien">Les liens et QR codes des cartes sont réservés aux familles.</p><button class="btn primary" id="cloud-connexion" style="margin-top:10px">Se connecter</button></div><p id="cloud-info" role="status">${esc(infos.message)}</p>`;
-        const info=box.querySelector("#cloud-info"),email=box.querySelector("#cloud-email"),code=box.querySelector("#cloud-code");
+        box.innerHTML=`<h2>Connecter l'espace de l'enseignante</h2><p>Une seule connexion pour recevoir les résultats de tous tes élèves. Tu restes connectée sur cet appareil ; les bilans restent privés.</p><label class="label" for="cloud-email">Adresse e-mail</label><input id="cloud-email" type="email" autocomplete="email" style="width:100%"><div class="row start" style="margin-top:12px"><button type="button" class="btn primary" id="cloud-code">Recevoir un lien</button></div><p>Dans le mail reçu, fais un appui long sur le lien, choisis « Copier le lien », puis colle-le ici <strong>sans l’ouvrir</strong>. Il ne sert qu’une fois.</p><div id="cloud-verification"><label class="label" for="cloud-otp">Lien reçu par e-mail (ou code)</label><input id="cloud-otp" type="text" autocapitalize="off" spellcheck="false" autocomplete="off" aria-describedby="cloud-aide-lien" style="width:100%"><p class="muted" id="cloud-aide-lien">Les liens et QR codes des cartes sont réservés aux familles.</p><p id="cloud-info" class="cloud-message" tabindex="-1" role="status"></p><button type="button" class="btn primary" id="cloud-connexion" style="margin-top:10px">Se connecter</button></div>`;
+        const email=box.querySelector("#cloud-email"),code=box.querySelector("#cloud-code"),champ=box.querySelector("#cloud-otp"),connexion=box.querySelector("#cloud-connexion");
         email.value=session?.user.email||"";
-        code.onclick=async()=>{code.disabled=true;try{await demandeCode(email.value.trim());info.textContent="Le lien de connexion a été demandé. Consulte ta messagerie, puis ouvre le lien ou copie-le dans le champ ci-dessus.";}catch(e){info.textContent=e.message;}finally{code.disabled=false;}};
-        box.querySelector("#cloud-connexion").onclick=async e=>{const b=e.currentTarget;b.disabled=true;try{await connecteCode(email.value.trim(),box.querySelector("#cloud-otp").value.trim());await rend();}catch(e){info.textContent=e.message;b.disabled=false;}};return;
+        if(messageFormulaire)messageConnexion(messageFormulaire.texte,messageFormulaire.etat,false);else if(infos.message)messageConnexion(infos.message,infos.erreur?"erreur":"attente",false);
+        async function lance(connexionDemandee){
+          if(actionEnCours)return;actionEnCours=true;
+          const adresse=email.value.trim(),saisie=champ.value.trim();
+          [email,champ,code,connexion].forEach(e=>e.disabled=true);
+          (connexionDemandee?connexion:code).textContent=connexionDemandee?"Connexion…":"Demande du lien…";
+          messageConnexion(connexionDemandee?"Connexion en cours…":"Demande du lien en cours…");
+          try{
+            if(connexionDemandee){await connecteCode(adresse,saisie);messageFormulaire=null;}
+            else{await demandeCode(adresse);messageConnexion("Le lien a été demandé. Consulte ta messagerie et copie-le ici sans l’ouvrir.","succes");}
+          }catch(e){messageConnexion(e.message||"La connexion n’a pas abouti. Réessaie.","erreur");}
+          finally{
+            actionEnCours=false;
+            if(!vivant)return;
+            if(besoinConnexion()!==afficheFormulaire){await rend();return;}
+            [email,champ,code,connexion].forEach(e=>e.disabled=false);code.textContent="Recevoir un lien";connexion.textContent="Se connecter";
+            if(connexionDemandee&&!messageFormulaire&&besoinConnexion())messageConnexion(infos.message||"La connexion doit être renouvelée. Demande un nouveau lien.","erreur");
+          }
+        }
+        code.onclick=()=>lance(false);connexion.onclick=()=>lance(true);return;
       }
+      messageFormulaire=null;
       box.innerHTML=`<h2>Réception automatique privée</h2><p>Connectée : ${esc(session.user.email)}. Chaque lien autorise une famille à envoyer des bilans pour un seul enfant.</p><div class="row start"><button class="btn" id="cloud-actualise">Actualiser les bilans</button><button class="btn" id="cloud-deconnexion">Déconnecter ce compte</button></div><p id="cloud-reception" role="status">${esc([infos.message,messageProgres].filter(Boolean).join(" "))}</p><label class="label" for="cloud-eleve">Créer un lien personnel</label><select class="sel" id="cloud-eleve"><option value="">Choisir l'élève…</option>${Donnees.eleves().map(e=>`<option value="${esc(e.id)}">${esc(e.nom)}</option>`).join("")}</select><button class="btn primary" id="cloud-cree">Créer le lien parents</button><p id="cloud-info" role="status"></p><div id="cloud-lien" hidden><input id="cloud-url" readonly aria-label="Lien privé de la famille" style="width:100%"><div class="row start"><button class="btn primary" id="cloud-partage">Partager à cette famille</button><button class="btn" id="cloud-copie">Copier le lien privé</button></div><p class="muted">Transmets ce lien uniquement à la famille concernée. Garde-en une copie dans ton message : le service ne conserve pas le secret du lien.</p></div><h3>Liens créés</h3><div id="cloud-acces"></div>`;
       box.querySelector("#cloud-actualise").onclick=()=>recoit();box.querySelector("#cloud-deconnexion").onclick=async()=>{try{await deconnecte();}catch(e){const p=box.querySelector("#cloud-info");if(p&&!connectee())p.textContent=e.message;}};
       const info=box.querySelector("#cloud-info"),champ=box.querySelector("#cloud-url"),cible=box.querySelector("#cloud-acces");
@@ -327,7 +354,7 @@ const MaisonCloud = (() => {
       box.querySelector("#cloud-partage").onclick=async()=>{try{const d={title:"Fluence à la maison",text:"Voici votre lien personnel pour imprimer les textes et transmettre les bilans de lecture à l'enseignante.",url:champ.value};if(Plateforme.partage)await Plateforme.partage.share(d);else if(navigator.share)await navigator.share(d);else box.querySelector("#cloud-copie").click();}catch(e){info.textContent=e?.name==="AbortError"?"Partage annulé.":"Le partage n'a pas abouti. Tu peux copier le lien.";}};
       liste();
     }
-    const retire=surChange(()=>{if(besoinConnexion()!==afficheFormulaire){rend();return;}const p=box.querySelector(afficheFormulaire?"#cloud-info":"#cloud-reception");if(p)p.textContent=[infos.message,messageProgres].filter(Boolean).join(" ");});rend();return ()=>{vivant=false;retire();};
+    const retire=surChange(()=>{if(actionEnCours)return;if(besoinConnexion()!==afficheFormulaire){rend();return;}if(afficheFormulaire&&messageFormulaire)return;const p=box.querySelector(afficheFormulaire?"#cloud-info":"#cloud-reception");if(p)p.textContent=[infos.message,messageProgres].filter(Boolean).join(" ");});rend();return ()=>{vivant=false;retire();};
   }
   function surChange(f){ecoutes.add(f);return ()=>ecoutes.delete(f);}
   return {init,configure,parentActif,progressionParents,synchronise,etat,envoie,surChange,demandeCode,connecteCode,deconnecte,connectee,statutReception,creeLien,invitations,revoque,recoit,vue};

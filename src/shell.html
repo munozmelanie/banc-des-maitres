@@ -299,6 +299,7 @@ html[data-role="parents"] .step{padding:0 10px}
 .maison-identite input{width:100%;min-height:48px;border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--paper)}
 .maison-pilotage{position:sticky;top:0;z-index:4;background:var(--paper);border:1.5px solid var(--line);border-radius:16px;padding:12px;margin-block:12px}
 .maison-pilotage .chrono{justify-content:space-between;flex-wrap:wrap}
+.maison-pilotage .maison-lecture-terminee{width:100%;min-height:64px;padding:12px 16px;margin-top:12px;font-size:22px;line-height:1.2;font-weight:800;border-width:2px;box-shadow:0 3px 0 rgb(0 0 0 / .16)}
 .maison-pilotage p{margin:8px 0}
 .maison-pilotage.termine{position:static}
 .maison-texte{padding:18px;background:var(--paper);border-radius:18px;border:1.5px solid var(--line)}
@@ -497,6 +498,27 @@ html[data-role="parents"] .step{padding:0 10px}
 .progression-point:hover .maison-lecture-point-defi,.progression-point:focus-visible .maison-lecture-point-defi{stroke-width:5}
 .maison-progres .progression-legende .maison-lecture-losange{width:10px;height:10px;margin-inline:3px;transform:rotate(45deg);border:1.5px solid #714a00;border-radius:0;background:#e5b444}
 @media(max-width:759px){.maison-progres-entete{margin-bottom:18px}.maison-progres-entete p{font-size:15px}.maison-progres .progression-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.maison-rubriques{gap:8px}.maison-rubriques .btn{padding-inline:10px;min-width:0;font-size:16px}.maison-progres .progression-objectif{max-width:49%}.maison-progres .progression-fiche-entete{align-items:center}}
+/* Guide d’ajout à l’écran d’accueil, uniquement dans l’espace famille mobile. */
+.maison-installation{position:fixed;inset:0;width:100%;height:100%;height:100dvh;max-width:none;max-height:none;margin:0;border:0;padding:max(22px,env(safe-area-inset-top,0px)) max(20px,env(safe-area-inset-right,0px)) max(24px,env(safe-area-inset-bottom,0px)) max(20px,env(safe-area-inset-left,0px));overflow:auto;overscroll-behavior:contain;background:var(--bg);color:var(--ink)}
+.maison-installation::backdrop{background:var(--bg)}
+.maison-installation-contenu{width:100%;max-width:540px;min-height:100%;margin:0 auto;display:flex;flex-direction:column;align-items:stretch;gap:16px;justify-content:center}
+.maison-installation-logo{align-self:center;border-radius:22px;flex:none}
+.maison-installation .label{text-align:center;margin:0}
+.maison-installation h1{font-size:clamp(27px,7.2vw,36px);line-height:1.15;text-align:center}
+.maison-installation h1:focus,.maison-installation h2:focus{outline:none}
+.maison-installation-guide .maison-installation-logo,.maison-installation-guide .label,.maison-installation-guide h1,.maison-installation-guide .maison-installation-intro,.maison-installation-guide .maison-installation-prive{display:none}
+.maison-installation-intro{font-size:19px;text-align:center;margin:0}
+.maison-installation-prive{padding:12px 14px;border-radius:12px;background:var(--green-soft);font-size:16px;margin:0}
+.maison-installation .btn{width:100%;padding:12px 16px;min-height:52px;line-height:1.3}
+.maison-installation h2{font-size:24px;line-height:1.2}
+.maison-installation ol{padding-left:28px;display:grid;gap:14px;line-height:1.5}
+.maison-installation li{padding-left:5px}
+.maison-installation li::marker{font-weight:800;color:var(--green)}
+.maison-installation #maison-installation-message:empty{display:none}
+.maison-installation #maison-installation-message{padding:10px 12px;border-radius:10px;background:var(--echo);overflow-wrap:anywhere}
+.maison-installation-note{font-size:15px;text-align:center;color:var(--ink-soft);margin:0}
+.maison-guide-installation{display:block;max-width:100%;min-height:44px;padding:8px 0;border:0;background:none;text-decoration:underline;text-underline-offset:3px;text-align:left;font:inherit;font-size:15px;color:var(--ink-soft);cursor:pointer}
+@media print{.maison-installation,.maison-guide-installation{display:none!important}}
 </style>
 </head>
 <body>

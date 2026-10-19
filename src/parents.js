@@ -130,6 +130,7 @@ const Parents = (() => {
     if(rubrique==="progres"){window.ParentsProgres?.ouvre(view,{prenom:profil().prenom});return;}
     window.ParentsProgres?.ferme();
     view.innerHTML='<h1>Choisissez un texte</h1><nav class="maison-categories" aria-label="Catégories de textes"></nav><p class="maison-serie"></p><div id="maison-attente" class="card maison-attente" hidden><span role="status"></span><button type="button" class="btn" id="maison-reessayer">Réessayer l’envoi</button></div><section class="maison-categorie" id="maison-textes" aria-label="Les épisodes"><div class="maison-liste-textes"></div></section>';
+    window.ParentsInstallation?.ajouteAcces(view);
     const liste=view.querySelector(".maison-liste-textes"),categories=view.querySelector(".maison-categories");
     [["entrainement","Textes d’entraînement"],["periode","Textes de la période (facultatifs)"]].forEach(([id,titre])=>{
       const bouton=el("button",{class:"btn maison-choix-categorie",type:"button","data-categorie":id,"aria-pressed":String(categorie===id)});bouton.textContent=titre;
@@ -164,7 +165,8 @@ const Parents = (() => {
       <div class="maison-identite"><label for="maison-prenom">Prénom de l’enfant</label><input id="maison-prenom" autocomplete="off" autocapitalize="words" maxlength="80" value="${esc(profil().prenom)}"><p id="maison-prenom-erreur" class="maison-erreur" role="status" hidden></p></div>
       <fieldset id="maison-type-lecture" class="maison-lecture-choix" aria-describedby="maison-type-aide"><legend>Cette lecture</legend><div><label><input type="radio" name="typeLecture" value="entrainement" checked><span>Entraînement</span></label><label><input type="radio" name="typeLecture" value="defi"><span>Défi du 4ᵉ soir</span></label></div><p id="maison-type-aide">Choisissez le défi le 4ᵉ soir. Chaque score reste enregistré.</p></fieldset>
       <div class="maison-pilotage"><div class="chrono"><div><strong class="big-num" id="maison-chrono">${duree}</strong> secondes</div>
-      <div class="row"><button class="btn primary" id="maison-depart" type="button">Démarrer</button><button class="btn" id="maison-fini" type="button" hidden>Lecture terminée</button></div></div>
+      <div class="row"><button class="btn primary" id="maison-depart" type="button">Démarrer</button></div></div>
+      <button class="btn primary maison-lecture-terminee" id="maison-fini" type="button" hidden>Lecture terminée</button>
       <div class="defi-compte-rebours" id="maison-compte-rebours" role="status" aria-live="assertive" aria-atomic="true" hidden><span>La lecture commence dans</span><strong class="defi-compte-nombre" id="maison-compte-nombre"></strong></div>
       <p class="defi-consigne" id="maison-consigne" role="status">Après Démarrer : 3 secondes de préparation, avec trois bips (3, 2, 1).</p></div>
       <div id="maison-resultat" tabindex="-1" hidden></div><div class="maison-texte"><div class="text" id="maison-texte" lang="fr"></div></div>`;
@@ -326,6 +328,7 @@ const Parents = (() => {
       window.addEventListener("hashchange",()=>{if(tokenLien()!==tokenSession){window.ParentsProgres?.ferme();$("#view").replaceChildren(el("p",{role:"status"},"Ouverture du lien personnel…"));location.reload();}});
     }
     afficheStockage();
+    window.ParentsInstallation?.demarre({contexte});
   }
   return {demarre,apercuEpisodes};
 })();

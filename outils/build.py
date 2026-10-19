@@ -62,7 +62,7 @@ def donnees():
 
 
 POLICES = [("Andika", "400", "normal", "andika-400-normal"), ("Andika", "700", "normal", "andika-700-normal"), ("Grandstander", "100 900", "normal", "grandstander")]
-SCRIPTS = ["maison-cloud-config.js", "plateforme.js", "commun.js", "ecran.js", "telephone.js", "parents-progres.js", "parents.js", "envoi-maison.js", "maison-cloud.js"]
+SCRIPTS = ["maison-cloud-config.js", "plateforme.js", "commun.js", "ecran.js", "telephone.js", "parents-progres.js", "parents-installation.js", "parents.js", "envoi-maison.js", "maison-cloud.js"]
 VENDOR = ["nostr-lite.js", "mqtt.min.js", "qrcode.js"]
 
 

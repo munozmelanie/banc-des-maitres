@@ -304,6 +304,7 @@ html[data-role="parents"] .step{padding:0 10px}
 .maison-identite input{width:100%;min-height:48px;border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--paper)}
 .maison-pilotage{position:sticky;top:0;z-index:4;background:var(--paper);border:1.5px solid var(--line);border-radius:16px;padding:12px;margin-block:12px}
 .maison-pilotage .chrono{justify-content:space-between;flex-wrap:wrap}
+.maison-pilotage .maison-lecture-terminee{width:100%;min-height:64px;padding:12px 16px;margin-top:12px;font-size:22px;line-height:1.2;font-weight:800;border-width:2px;box-shadow:0 3px 0 rgb(0 0 0 / .16)}
 .maison-pilotage p{margin:8px 0}
 .maison-pilotage.termine{position:static}
 .maison-texte{padding:18px;background:var(--paper);border-radius:18px;border:1.5px solid var(--line)}
@@ -502,6 +503,27 @@ html[data-role="parents"] .step{padding:0 10px}
 .progression-point:hover .maison-lecture-point-defi,.progression-point:focus-visible .maison-lecture-point-defi{stroke-width:5}
 .maison-progres .progression-legende .maison-lecture-losange{width:10px;height:10px;margin-inline:3px;transform:rotate(45deg);border:1.5px solid #714a00;border-radius:0;background:#e5b444}
 @media(max-width:759px){.maison-progres-entete{margin-bottom:18px}.maison-progres-entete p{font-size:15px}.maison-progres .progression-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.maison-rubriques{gap:8px}.maison-rubriques .btn{padding-inline:10px;min-width:0;font-size:16px}.maison-progres .progression-objectif{max-width:49%}.maison-progres .progression-fiche-entete{align-items:center}}
+/* Guide d’ajout à l’écran d’accueil, uniquement dans l’espace famille mobile. */
+.maison-installation{position:fixed;inset:0;width:100%;height:100%;height:100dvh;max-width:none;max-height:none;margin:0;border:0;padding:max(22px,env(safe-area-inset-top,0px)) max(20px,env(safe-area-inset-right,0px)) max(24px,env(safe-area-inset-bottom,0px)) max(20px,env(safe-area-inset-left,0px));overflow:auto;overscroll-behavior:contain;background:var(--bg);color:var(--ink)}
+.maison-installation::backdrop{background:var(--bg)}
+.maison-installation-contenu{width:100%;max-width:540px;min-height:100%;margin:0 auto;display:flex;flex-direction:column;align-items:stretch;gap:16px;justify-content:center}
+.maison-installation-logo{align-self:center;border-radius:22px;flex:none}
+.maison-installation .label{text-align:center;margin:0}
+.maison-installation h1{font-size:clamp(27px,7.2vw,36px);line-height:1.15;text-align:center}
+.maison-installation h1:focus,.maison-installation h2:focus{outline:none}
+.maison-installation-guide .maison-installation-logo,.maison-installation-guide .label,.maison-installation-guide h1,.maison-installation-guide .maison-installation-intro,.maison-installation-guide .maison-installation-prive{display:none}
+.maison-installation-intro{font-size:19px;text-align:center;margin:0}
+.maison-installation-prive{padding:12px 14px;border-radius:12px;background:var(--green-soft);font-size:16px;margin:0}
+.maison-installation .btn{width:100%;padding:12px 16px;min-height:52px;line-height:1.3}
+.maison-installation h2{font-size:24px;line-height:1.2}
+.maison-installation ol{padding-left:28px;display:grid;gap:14px;line-height:1.5}
+.maison-installation li{padding-left:5px}
+.maison-installation li::marker{font-weight:800;color:var(--green)}
+.maison-installation #maison-installation-message:empty{display:none}
+.maison-installation #maison-installation-message{padding:10px 12px;border-radius:10px;background:var(--echo);overflow-wrap:anywhere}
+.maison-installation-note{font-size:15px;text-align:center;color:var(--ink-soft);margin:0}
+.maison-guide-installation{display:block;max-width:100%;min-height:44px;padding:8px 0;border:0;background:none;text-decoration:underline;text-underline-offset:3px;text-align:left;font:inherit;font-size:15px;color:var(--ink-soft);cursor:pointer}
+@media print{.maison-installation,.maison-guide-installation{display:none!important}}
 </style>
 </head>
 <body>
@@ -2293,6 +2315,104 @@ window.ParentsProgres=ParentsProgres;
 
 </script>
 <script>
+/* Guide local pour ajouter l’accès personnel à l’écran d’accueil. */
+"use strict";
+const ParentsInstallation = (() => {
+  let contexte="", lienSession="", dialogue=null, retourFocus=null, vu=false;
+  const cle=()=>"fluence-installation-parents-v1:"+contexte;
+  const lienPersonnel=()=>{
+    const p=new URLSearchParams(location.hash.slice(1)),t=p.get("famille");
+    return Banc.ROLE==="parents"&&p.has("parents")&&p.getAll("famille").length===1&&/^[a-f0-9]{64}$/.test(t||"")?t:"";
+  };
+  const autonome=()=>navigator.standalone===true||window.matchMedia?.("(display-mode: standalone)").matches||window.matchMedia?.("(display-mode: fullscreen)").matches;
+  const ios=()=>/iPhone|iPad|iPod/i.test(navigator.userAgent)||/Macintosh/i.test(navigator.userAgent)&&navigator.maxTouchPoints>1;
+  const mobile=()=>ios()||/Android/i.test(navigator.userAgent);
+  const autorise=()=>!!contexte&&!!lienSession&&lienPersonnel()===lienSession&&mobile()&&!Plateforme.NATIF&&!autonome()&&/^https?:$/.test(location.protocol);
+
+  function memorise(){
+    vu=true;
+    try{localStorage.setItem(cle(),"vu");}catch(e){}
+  }
+  function ferme({memoriser=true}={}){
+    if(memoriser&&autorise())memorise();
+    if(dialogue){const ancien=dialogue;dialogue=null;ancien.close();ancien.remove();}
+    if(retourFocus?.isConnected)retourFocus.focus({preventScroll:true});
+    retourFocus=null;
+  }
+  function ouvre(avecEtapes=false,origine=null){
+    if(!autorise()||dialogue)return;
+    retourFocus=origine||document.activeElement;
+    const d=document.createElement("dialog");dialogue=d;d.id="maison-installation";d.className="maison-installation";
+    d.setAttribute("aria-labelledby","maison-installation-titre");
+    d.innerHTML=`<div class="maison-installation-contenu">
+      <img class="maison-installation-logo" alt="" width="88" height="88">
+      <p class="label">Fluence à la maison</p>
+      <h1 id="maison-installation-titre" tabindex="-1">Un accès facile depuis votre téléphone</h1>
+      <p class="maison-installation-intro">Ajoutez une icône sur votre écran d’accueil pour retrouver les textes et les progrès de votre enfant.</p>
+      <p class="maison-installation-prive">Ce lien et cette icône sont personnels. Gardez-les pour votre famille.</p>
+      <button class="btn primary" type="button" id="maison-installer">Ajouter à l’écran d’accueil</button>
+      <section id="maison-installation-etapes" aria-labelledby="maison-installation-mode" hidden>
+        <h2 id="maison-installation-mode" tabindex="-1"></h2><ol></ol>
+        <p class="muted" id="maison-installation-aide"></p>
+        <button class="btn" type="button" id="maison-installation-copier">Copier mon lien personnel</button>
+        <p id="maison-installation-message" role="status"></p>
+      </section>
+      <button class="btn" type="button" id="maison-installation-continuer">Continuer sans installer</button>
+      <p class="maison-installation-note">Vous pouvez aussi utiliser Fluence directement dans cette page.</p>
+    </div>`;
+    d.querySelector("img").src=document.querySelector("#home-link img")?.src||"icones/icone-192.png";
+    const etapes=d.querySelector("#maison-installation-etapes"),titre=d.querySelector("#maison-installation-mode"),liste=etapes.querySelector("ol"),aide=d.querySelector("#maison-installation-aide");
+    const apple=ios();
+    titre.textContent=apple?"Sur iPhone ou iPad":"Sur Android";
+    const instructions=apple?[
+      "Dans Safari, ouvrez le menu Partager (le carré avec une flèche vers le haut).",
+      "Choisissez « Sur l’écran d’accueil ».",
+      "Activez « Ouvrir comme app web » si cette option apparaît, puis touchez « Ajouter »."
+    ]:[
+      "Ouvrez le menu de Chrome (les trois points).",
+      "Choisissez « Installer et créer un raccourci », puis « Créer un raccourci » si ce choix apparaît.",
+      "Gardez l’adresse personnelle de cette page, puis confirmez « Ajouter »."
+    ];
+    instructions.forEach(texte=>{const li=document.createElement("li");li.textContent=texte;liste.appendChild(li);});
+    aide.textContent=apple?"Depuis une messagerie, ouvrez ce même lien personnel dans Safari. L’ajout se termine dans le menu du téléphone.":"Selon la version, le menu s’appelle « Ajouter à l’écran d’accueil ». Depuis une messagerie, ouvrez ce même lien personnel dans Chrome. Le raccourci peut ouvrir Chrome.";
+    const montreEtapes=()=>{etapes.hidden=false;d.classList.add("maison-installation-guide");d.setAttribute("aria-labelledby","maison-installation-mode");d.querySelector("#maison-installer").hidden=true;titre.focus({preventScroll:true});d.scrollTop=0;};
+    d.querySelector("#maison-installer").onclick=montreEtapes;
+    d.querySelector("#maison-installation-copier").onclick=async()=>{
+      if(!autorise())return;
+      const info=d.querySelector("#maison-installation-message");
+      try{
+        if(!navigator.clipboard?.writeText)throw new Error("Presse-papiers indisponible");
+        await navigator.clipboard.writeText(location.href);
+        if(dialogue===d&&autorise())info.textContent="Lien copié. Collez-le dans "+(apple?"Safari":"Chrome")+", puis suivez les étapes ci-dessus.";
+      }catch(e){if(dialogue===d)info.textContent="La copie n’est pas disponible ici. Faites un appui long sur le lien reçu de l’enseignante pour le copier.";}
+    };
+    d.querySelector("#maison-installation-continuer").onclick=()=>ferme();
+    d.addEventListener("cancel",e=>{e.preventDefault();ferme();});
+    document.body.appendChild(d);d.showModal();
+    if(avecEtapes)montreEtapes();else d.querySelector("h1").focus({preventScroll:true});
+  }
+  function ajouteAcces(view){
+    if(!autorise()||view.querySelector("#maison-guide-installation"))return;
+    const bouton=document.createElement("button");bouton.type="button";bouton.id="maison-guide-installation";bouton.className="maison-guide-installation";
+    bouton.textContent="Ajouter Fluence à l’écran d’accueil";bouton.onclick=()=>ouvre(true,bouton);
+    view.querySelector("h1")?.after(bouton);
+  }
+  function demarre(options={}){
+    if(Banc.ROLE!=="parents"||Plateforme.NATIF)return;
+    contexte=/^[a-f0-9]{64}$/.test(options.contexte||"")?options.contexte:"";
+    lienSession=lienPersonnel();
+    if(!autorise())return;
+    const view=document.querySelector("#view");if(view)ajouteAcces(view);
+    try{vu=localStorage.getItem(cle())==="vu";}catch(e){vu=false;}
+    if(!vu&&mobile())ouvre();
+  }
+  window.addEventListener("hashchange",()=>{if(lienSession&&lienPersonnel()!==lienSession){ferme({memoriser:false});contexte="";lienSession="";}});
+  return {demarre,ajouteAcces};
+})();
+window.ParentsInstallation=ParentsInstallation;
+
+</script>
+<script>
 /* Défis à la maison : aucun accès à la classe ni à la liaison de l'enseignante. */
 "use strict";
 const Parents = (() => {
@@ -2425,6 +2545,7 @@ const Parents = (() => {
     if(rubrique==="progres"){window.ParentsProgres?.ouvre(view,{prenom:profil().prenom});return;}
     window.ParentsProgres?.ferme();
     view.innerHTML='<h1>Choisissez un texte</h1><nav class="maison-categories" aria-label="Catégories de textes"></nav><p class="maison-serie"></p><div id="maison-attente" class="card maison-attente" hidden><span role="status"></span><button type="button" class="btn" id="maison-reessayer">Réessayer l’envoi</button></div><section class="maison-categorie" id="maison-textes" aria-label="Les épisodes"><div class="maison-liste-textes"></div></section>';
+    window.ParentsInstallation?.ajouteAcces(view);
     const liste=view.querySelector(".maison-liste-textes"),categories=view.querySelector(".maison-categories");
     [["entrainement","Textes d’entraînement"],["periode","Textes de la période (facultatifs)"]].forEach(([id,titre])=>{
       const bouton=el("button",{class:"btn maison-choix-categorie",type:"button","data-categorie":id,"aria-pressed":String(categorie===id)});bouton.textContent=titre;
@@ -2459,7 +2580,8 @@ const Parents = (() => {
       <div class="maison-identite"><label for="maison-prenom">Prénom de l’enfant</label><input id="maison-prenom" autocomplete="off" autocapitalize="words" maxlength="80" value="${esc(profil().prenom)}"><p id="maison-prenom-erreur" class="maison-erreur" role="status" hidden></p></div>
       <fieldset id="maison-type-lecture" class="maison-lecture-choix" aria-describedby="maison-type-aide"><legend>Cette lecture</legend><div><label><input type="radio" name="typeLecture" value="entrainement" checked><span>Entraînement</span></label><label><input type="radio" name="typeLecture" value="defi"><span>Défi du 4ᵉ soir</span></label></div><p id="maison-type-aide">Choisissez le défi le 4ᵉ soir. Chaque score reste enregistré.</p></fieldset>
       <div class="maison-pilotage"><div class="chrono"><div><strong class="big-num" id="maison-chrono">${duree}</strong> secondes</div>
-      <div class="row"><button class="btn primary" id="maison-depart" type="button">Démarrer</button><button class="btn" id="maison-fini" type="button" hidden>Lecture terminée</button></div></div>
+      <div class="row"><button class="btn primary" id="maison-depart" type="button">Démarrer</button></div></div>
+      <button class="btn primary maison-lecture-terminee" id="maison-fini" type="button" hidden>Lecture terminée</button>
       <div class="defi-compte-rebours" id="maison-compte-rebours" role="status" aria-live="assertive" aria-atomic="true" hidden><span>La lecture commence dans</span><strong class="defi-compte-nombre" id="maison-compte-nombre"></strong></div>
       <p class="defi-consigne" id="maison-consigne" role="status">Après Démarrer : 3 secondes de préparation, avec trois bips (3, 2, 1).</p></div>
       <div id="maison-resultat" tabindex="-1" hidden></div><div class="maison-texte"><div class="text" id="maison-texte" lang="fr"></div></div>`;
@@ -2621,6 +2743,7 @@ const Parents = (() => {
       window.addEventListener("hashchange",()=>{if(tokenLien()!==tokenSession){window.ParentsProgres?.ferme();$("#view").replaceChildren(el("p",{role:"status"},"Ouverture du lien personnel…"));location.reload();}});
     }
     afficheStockage();
+    window.ParentsInstallation?.demarre({contexte});
   }
   return {demarre,apercuEpisodes};
 })();

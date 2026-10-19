@@ -2,14 +2,15 @@
   "name": "banc-des-maitres",
   "version": "1.0.0",
   "private": true,
-  "description": "Le banc des maîtres : fluence CM1 au TBI (feuilleton lu par la maîtresse, écho, chœur, défi d'une minute), avec le téléphone de la maîtresse en télécommande",
+  "description": "Fluence CM1 : lecture, écho, chœur et défi d’une minute, avec télécommande iPhone.",
   "scripts": {
     "build": "python3 outils/build.py",
     "hors-ligne": "python3 outils/build.py --hors-ligne",
-    "test": "python3 outils/build.py && node tests/app.js",
+    "test": "python3 outils/build.py && node tests/import-classe.js && node tests/app.js",
     "voix": "python3 outils/voix.py",
     "images": "python3 outils/images.py",
-    "sync": "python3 outils/build.py && npx cap sync"
+    "sync": "python3 outils/build.py && npx cap sync",
+    "test:classe": "python3 outils/build.py && node tests/import-classe.js"
   },
   "dependencies": {
     "@capacitor-community/keep-awake": "^8.0.1",

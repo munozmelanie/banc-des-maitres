@@ -38,6 +38,12 @@ L'appli est séparée du Bateau-école, mais construite sur le même principe :
 
 Le téléphone a quatre onglets : **Écran** (choisir l'épisode et l'étape, et toucher à distance les boutons de l'écran : écouter, pause, page suivante, phrase suivante, vitesse…), **Défi**, **Élèves** et **Progrès**. Sans écran relié, le défi marche aussi sur le téléphone seul : l'élève lit alors sur le texte imprimé.
 
+### Importer une liste de classe
+
+Dans **Élèves › Importer une liste de classe**, choisir un fichier **TXT** (un nom par ligne), **CSV/TSV** (colonnes `Prénom`, `Nom`, `Objectif` facultatif, séparées par virgule, point-virgule ou tabulation), ou **JSON**. Le JSON accepte un tableau de noms ou d'objets, `eleves`, et `classe.eleves` des sauvegardes Fluence ou Bateau-école. Les fiches inactives ou vides sont ignorées. Le fichier est lu localement, sans téléversement ; limite de 1 Mo et de 100 élèves.
+
+La prévisualisation permet de corriger un nom ou un objectif et d'écarter une ligne en effaçant son nom. Seul **Importer et enregistrer** valide les changements. Les noms identiques (casse et espaces ignorés, accents conservés) sont regroupés : leurs identifiants, objectifs et résultats existants restent inchangés. Les autres élèves sont ajoutés. Pour deux élèves de même prénom, inclure aussi le nom. Les fiches initiales « Élève n » sont remplacées seulement si elles sont intactes et qu'aucun essai, même supprimé, n'existe. Les autres élèves de la classe ne sont jamais supprimés par cet import.
+
 Les deux appareils se recopient la classe et tous les résultats à chaque liaison. Un ordinateur remis à zéro retrouve donc tout dès que le téléphone se relie, et inversement. Pour la classe, la version la plus récente gagne. Les essais s'additionnent, et un essai supprimé l'est sur les deux appareils. **Progrès › Exporter une sauvegarde** donne en plus un fichier à garder (clé USB, Drive). **Importer une sauvegarde** remet la classe et ajoute les essais, y compris ceux de la première version (fichier « HORS LIGNE » de septembre).
 
 **Sans internet** : `hors-ligne/Le banc des maîtres - HORS LIGNE.html` est un seul fichier avec les voix et les images, à copier sur l'ordinateur de la classe (dossier « Le banc des maîtres » des Ressources Trans). Le téléphone ne peut s'y relier que si l'ordinateur a internet.

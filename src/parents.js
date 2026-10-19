@@ -1,7 +1,7 @@
 /* Défis à la maison : aucun accès à la classe ni à la liaison de l'enseignante. */
 "use strict";
 const Parents = (() => {
-  const { $, el, esc, motsDefi, calcule, motsDifficiles, bip } = Banc;
+  const { $, el, esc, motsDefi, calcule, motsDifficiles, bip, libelleLecture } = Banc;
   const CLE = "fluence-parents-v1";
   // Empreinte dédiée au lien de démonstration : jamais le secret ni son empreinte d’accès aux bilans.
   const EMPREINTE_APERCU = "d22921451b224db9d886cdd5fc5c658d263d8a4fa63a0ccc023a8907c56b01f8";
@@ -46,7 +46,8 @@ const Parents = (() => {
     const contexteValide = c=>c===undefined || c==="" || typeof c==="string" && /^[a-f0-9]{64}$/.test(c);
     if (!d || d.version !== 1 || !Array.isArray(d.historique) || !d.historique.every(r => r && r.origine === "maison" && typeof r.id === "string" && typeof r.prenom === "string" && typeof r.ep === "string" && typeof r.titre === "string" && contexteValide(r.contexte) && Number.isFinite(Date.parse(r.date)) && [r.mclm,r.lus,r.erreurs,r.secondes,r.dernier].every(n=>Number.isFinite(n) && n>=0) && Array.isArray(r.fautes) && r.fautes.every(n=>Number.isInteger(n) && n>=0))) throw new Error("historique non reconnu");
     if(d.profils!==undefined && (!d.profils || typeof d.profils!=="object" || Array.isArray(d.profils) || !Object.entries(d.profils).every(([c,p])=>/^[a-f0-9]{64}$/.test(c) && p && typeof p.prenom==="string"))) throw new Error("profils non reconnus");
-    const historique = d.historique.map(r=>({id:r.id,formatVersion:1,origine:"maison",contexte:r.contexte||"",prenom:r.prenom,ep:r.ep,titre:r.titre,date:r.date,mclm:r.mclm,lus:r.lus,erreurs:r.erreurs,secondes:r.secondes,dernier:r.dernier,fautes:r.fautes.slice()}));
+    if(d.historique.some(r=>r.typeLecture!==undefined && !["entrainement","defi"].includes(r.typeLecture)))throw new Error("type de lecture non reconnu");
+    const historique = d.historique.map(r=>({id:r.id,formatVersion:1,origine:"maison",contexte:r.contexte||"",prenom:r.prenom,ep:r.ep,titre:r.titre,date:r.date,mclm:r.mclm,lus:r.lus,erreurs:r.erreurs,secondes:r.secondes,dernier:r.dernier,fautes:r.fautes.slice(),...(r.typeLecture?{typeLecture:r.typeLecture}:{})}));
     const profils=Object.fromEntries(Object.entries(d.profils||{}).map(([c,p])=>[c,{prenom:p.prenom,vitesse:[0.6,0.8,1].includes(p.vitesse)?p.vitesse:0.8}]));
     return {version:1, prenom:typeof d.prenom === "string" ? d.prenom : "", vitesse:[0.6,0.8,1].includes(d.vitesse) ? d.vitesse : 0.8, historique, profils};
   }
@@ -83,7 +84,7 @@ const Parents = (() => {
     const c = el("article", {class:"card maison-bilan","data-maison-bilan":r.id});
     const date = new Date(r.date).toLocaleString("fr-FR",{dateStyle:"short",timeStyle:"short"});
     const durs = motsDifficiles(r);
-    c.innerHTML = `<div class="label">Résultat · ${esc(date)}</div>
+    c.innerHTML = `<div class="label">Résultat · ${esc(date)}</div><span class="maison-lecture-badge${r.typeLecture==="defi"?" maison-lecture-defi":""}" data-type-lecture="${r.typeLecture||"lecture"}">${libelleLecture(r)}</span>
       <h3>${esc(r.prenom)} — ${esc(r.titre)}</h3>
       <div class="big-num">${r.mclm}</div><div class="muted">mots lus correctement par minute</div>
       <dl class="res"><dt>Mots lus</dt><dd>${r.lus}</dd><dt>Erreurs</dt><dd>${r.erreurs}</dd><dt>Temps</dt><dd>${r.secondes} s</dd></dl>
@@ -158,9 +159,10 @@ const Parents = (() => {
   function defi(P,E){
     rubrique="entrainement";actualiseRubriques();window.ParentsProgres?.ferme();
     const duree = Banc.DUREE(), mots = motsDefi(E), fautes = new Set(), contexteDefi=contexte;
-    let etat = "pret", depart = 0, ecoule = 0, timer = null, prenom = "", annuleCompte = ()=>{};
+    let etat = "pret", depart = 0, ecoule = 0, timer = null, prenom = "", typeLecture = "entrainement", annuleCompte = ()=>{};
     P.innerHTML = `${E.audio ? '<div class="maison-ecoute"><div class="row start"><button class="btn" type="button" id="maison-ecouter">Écouter le texte</button><button class="btn" type="button" id="maison-ecouter-debut" hidden>Depuis le début</button></div><p class="muted" id="maison-ecoute-info" role="status" hidden></p></div>' : ""}<p class="lead">L’enfant lit. Touchez les mots mal lus.</p>
       <div class="maison-identite"><label for="maison-prenom">Prénom de l’enfant</label><input id="maison-prenom" autocomplete="off" autocapitalize="words" maxlength="80" value="${esc(profil().prenom)}"><p id="maison-prenom-erreur" class="maison-erreur" role="status" hidden></p></div>
+      <fieldset id="maison-type-lecture" class="maison-lecture-choix" aria-describedby="maison-type-aide"><legend>Cette lecture</legend><div><label><input type="radio" name="typeLecture" value="entrainement" checked><span>Entraînement</span></label><label><input type="radio" name="typeLecture" value="defi"><span>Défi du 4ᵉ soir</span></label></div><p id="maison-type-aide">Choisissez le défi le 4ᵉ soir. Chaque score reste enregistré.</p></fieldset>
       <div class="maison-pilotage"><div class="chrono"><div><strong class="big-num" id="maison-chrono">${duree}</strong> secondes</div>
       <div class="row"><button class="btn primary" id="maison-depart" type="button">Démarrer</button><button class="btn" id="maison-fini" type="button" hidden>Lecture terminée</button></div></div>
       <div class="defi-compte-rebours" id="maison-compte-rebours" role="status" aria-live="assertive" aria-atomic="true" hidden><span>La lecture commence dans</span><strong class="defi-compte-nombre" id="maison-compte-nombre"></strong></div>
@@ -168,6 +170,7 @@ const Parents = (() => {
       <div id="maison-resultat" tabindex="-1" hidden></div><div class="maison-texte"><div class="text" id="maison-texte" lang="fr"></div></div>`;
     const champ = P.querySelector("#maison-prenom"), erreur = P.querySelector("#maison-prenom-erreur"), bouton = P.querySelector("#maison-depart"), fini = P.querySelector("#maison-fini"), chrono = P.querySelector("#maison-chrono"), consigne = P.querySelector("#maison-consigne"), texte = P.querySelector("#maison-texte"), resultat = P.querySelector("#maison-resultat"), spans = [];
     const pilotage=P.querySelector(".maison-pilotage"), compte=P.querySelector("#maison-compte-rebours"), nombre=P.querySelector("#maison-compte-nombre");
+    const choixLecture=P.querySelector("#maison-type-lecture");
     // La voix reste dans cet écran ; le défi et la navigation arrêtent toute écoute.
     const audio=E.audio ? $("#audio") : null, ecouter=P.querySelector("#maison-ecouter"), debut=P.querySelector("#maison-ecouter-debut"), infoEcoute=P.querySelector("#maison-ecoute-info");
     let souhaiteEcoute=false, commandeEcoute=0;
@@ -248,7 +251,7 @@ const Parents = (() => {
       pilotage.classList.remove("etat-dernier");consigne.classList.remove("etat-dernier");pilotage.classList.add("termine");
       const secondes = Math.max(1,Math.min(60,Math.round(ecoule)));
       const {eleve, ...mesures} = calcule(E,null,secondes,dernier,fautes);
-      const r = {...mesures,formatVersion:1,origine:"maison",contexte:contexteDefi,prenom, titre:E.titre};
+      const r = {...mesures,formatVersion:1,origine:"maison",contexte:contexteDefi,prenom,titre:E.titre,typeLecture};
       donnees.historique.push(r); sauve();
       spans.forEach((s,i)=>{s.classList.toggle("after",i>dernier);s.classList.toggle("last",i===dernier);s.classList.toggle("err",r.fautes.includes(i));s.removeAttribute("aria-pressed");s.removeAttribute("role");s.removeAttribute("tabindex");});
       P.querySelector("#maison-bilan-precedent")?.remove();
@@ -263,6 +266,7 @@ const Parents = (() => {
       if(etat !== "pret") return;
       try {prenom=validePrenom(champ.value);} catch(e){erreur.hidden=false;erreur.textContent=e.message;champ.focus();return;}
       erreur.hidden=true; profil().prenom=prenom; sauve(); champ.value=prenom; champ.disabled=true;
+      typeLecture=choixLecture.querySelector(":checked")?.value==="defi"?"defi":"entrainement";choixLecture.disabled=true;
       etat="compte-rebours";arreteEcoute();bouton.disabled=true;fini.hidden=true;pilotage.classList.add("etat-compte-rebours");
       spans.filter(s=>s.getAttribute("role")==="button").forEach(s=>s.setAttribute("aria-disabled","true"));
       consigne.textContent="Préparez-vous. Attendez la fin du compte à rebours pour lire.";
@@ -283,7 +287,7 @@ const Parents = (() => {
     function visibilite(){
       if(document.hidden&&etat==="compte-rebours"){
         annuleCompte();annuleCompte=()=>{};etat="pret";compte.hidden=true;pilotage.classList.remove("etat-compte-rebours");
-        spans.forEach(s=>s.removeAttribute("aria-disabled"));champ.disabled=false;bouton.disabled=false;
+        spans.forEach(s=>s.removeAttribute("aria-disabled"));champ.disabled=false;bouton.disabled=false;choixLecture.disabled=false;
         consigne.textContent="Départ interrompu. Appuyez sur Démarrer quand l’enfant est prêt : 3, 2, 1 annonceront le départ.";
         actualiseEcoute();Plateforme.eveille(false);return;
       }

@@ -17,6 +17,7 @@ const EnvoiMaison = (() => {
   }
   function normalise(r){
     if(!r || typeof r!=="object" || r.origine!=="maison" || !/^[a-zA-Z0-9_-]{8,80}$/.test(r.id||"")) throw new Error("Ce bilan maison n'est pas valide.");
+    if(Object.hasOwn(r,"typeLecture") && !["entrainement","defi"].includes(r.typeLecture)) throw new Error("Le type de lecture n’est pas valide.");
     const E=ep(r.ep), date=new Date(r.date);
     if(!E || !Number.isFinite(date.getTime()) || date.getTime()>Date.now()+86400000) throw new Error("Le texte ou la date de ce bilan n'est pas valide.");
     const toks=motsDefi(E);
@@ -24,7 +25,7 @@ const EnvoiMaison = (() => {
     if(!Array.isArray(r.fautes) || r.fautes.length>toks.length || r.fautes.some(i=>!Number.isInteger(i)||i<0||i>r.dernier||!toks[i].w) || new Set(r.fautes).size!==r.fautes.length) throw new Error("La liste des erreurs n'est pas valide.");
     const lus=toks.slice(0,r.dernier+1).filter(t=>t.w).length, erreurs=r.fautes.length;
     if(r.lus!==lus || r.erreurs!==erreurs) throw new Error("Les nombres de mots et d'erreurs ne correspondent pas au texte.");
-    return {id:r.id,origine:"maison",prenom:nom(r.prenom),ep:E.id,titre:E.titre,date:date.toISOString(),secondes:r.secondes,dernier:r.dernier,fautes:r.fautes.slice().sort((a,b)=>a-b),lus,erreurs,mclm:Math.round((lus-erreurs)*60/r.secondes)};
+    return {id:r.id,origine:"maison",prenom:nom(r.prenom),ep:E.id,titre:E.titre,date:date.toISOString(),secondes:r.secondes,dernier:r.dernier,fautes:r.fautes.slice().sort((a,b)=>a-b),lus,erreurs,mclm:Math.round((lus-erreurs)*60/r.secondes),...(Object.hasOwn(r,"typeLecture")?{typeLecture:r.typeLecture}:{})};
   }
   const paquet = r => { const bilan=normalise(r);return {format:FORMAT,version:1,texte:empreinte(bilan.ep),bilan}; };
   function code(d){ const bytes=new TextEncoder().encode(JSON.stringify(d)); let s="";bytes.forEach(b=>s+=String.fromCharCode(b));return btoa(s).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/g,""); }
@@ -41,7 +42,7 @@ const EnvoiMaison = (() => {
   const idLocal = (sourceId,eleve)=>"maison:"+encodeURIComponent(eleve)+":"+sourceId;
   function lienParent(prenom=""){ const url=base();return url ? url+"#parents"+(prenom?"&prenom="+encodeURIComponent(nom(prenom)):"") : ""; }
   function prenomLien(){try {const p=new URLSearchParams(location.hash.slice(1)).get("prenom");return p?nom(p):"";}catch(e){return "";}}
-  const texteBilan = r => `Fluence — entraînement à la maison\n${r.prenom} · ${r.titre}\n${new Date(r.date).toLocaleDateString("fr-FR")}\n${r.lus} mots lus, ${r.erreurs} erreur(s), ${r.secondes} secondes : ${r.mclm} mots corrects par minute.\nBilan déclaré par la famille.`;
+  const texteBilan = r => `Fluence — ${Banc.libelleLecture(r)} à la maison\n${r.prenom} · ${r.titre}\n${new Date(r.date).toLocaleDateString("fr-FR")}\n${r.lus} mots lus, ${r.erreurs} erreur(s), ${r.secondes} secondes : ${r.mclm} mots corrects par minute.\nBilan déclaré par la famille.`;
   async function partage(r){
     const d=paquet(r), url=base()+"#bilan="+code(d), text=texteBilan(d.bilan), title="Bilan Fluence à la maison";
     if(Plateforme.partage){await Plateforme.partage.share({title,text,url});return {message:"Le partage est terminé. Le bilan reste disponible ici ; la réception n'est pas confirmée par Fluence."};}
@@ -95,7 +96,7 @@ const EnvoiMaison = (() => {
     function apercuBilan(texte){
       apercu.innerHTML="";
       try {const r=lit(texte);info.textContent="Bilan prêt à vérifier. Rien n'est encore enregistré.";
-        apercu.innerHTML=`<h3>${esc(r.prenom)} — ${esc(r.titre)}</h3><p>${esc(new Date(r.date).toLocaleDateString("fr-FR"))} · ${r.lus} mots lus · ${r.erreurs} erreur(s) · ${r.secondes} secondes · <b>${r.mclm} mots/min</b></p><label class="label" for="maison-eleve">Associer à l'élève de la classe</label><select class="sel" id="maison-eleve"><option value="">Choisir l'élève…</option>${Donnees.eleves().map(e=>`<option value="${esc(e.id)}">${esc(e.nom)}</option>`).join("")}</select><div class="row start" style="margin-top:12px"><button class="btn primary" id="maison-confirme">Ajouter au suivi maison</button><button class="btn" id="maison-annule">Annuler</button></div>`;
+        apercu.innerHTML=`<h3>${esc(r.prenom)} — ${esc(r.titre)}</h3><p>${Banc.libelleLecture(r)}</p><p>${esc(new Date(r.date).toLocaleDateString("fr-FR"))} · ${r.lus} mots lus · ${r.erreurs} erreur(s) · ${r.secondes} secondes · <b>${r.mclm} mots/min</b></p><label class="label" for="maison-eleve">Associer à l'élève de la classe</label><select class="sel" id="maison-eleve"><option value="">Choisir l'élève…</option>${Donnees.eleves().map(e=>`<option value="${esc(e.id)}">${esc(e.nom)}</option>`).join("")}</select><div class="row start" style="margin-top:12px"><button class="btn primary" id="maison-confirme">Ajouter au suivi maison</button><button class="btn" id="maison-annule">Annuler</button></div>`;
         const sel=apercu.querySelector("#maison-eleve"), correspond=Donnees.eleves().filter(e=>e.nom.normalize("NFC").toLocaleLowerCase("fr")===r.prenom.toLocaleLowerCase("fr"));
         if(correspond.length===1) sel.value=correspond[0].id;
         apercu.querySelector("#maison-annule").onclick=()=>{apercu.innerHTML="";info.textContent="Import annulé.";};
@@ -114,7 +115,7 @@ const EnvoiMaison = (() => {
     const fichier=box.querySelector("#maison-file");box.querySelector("#maison-fichier").onclick=()=>fichier.click();
     fichier.onchange=async()=>{const f=fichier.files[0];if(!f)return;try {if(f.size>30000)throw new Error("Le bilan doit faire moins de 30 Ko.");apercuBilan(await f.text());}catch(e){info.textContent=e.message;}finally{fichier.value="";}};
     function afficheResultats(){const cible=box.querySelector("#maison-resultats"),rs=Donnees.essaisMaison().slice().reverse();
-      cible.innerHTML=rs.length?`<div class="tablewrap"><table class="t"><thead><tr><th>Date</th><th>Élève</th><th>Texte</th><th>Mots/min</th><th>Erreurs</th><th></th></tr></thead><tbody>${rs.map(r=>`<tr><td>${esc(new Date(r.date).toLocaleDateString("fr-FR"))}</td><td>${esc(Donnees.nom(r.eleve))}</td><td>${esc(ep(r.ep)?.titre||r.ep)}</td><td>${esc(r.mclm)}</td><td>${esc(r.erreurs)}</td><td><button class="btn danger" data-maison-supprime="${esc(r.id)}">Supprimer</button></td></tr>`).join("")}</tbody></table></div>`:`<p class="muted">Aucun bilan maison importé pour l'instant.</p>`;
+      cible.innerHTML=rs.length?`<div class="tablewrap"><table class="t"><thead><tr><th>Date</th><th>Élève</th><th>Texte</th><th>Mots/min</th><th>Erreurs</th><th></th></tr></thead><tbody>${rs.map(r=>`<tr><td>${esc(new Date(r.date).toLocaleDateString("fr-FR"))}</td><td>${esc(Donnees.nom(r.eleve))}</td><td>${esc(ep(r.ep)?.titre||r.ep)}<br><small>${Banc.libelleLecture(r)}</small></td><td>${esc(r.mclm)}</td><td>${esc(r.erreurs)}</td><td><button class="btn danger" data-maison-supprime="${esc(r.id)}">Supprimer</button></td></tr>`).join("")}</tbody></table></div>`:`<p class="muted">Aucun bilan maison importé pour l'instant.</p>`;
       cible.querySelectorAll("[data-maison-supprime]").forEach(b=>b.onclick=async()=>{if(!b.dataset.confirme){b.dataset.confirme="1";b.textContent="Confirmer ?";return;}b.disabled=true;if(await Donnees.supprime(b.dataset.maisonSupprime))afficheResultats();else{b.disabled=false;info.textContent="Impossible de supprimer le bilan. Réessaie.";}});
     }
     afficheResultats();

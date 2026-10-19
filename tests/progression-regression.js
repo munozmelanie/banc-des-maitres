@@ -143,7 +143,8 @@ async function ouvreLecture(p,id){
           vrai(eq(await points(p),["reg-house-02",recu])&&await valeur(p,"dernier",40)&&await valeur(p,"meilleur",65)&&await valeur(p,"evolution",-25),label+" : le nouveau bilan paraît à la bonne place avec une évolution négative fidèle");
           await p.click(tel?"[data-tab=eleves]":"[data-go=students]");await progres();
           vrai(await p.locator("#progression-texte").inputValue()==="E1"&&await p.locator('[data-progress-origine="maison"]').getAttribute("aria-pressed")==="true"&&(await p.locator("#progression-titre").textContent()).includes("Test Alpha"),label+" : quitter puis retrouver Progrès conserve le choix courant");
-          await p.click("#acces-parents");vrai(await p.locator("#maison-dialogue").isVisible(),label+" : l'accès parents reste disponible dans Progrès");await p.click("#maison-retour");
+          vrai(await p.locator("#acces-parents").isHidden()&&await p.locator("#progression-actualiser").isVisible(),label+" : une enseignante connectée voit Actualiser sans gestion des liens dans Progrès");
+          await p.click(tel?"[data-tab=eleves]":"[data-go=students]");await p.click("#acces-parents");vrai(await p.locator("#maison-dialogue").isVisible(),label+" : la gestion des accès parents reste disponible dans Élèves");await p.click("#maison-retour");await progres();
           await p.locator(".progression-sauvegarde > summary").click();
           const downloadPromise=p.waitForEvent("download");await p.click("#exp");const download=await downloadPromise;
           const sauvegarde=JSON.parse(fs.readFileSync(await download.path(),"utf8"));

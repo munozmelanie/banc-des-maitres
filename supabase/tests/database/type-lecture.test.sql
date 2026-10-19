@@ -1,0 +1,77 @@
+-- Types optionnels et immuables : données fictives, transaction annulée.
+begin;
+create extension if not exists pgtap with schema extensions;
+grant usage on schema extensions to anon,authenticated,service_role;
+set local search_path=public,extensions;
+select no_plan();
+insert into auth.users(id,email) values('11111111-1111-4111-8111-111111111111','types@example.invalid');
+insert into private.fluence_teachers(user_id) values('11111111-1111-4111-8111-111111111111');
+insert into public.fluence_accesses(owner,child_ref,token_hash) values
+ ('11111111-1111-4111-8111-111111111111','type-a',repeat('a',64)),
+ ('11111111-1111-4111-8111-111111111111','type-b',repeat('b',64));
+create function pg_temp.classe(i text,score integer default 50) returns jsonb language sql immutable as $$
+ select jsonb_build_object('id',i,'child_ref','type-a','origine','classe','ep','E1','date','2025-01-01T10:00:00.000Z','mclm',score,'lus',50,'erreurs',0,'secondes',60);
+$$;
+create function pg_temp.maison(i text,score integer default 40) returns jsonb language sql immutable as $$
+ select jsonb_build_object('format','fluence/bilan-maison','version',1,'texte','1234abcd','bilan',jsonb_build_object('id',i,'origine','maison','prenom','Test Type','ep','E1','titre','Texte fictif','date','2025-01-02T10:00:00.000Z','mclm',score,'lus',score,'erreurs',0,'secondes',60,'dernier',score-1,'fautes','[]'::jsonb));
+$$;
+create function pg_temp.projection(i text,score integer default 40) returns jsonb language sql immutable as $$
+ select ((pg_temp.maison(i,score)->'bilan')-array['prenom','titre'])||jsonb_build_object('id','maison:type-a:'||i,'source_id',i,'child_ref','type-a');
+$$;
+create function pg_temp.lit() returns jsonb language sql volatile as $$select public.fluence_read_progress(repeat('a',64));$$;
+select ok(private.fluence_valid_payload(pg_temp.maison('old-home')),'ancien paquet sans type accepté');
+select ok(private.fluence_valid_projection(pg_temp.classe('old-class')),'ancienne projection sans type acceptée');
+select ok(private.fluence_valid_payload(jsonb_set(pg_temp.maison('new-home'),'{bilan,typeLecture}','"entrainement"')),'entraînement parent accepté');
+select ok(private.fluence_valid_payload(jsonb_set(pg_temp.maison('new-home'),'{bilan,typeLecture}','"defi"')),'défi parent accepté');
+select ok(private.fluence_valid_projection(pg_temp.classe('new-class')||'{"typeLecture":"entrainement"}'),'entraînement projeté accepté');
+select ok(private.fluence_valid_projection(pg_temp.classe('new-class')||'{"typeLecture":"defi"}'),'défi projeté accepté');
+select ok(not private.fluence_valid_payload(jsonb_set(pg_temp.maison('invalid-home'),'{bilan,typeLecture}',v)),'type parent invalide refusé sans coercition') from (values('null'::jsonb),('1'),('true'),('[]'),('["defi"]'),('{}'),('"lecture"'),('"Defi"'),('"defi "'))q(v);
+select ok(not private.fluence_valid_projection(pg_temp.classe('invalid-class')||jsonb_build_object('typeLecture',v)),'type projeté invalide refusé sans coercition') from (values('null'::jsonb),('1'),('true'),('[]'),('["defi"]'),('{}'),('"lecture"'),('"Defi"'),('"defi "'))q(v);
+select public.fluence_receive_result(repeat('a',64),pg_temp.maison('old-home'));
+select public.fluence_receive_result(repeat('a',64),jsonb_set(pg_temp.maison('new-home',100),'{bilan,typeLecture}','"defi"'));
+select public.fluence_receive_result(repeat('a',64),jsonb_set(pg_temp.maison('train-home',120),'{bilan,typeLecture}','"entrainement"'));
+select is((select payload#>>'{bilan,typeLecture}' from public.fluence_results where client_id='new-home'),'defi','type du bilan enregistré');
+select ok(not (select payload->'bilan' ? 'typeLecture' from public.fluence_results where client_id='old-home'),'historique sans type reste absent');
+select throws_ok($$select public.fluence_receive_result(repeat('a',64),jsonb_set(pg_temp.maison('new-home',100),'{bilan,typeLecture}','"entrainement"'))$$,'PT409','idempotency_conflict','modifier défi en entraînement est interdit');
+select throws_ok($$select public.fluence_receive_result(repeat('a',64),pg_temp.maison('new-home',100))$$,'PT409','idempotency_conflict','le type parent ne peut être effacé');
+select throws_ok($$select public.fluence_receive_result(repeat('a',64),jsonb_set(pg_temp.maison('old-home'),'{bilan,typeLecture}','"defi"'))$$,'PT409','idempotency_conflict','ancienne tentative ne reçoit aucun type rétroactif');
+select lives_ok($$select public.fluence_receive_result(repeat('a',64),jsonb_set(pg_temp.maison('new-home',100),'{bilan,typeLecture}','"defi"'))$$,'réessai identique reste idempotent');
+set local role authenticated;
+set local request.jwt.claim.sub='11111111-1111-4111-8111-111111111111';
+select lives_ok($$select public.fluence_sync_progress('[]',jsonb_build_array(pg_temp.classe('old-class'),pg_temp.classe('new-class',130)||'{"typeLecture":"defi"}'),'[]')$$,'classe ancienne et défi stockés ensemble');
+select lives_ok($$select public.fluence_sync_progress('[]',jsonb_build_array(pg_temp.classe('new-class',130)),'[]')$$,'ancien enseignant peut réémettre sans champ, sans modifier le type');
+select throws_ok($$select public.fluence_sync_progress('[]',jsonb_build_array(pg_temp.classe('new-class',130)||'{"typeLecture":"entrainement"}'),'[]')$$,'PT409','idempotency_conflict','projection ne peut reclasser un défi');
+select throws_ok($$select public.fluence_sync_progress('[]',jsonb_build_array(pg_temp.classe('old-class')||'{"typeLecture":"defi"}'),'[]')$$,'PT409','idempotency_conflict','projection historique ne peut être rétroclassée');
+select throws_ok($$select public.fluence_sync_progress('[]',jsonb_build_array(pg_temp.classe('new-class',131)),'[]')$$,'PT409','idempotency_conflict','compat ancien client ne permet aucun changement de score');
+select lives_ok($$select public.fluence_sync_progress('[]',jsonb_build_array(pg_temp.projection('new-home',100)),'[]')$$,'projection ancienne du bilan maison reste acceptée');
+reset role;
+set local role authenticated;
+select lives_ok($$select public.fluence_sync_progress('[]',jsonb_build_array(pg_temp.projection('new-home',100)||'{"typeLecture":"defi"}'),'[]')$$,'brut parent autorise enrichissement de sa projection importée par ancien client');
+select lives_ok($$select public.fluence_sync_progress('[]',jsonb_build_array(pg_temp.projection('new-home',100)),'[]')$$,'ancien pair reste accepté après enrichissement prouvé');
+select lives_ok($$select public.fluence_sync_progress('[]',jsonb_build_array(pg_temp.projection('old-home')),'[]')$$,'ancienne projection maison sans type conservée');
+select throws_ok($$select public.fluence_sync_progress('[]',jsonb_build_array(pg_temp.projection('old-home')||'{"typeLecture":"defi"}'),'[]')$$,'PT409','idempotency_conflict','brut historique sans type interdit une rétroclassification');
+select lives_ok($$select public.fluence_sync_progress('[]',jsonb_build_array(pg_temp.projection('train-home',120)),'[]')$$,'projection entraînement historique provisoirement sans type');
+select throws_ok($$select public.fluence_sync_progress('[]',jsonb_build_array(pg_temp.projection('train-home',120)||'{"typeLecture":"defi"}'),'[]')$$,'PT409','idempotency_conflict','type différent du brut refusé');
+select lives_ok($$select public.fluence_sync_progress('[]',jsonb_build_array(pg_temp.projection('train-home',121)||'{"id":"different-score"}'),'[]')$$,'ancienne projection indépendante avec score différent');
+select throws_ok($$select public.fluence_sync_progress('[]',jsonb_build_array(pg_temp.projection('train-home',121)||'{"id":"different-score","typeLecture":"entrainement"}'),'[]')$$,'PT409','idempotency_conflict','même source mais mesures différentes ne prouvent pas le type');
+select lives_ok($$select public.fluence_sync_progress('[]',jsonb_build_array(pg_temp.projection('train-home',120)||'{"id":"different-child","child_ref":"type-b"}'),'[]')$$,'ancienne projection d’un autre enfant');
+select throws_ok($$select public.fluence_sync_progress('[]',jsonb_build_array(pg_temp.projection('train-home',120)||'{"id":"different-child","child_ref":"type-b","typeLecture":"entrainement"}'),'[]')$$,'PT409','idempotency_conflict','le brut d’un autre enfant ne permet pas un enrichissement');
+select public.fluence_sync_progress('[]','[]','[{"id":"different-child"}]');
+reset role;
+select is((select payload->>'typeLecture' from private.fluence_progress_items where local_id='maison:type-a:new-home'),'defi','type enrichi reste enregistré après replay ancien');
+select is((select payload->>'typeLecture' from private.fluence_progress_items where local_id='new-class'),'defi','réessai ancien n’a pas effacé le type');
+select is((select count(*)::integer from private.fluence_visible_progress('11111111-1111-4111-8111-111111111111','type-a')),5,'toutes tentatives conservées et maison dédoublonnée');
+select is((select count(*)::integer from private.fluence_visible_progress('11111111-1111-4111-8111-111111111111','type-a') where item->>'typeLecture'='defi'),2,'défi brut maison prioritaire sur projection ancienne sans type');
+select is((select count(*)::integer from private.fluence_visible_progress('11111111-1111-4111-8111-111111111111','type-a') where not(item ? 'typeLecture')),2,'anciennes lectures restent sans type dans progression');
+select is(pg_temp.lit()#>>'{objectif,valeur}','143','objectif reste meilleur score toutes tentatives');
+select is(jsonb_array_length(public.fluence_read_progress(repeat('b',64))->'lectures'),0,'un autre lien reste isolé');
+select ok(not exists(select 1 from private.fluence_visible_progress('11111111-1111-4111-8111-111111111111','type-a') where (item-array['id','origine','ep','date','mclm','lus','erreurs','secondes','dernier','fautes','typeLecture'])<>'{}'::jsonb),'projection strictement sans identité privée');
+set local role authenticated;
+select public.fluence_sync_progress('[]','[]','[{"id":"new-class"}]');
+reset role;
+select is(pg_temp.lit()#>>'{objectif,valeur}','132','entraînement compte pour objectif après suppression du meilleur défi');
+select is((select count(*)::integer from private.fluence_progress_items where local_id='new-class'),1,'suppression conserve la lecture et son type dans historique');
+select ok(not has_function_privilege('anon','private.fluence_valid_payload(jsonb)','EXECUTE'),'validator privé reste interdit');
+select ok(not has_function_privilege('anon','public.fluence_sync_progress(jsonb,jsonb,jsonb)','EXECUTE'),'projection enseignant reste interdite aux parents');
+select * from finish();
+rollback;

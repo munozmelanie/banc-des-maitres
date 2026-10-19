@@ -222,16 +222,23 @@ const Plateforme = (() => {
   /* ---------- les deux appareils gardent chacun la classe et tous les résultats ----------
      banc/classe et banc/reglages : la version la plus récente gagne (champ maj) ;
      banc/resultats : les deux listes sont réunies (chaque essai a son identifiant ; un essai supprimé le reste partout). */
+  // Égalité pédagogique stricte : les informations de transport restent locales.
+  const memeBilanMaison = (a,b) => {
+    if(!a||!b||a.suppr||b.suppr||a.origine!=="maison"||b.origine!=="maison"||typeof a.sourceId!=="string"||!a.sourceId||a.sourceId!==b.sourceId||typeof a.eleve!=="string"||!a.eleve||a.eleve!==b.eleve||a.ep!==b.ep||!Number.isFinite(Date.parse(a.date))||Date.parse(a.date)!==Date.parse(b.date))return false;
+    if(!["mclm","lus","erreurs","secondes","dernier"].every(k=>typeof a[k]==="number"&&Number.isFinite(a[k])&&a[k]===b[k]))return false;
+    return Array.isArray(a.fautes)&&Array.isArray(b.fautes)&&a.fautes.length===a.erreurs&&b.fautes.length===b.erreurs&&[a.fautes,b.fautes].every(f=>new Set(f).size===f.length&&f.every(i=>Number.isSafeInteger(i)&&i>=0&&i<=a.dernier))&&JSON.stringify(a.fautes.slice().sort((x,y)=>x-y))===JSON.stringify(b.fautes.slice().sort((x,y)=>x-y));
+  };
   const fusionResultats = (a, b) => {
     const m = new Map();
     for (const l of [a && a.liste, b && b.liste]) for (const r of (Array.isArray(l) ? l : [])){
       if (!r || typeof r.id!=="string") continue;
       const x = m.get(r.id);
       if (!x || (r.suppr && !x.suppr)) m.set(r.id, r);
+      else if(!Object.hasOwn(x,"typeLecture")&&["entrainement","defi"].includes(r.typeLecture)&&memeBilanMaison(x,r))m.set(r.id,{...x,typeLecture:r.typeLecture});
     }
     return {liste:[...m.values()].sort((x,y)=>String(x.date||"").localeCompare(String(y.date||"")) || x.id.localeCompare(y.id))};
   };
-  const sigResultats = d => (d && Array.isArray(d.liste) ? d.liste : []).map(r=>r.id+(r.suppr?"x":"")).sort().join(",");
+  const sigResultats = d => JSON.stringify((d && Array.isArray(d.liste) ? d.liste : []).map(r=>[r.id,!!r.suppr,r.suppr?null:["entrainement","defi"].includes(r.typeLecture)?r.typeLecture:null]).sort((a,b)=>String(a[0]).localeCompare(String(b[0]))));
   const plusRecent = (a, b) => !b ? a : (!a || (b.maj||0) > (a.maj||0)) ? b : a;
   const sigMaj = d => d ? String(d.maj||0)+":"+JSON.stringify(d).length : "";
   const Sync = (() => {
@@ -372,6 +379,6 @@ const Plateforme = (() => {
     if (name==="downloads") return Telechargements;
     return null;
   } };
-  return { NATIF, Liaison, Stock, partage:plug("Share"), eveille, rid, normalise, role, changeRole, fusionResultats, lsG, lsS };
+  return { NATIF, Liaison, Stock, partage:plug("Share"), eveille, rid, normalise, role, changeRole, fusionResultats, memeBilanMaison, lsG, lsS };
 })();
 window.Plateforme = Plateforme;

@@ -31,7 +31,7 @@ let nb=0;const vrai=(ok,m)=>{if(!ok)throw Error(m);nb++;console.log('  ✓ '+m);
     return r.continue();
    }
    if(new URL(r.request().url()).pathname==='/functions/v1/fluence-bilan'){
-    const d=r.request().postDataJSON();api.push({action:d.action,cles:Object.keys(d).sort(),tokenConforme:d.token===TOKEN||d.token===AUTRE,authorization:!!r.request().headers().authorization});
+    const d=r.request().postDataJSON();api.push({action:d.action,avecTypeLecture:d.avecTypeLecture,cles:Object.keys(d).sort(),tokenConforme:d.token===TOKEN||d.token===AUTRE,authorization:!!r.request().headers().authorization});
     return r.fulfill({status:401,contentType:'application/json',body:'{"error":"invalid_access"}'});
    }
    autres.push(new URL(r.request().url()).pathname);return r.abort();
@@ -56,7 +56,7 @@ let nb=0;const vrai=(ok,m)=>{if(!ok)throw Error(m);nb++;console.log('  ✓ '+m);
   await p.evaluate(()=>Ecran.go({name:'episode',id:'T2',step:4}));
   vrai(await p.locator('#maison-depart').count()===0&&!await p.evaluate(()=>Banc.prepareImpression(Banc.ep('T2'))),'la BD reste refusée par route directe et par impression');
   const refus=await p.evaluate(async()=>{try{await MaisonCloud.progressionParents();return 'accepte';}catch(e){return e.code;}});
-  vrai(refus==='acces-refuse'&&api.length===1&&api[0].tokenConforme&&!api[0].authorization&&api[0].cles.join(',')==='action,limite,token','l’aperçu ne contourne pas le refus de l’API privée et ne lui ajoute aucun privilège');
+  vrai(refus==='acces-refuse'&&api.length===1&&api[0].tokenConforme&&!api[0].authorization&&api[0].avecTypeLecture===true&&api[0].cles.join(',')==='action,avecTypeLecture,limite,token','l’aperçu ne contourne pas le refus de l’API privée et ne lui ajoute aucun privilège');
   await p.reload();await p.waitForSelector('button[data-ep=E1]');
   vrai(await p.evaluate(()=>Parents.apercuEpisodes())&&await p.locator('button[data-ep=E7]').isEnabled(),'le même QR retrouve son aperçu après rechargement');
   await p.evaluate(token=>history.replaceState(null,'',location.pathname+'#parents&famille='+token+'&prenom=Test'),AUTRE);

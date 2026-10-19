@@ -25,6 +25,7 @@ function installe(o){
     __cloudTest.requetes.push({url,method:init.method||"GET",body,headers});
     if(url.includes("/auth/v1/user")&&__cloudTest.attendUser)return new Promise(resolve=>{window.__reponseUser=resolve;});
     if(url.includes("/auth/v1/user")&&__cloudTest.userRefuse)return new Response(JSON.stringify({error:"invalid_token"}),{status:401,headers:{"content-type":"application/json"}});
+    if(url.includes("/auth/v1/token")&&__cloudTest.refuseRefresh)return Response.json({error:"refresh_token_not_found"},{status:400});
     if(url.includes("/auth/v1/token")&&__cloudTest.attendRefresh)return new Promise(resolve=>{window.__reponseRefresh=resolve;});
     if(url.includes("/auth/v1/verify")&&__cloudTest.attendVerify)return new Promise(resolve=>{window.__reponseVerify=resolve;});
     if(url.includes("/rest/v1/fluence_results")&&__cloudTest.attendResultats)return new Promise(resolve=>{window.__reponseResultats=resolve;});
@@ -154,6 +155,23 @@ function installe(o){
     const sessionRéponse={access_token:"test-access-renouvele",refresh_token:"test-refresh-renouvele",expires_in:3600,user:{id:"test-enseignante",email:"enseignante@example.test"}};
     await expirée.evaluate(d=>__reponseRefresh(new Response(JSON.stringify(d),{status:200,headers:{"content-type":"application/json"}})),sessionRéponse);await attend(expirée,()=>__refreshFini);
     vrai(await expirée.evaluate(()=>!MaisonCloud.connectee()&&localStorage.getItem("fluence-cloud-auth-v1")==="null"),"une réponse de renouvellement tardive ne reconnecte pas le compte déconnecté");
+    // Une session présente mais expirée doit ouvrir un vrai formulaire de reconnexion.
+    const renouvelle=await ouvre({enseignante:true,expiree:true});await attend(renouvelle,()=>!!window.__reponseRefresh);
+    await renouvelle.evaluate(()=>EnvoiMaison.ouvre());await renouvelle.waitForSelector("#cloud-actualise");
+    await renouvelle.evaluate(()=>{__cloudTest.attendRefresh=false;__cloudTest.refuseRefresh=true;__reponseRefresh(Response.json({error:"refresh_token_not_found"},{status:400}));});
+    await attend(renouvelle,()=>MaisonCloud.statutReception().reconnexionNecessaire&&!MaisonCloud.statutReception().enCours);await renouvelle.waitForSelector("#cloud-connexion");
+    vrai(await renouvelle.locator("#cloud-email").inputValue()==="enseignante@example.test"&&await renouvelle.locator("#cloud-actualise").count()===0,"session expirée : le dialogue remplace le panneau Connectée par le formulaire prérempli");
+    vrai(await renouvelle.evaluate(()=>MaisonCloud.connectee()&&JSON.parse(localStorage.getItem("fluence-cloud-auth-v1")).access_token==="test-access-expire"),"l’ancienne session reste intacte pendant la reconnexion");
+    const gardeBilan=await bilan(renouvelle,"test-reconnexion-conserve");
+    await renouvelle.evaluate(async r=>{const v={...r,id:"maison:test-prive:"+r.id,sourceId:r.id,eleve:"test-prive"};delete v.prenom;await Banc.Donnees.ajoute(v);window.__pedagogieAvant=JSON.stringify({classe:Banc.Donnees.sauvegarde().classe,resultats:Banc.Donnees.sauvegarde().resultats,reglages:Banc.Donnees.sauvegarde().reglages});},gardeBilan);
+    await renouvelle.fill("#cloud-otp","123456");await renouvelle.evaluate(()=>{__cloudTest.permis=false;});await renouvelle.click("#cloud-connexion");
+    await attend(renouvelle,()=>/pas autorisé/.test(document.querySelector("#cloud-info")?.textContent||""));
+    vrai(await renouvelle.evaluate(()=>MaisonCloud.connectee()&&MaisonCloud.statutReception().reconnexionNecessaire&&JSON.parse(localStorage.getItem("fluence-cloud-auth-v1")).access_token==="test-access-expire"),"un nouveau compte refusé ne remplace ni ne déconnecte l’ancienne session");
+    await renouvelle.evaluate(()=>{__cloudTest.permis=true;__cloudTest.refuseRefresh=false;});await renouvelle.click("#cloud-connexion");await renouvelle.waitForSelector("#cloud-actualise");
+    await attend(renouvelle,()=>!MaisonCloud.statutReception().enCours&&MaisonCloud.statutReception().derniereReception>0);
+    vrai(await renouvelle.evaluate(()=>MaisonCloud.connectee()&&!MaisonCloud.statutReception().reconnexionNecessaire&&!MaisonCloud.statutReception().erreur&&JSON.parse(localStorage.getItem("fluence-cloud-auth-v1")).access_token==="test-access-token"),"connexion autorisée remplace la session et confirme une nouvelle réception réelle");
+    vrai(await renouvelle.evaluate(()=>JSON.stringify({classe:Banc.Donnees.sauvegarde().classe,resultats:Banc.Donnees.sauvegarde().resultats,reglages:Banc.Donnees.sauvegarde().reglages})===__pedagogieAvant),"reconnexion conserve exactement élèves, objectifs, résultats et réglages");
+    vrai(await renouvelle.locator("#cloud-connexion").count()===0,"le formulaire disparaît après reconnexion réussie");
     const connexionTardive=await ouvre({enseignante:true});await connexionTardive.evaluate(()=>{__cloudTest.attendVerify=true;window.__connexionFinie=false;MaisonCloud.connecteCode("enseignante@example.test","123456").then(()=>{window.__connexionFinie=true;},()=>{window.__connexionFinie=true;});});await attend(connexionTardive,()=>!!window.__reponseVerify);
     await connexionTardive.evaluate(()=>MaisonCloud.deconnecte());await connexionTardive.evaluate(d=>__reponseVerify(new Response(JSON.stringify(d),{status:200,headers:{"content-type":"application/json"}})),sessionRéponse);await attend(connexionTardive,()=>__connexionFinie);
     vrai(await connexionTardive.evaluate(()=>!MaisonCloud.connectee()&&localStorage.getItem("fluence-cloud-auth-v1")==="null"),"une vérification OTP tardive ne rétablit pas la session après déconnexion");

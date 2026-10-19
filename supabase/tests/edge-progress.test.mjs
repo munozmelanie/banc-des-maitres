@@ -75,4 +75,18 @@ check(JSON.stringify(catalogue)===JSON.stringify(ids),'catalogue source identiqu
 for(const ep of ids)check(valideProgression({...page,lectures:[{...row,ep}]})!==null,'texte '+ep+' accepté par Edge');
 const migration=await readFile(new URL('../migrations/202610190002_fluence_family_progress.sql',import.meta.url),'utf8');
 check(migration.includes("where p->>'ep' ~ '^(E[1-7]|T[1-6])$'"),'vue SQL possède le même catalogue publié');
+const typedPage={...page,lectures:[{...row,typeLecture:'defi'}]};
+check(!Object.hasOwn(valideProgression(typedPage).lectures[0],'typeLecture'),'par défaut le type est retiré pour les anciens clients stricts');
+check(valideProgression(typedPage,200,true).lectures[0].typeLecture==='defi','nouveau client reçoit le défi reconnu');
+check(!Object.hasOwn(valideProgression(page,200,true).lectures[0],'typeLecture'),'aucun type inventé pour l’ancien historique');
+for(const typeLecture of ['entrainement','defi']){
+ const h=createHandler({...config,fetcher:async()=>Response.json({...page,lectures:[{...row,typeLecture}]})});
+ for(const option of [undefined,false,true]){
+  const b={token,action:'progression',...(option===undefined?{}:{avecTypeLecture:option})};
+  const response=await status(b,200,'négociation du type : '+String(option),h),d=await response.json();
+  check(option===true?d.lectures[0].typeLecture===typeLecture:!Object.hasOwn(d.lectures[0],'typeLecture'),'type seulement après opt-in explicite');
+ }
+}
+for(const avecTypeLecture of [null,1,'true',[],{}])await status({token,action:'progression',avecTypeLecture},400,'capacité mal formée refusée');
+for(const typeLecture of [null,'lecture','Defi',[],['defi'],{}])check(valideProgression({...page,lectures:[{...row,typeLecture}]},200,true)===null,'type de réponse invalide refusé');
 console.log(count+' contrôles Edge progression réussis (aucun réseau).');

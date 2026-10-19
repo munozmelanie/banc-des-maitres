@@ -12,8 +12,8 @@ const TOKENS = /^[0-9a-f]{64}$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const CURSOR = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z\|[0-9a-f-]{36}$/;
 const objet = (v: unknown): v is Objet => v !== null && typeof v === "object" && !Array.isArray(v);
-function cles(v: unknown, attendues: string[]): v is Objet {
-  return objet(v) && Object.keys(v).length === attendues.length && attendues.every(k => Object.hasOwn(v, k));
+function cles(v: unknown, attendues: string[], facultatives: string[] = []): v is Objet {
+  return objet(v) && attendues.every(k => Object.hasOwn(v, k)) && Object.keys(v).every(k => attendues.includes(k) || facultatives.includes(k));
 }
 const entier = (v: unknown, min: number, max: number): v is number => typeof v === "number" && Number.isSafeInteger(v) && v >= min && v <= max;
 function chaine(v: unknown, max: number): v is string {
@@ -24,7 +24,8 @@ function chaine(v: unknown, max: number): v is string {
 export function validePaquet(value: unknown, now = Date.now()): Objet | null {
   if (!cles(value, ["format", "version", "texte", "bilan"]) || value.format !== "fluence/bilan-maison" || value.version !== 1 || typeof value.texte !== "string" || !/^[0-9a-f]{8}$/.test(value.texte)) return null;
   const b = value.bilan;
-  if (!cles(b, ["id", "origine", "prenom", "ep", "titre", "date", "secondes", "dernier", "fautes", "lus", "erreurs", "mclm"])) return null;
+  if (!cles(b, ["id", "origine", "prenom", "ep", "titre", "date", "secondes", "dernier", "fautes", "lus", "erreurs", "mclm"], ["typeLecture"])) return null;
+  if (Object.hasOwn(b, "typeLecture") && (typeof b.typeLecture !== "string" || !["entrainement", "defi"].includes(b.typeLecture))) return null;
   if (typeof b.id !== "string" || !/^[A-Za-z0-9_-]{8,80}$/.test(b.id) || b.origine !== "maison" || !chaine(b.prenom, 80) || !chaine(b.titre, 200) || typeof b.ep !== "string" || !/^[ET][1-9][0-9]{0,2}$/.test(b.ep)) return null;
   if (typeof b.date !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(b.date)) return null;
   const date = Date.parse(b.date);
@@ -39,12 +40,12 @@ export function validePaquet(value: unknown, now = Date.now()): Objet | null {
   return {
     format: "fluence/bilan-maison", version: 1, texte: value.texte,
     bilan: { id: b.id, origine: "maison", prenom: b.prenom, ep: b.ep, titre: b.titre, date: b.date,
-      secondes: b.secondes, dernier: b.dernier, fautes: b.fautes.slice(), lus: b.lus, erreurs: b.erreurs, mclm: score }
+      secondes: b.secondes, dernier: b.dernier, fautes: b.fautes.slice(), lus: b.lus, erreurs: b.erreurs, mclm: score, ...(Object.hasOwn(b, "typeLecture") ? { typeLecture: b.typeLecture } : {}) }
   };
 }
 
 /** Reconstruire une réponse minimale même si la base ajoute des colonnes. */
-export function valideProgression(value: unknown, limite = 200): Objet | null {
+export function valideProgression(value: unknown, limite = 200, avecTypeLecture = false): Objet | null {
   if (!objet(value) || value.version !== 1 || !objet(value.objectif) || !Array.isArray(value.lectures) || value.lectures.length > limite ||
     (value.suivant !== null && (typeof value.suivant !== "string" || !CURSOR.test(value.suivant)))) return null;
   const objectif = value.objectif;
@@ -57,8 +58,10 @@ export function valideProgression(value: unknown, limite = 200): Objet | null {
       !entier(r.mclm, 0, 60000) || !entier(r.lus, 0, 1000) || !entier(r.erreurs, 0, r.lus) || typeof r.secondes !== "number" || !Number.isFinite(r.secondes) || r.secondes < 0 || r.secondes > 60) return null;
     if (Object.hasOwn(r, "dernier") && (!entier(r.dernier, 0, 5000) || r.lus > r.dernier + 1)) return null;
     if (Object.hasOwn(r, "fautes") && (!Array.isArray(r.fautes) || r.fautes.length !== r.erreurs || r.fautes.length > 1000 || new Set(r.fautes).size !== r.fautes.length || r.fautes.some(f => !entier(f, 0, typeof r.dernier === "number" ? r.dernier : 5000)))) return null;
+    if (Object.hasOwn(r, "typeLecture") && (typeof r.typeLecture !== "string" || !["entrainement", "defi"].includes(r.typeLecture))) return null;
     ids.add(r.id);
     lectures.push({ id: r.id, origine: r.origine, ep: r.ep, date: r.date, mclm: r.mclm, lus: r.lus, erreurs: r.erreurs, secondes: r.secondes,
+      ...(avecTypeLecture && Object.hasOwn(r, "typeLecture") ? { typeLecture: r.typeLecture } : {}),
       ...(Object.hasOwn(r, "dernier") ? { dernier: r.dernier } : {}), ...(Object.hasOwn(r, "fautes") ? { fautes: (r.fautes as number[]).slice() } : {}) });
   }
   return { version: 1, objectif: { valeur: objectif.valeur, mode: objectif.mode }, lectures, suivant: value.suivant };
@@ -108,9 +111,10 @@ export function createHandler(config: Config): (request: Request) => Promise<Res
     catch (e) { return reponse(e instanceof Error && e.message === "too_large" ? 413 : 400, { error: e instanceof Error && e.message === "too_large" ? "too_large" : "invalid_json" }); }
     const lecture = objet(body) && body.action === "progression";
     if (lecture) {
-      if (!objet(body) || !Object.hasOwn(body, "token") || Object.keys(body).some(k => !["token", "action", "curseur", "limite"].includes(k)) ||
+      if (!objet(body) || !Object.hasOwn(body, "token") || Object.keys(body).some(k => !["token", "action", "curseur", "limite", "avecTypeLecture"].includes(k)) ||
         (Object.hasOwn(body, "curseur") && body.curseur !== null && (typeof body.curseur !== "string" || !CURSOR.test(body.curseur))) ||
-        (Object.hasOwn(body, "limite") && !entier(body.limite, 1, 200))) return reponse(400, { error: "invalid_request" });
+        (Object.hasOwn(body, "limite") && !entier(body.limite, 1, 200)) ||
+        (Object.hasOwn(body, "avecTypeLecture") && typeof body.avecTypeLecture !== "boolean")) return reponse(400, { error: "invalid_request" });
     } else if (!cles(body, ["token", "paquet"])) return reponse(400, { error: "invalid_request" });
     if (!objet(body)) return reponse(400, { error: "invalid_request" });
     if (typeof body.token !== "string" || !TOKENS.test(body.token)) return reponse(401, { error: "invalid_access" });
@@ -136,7 +140,7 @@ export function createHandler(config: Config): (request: Request) => Promise<Res
         return reponse(503, { error: "service_unavailable" });
       }
       if (lecture) {
-        const progression = valideProgression(data, typeof body.limite === "number" ? body.limite : 200);
+        const progression = valideProgression(data, typeof body.limite === "number" ? body.limite : 200, body.avecTypeLecture === true);
         return progression ? reponse(200, progression) : reponse(503, { error: "service_unavailable" });
       }
       const recu = Array.isArray(data) && data.length === 1 ? data[0] : null;

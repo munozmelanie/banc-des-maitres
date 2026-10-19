@@ -3,7 +3,7 @@
 const MaisonCloud = (() => {
   const AUTH="fluence-cloud-auth-v1", QUEUE="fluence-parents-envois-v1";
   const ecoutes=new Set(); let session=null, file=[], chargee=false, stockageBloque=false, envoi=null, reception=null, actualisation=null, demarre=false, generation=0, ecrituresSession=Promise.resolve();
-  let infos={message:"",recu:0,nonAssocies:0};
+  let infos={message:"",recu:0,nonAssocies:0,derniereReception:0,erreur:false,reconnexionNecessaire:false};
   const signale=()=>ecoutes.forEach(f=>{try{f();}catch(e){}});
   const config=()=>window.BANC_MAISON||{};
   const configure=()=>/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(config().url||"")&&typeof config().publishableKey==="string"&&config().publishableKey.length>20;
@@ -51,7 +51,7 @@ const MaisonCloud = (() => {
   const cles=(v,obligatoires,facultatives=[])=>objet(v)&&obligatoires.every(k=>Object.hasOwn(v,k))&&Object.keys(v).every(k=>obligatoires.includes(k)||facultatives.includes(k));
   const dateValide=v=>typeof v==="string"&&/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(v)&&Number.isFinite(Date.parse(v))&&Date.parse(v)>=Date.UTC(2000,0,1)&&Date.parse(v)<=Date.now()+86400000&&new Date(v).toISOString().slice(0,19)===v.slice(0,19);
   function mesureValide(r){
-    return objet(r)&&/^[ET][1-9][0-9]{0,2}$/.test(r.ep||"")&&dateValide(r.date)&&entier(r.mclm,0,60000)&&entier(r.lus,0,1000)&&entier(r.erreurs,0,r.lus)&&typeof r.secondes==="number"&&Number.isFinite(r.secondes)&&r.secondes>=0&&r.secondes<=60&&(!Object.hasOwn(r,"dernier")||entier(r.dernier,0,5000)&&r.lus<=r.dernier+1)&&(!Object.hasOwn(r,"fautes")||Array.isArray(r.fautes)&&r.fautes.length===r.erreurs&&new Set(r.fautes).size===r.fautes.length&&r.fautes.every(i=>entier(i,0,r.dernier??5000)));
+    return objet(r)&&(!Object.hasOwn(r,"typeLecture")||["entrainement","defi"].includes(r.typeLecture))&&/^[ET][1-9][0-9]{0,2}$/.test(r.ep||"")&&dateValide(r.date)&&entier(r.mclm,0,60000)&&entier(r.lus,0,1000)&&entier(r.erreurs,0,r.lus)&&typeof r.secondes==="number"&&Number.isFinite(r.secondes)&&r.secondes>=0&&r.secondes<=60&&(!Object.hasOwn(r,"dernier")||entier(r.dernier,0,5000)&&r.lus<=r.dernier+1)&&(!Object.hasOwn(r,"fautes")||Array.isArray(r.fautes)&&r.fautes.length===r.erreurs&&new Set(r.fautes).size===r.fautes.length&&r.fautes.every(i=>entier(i,0,r.dernier??5000)));
   }
   const erreurProgres=(code,message)=>Object.assign(new Error(message),{code});
   let generationParents=0;
@@ -65,12 +65,12 @@ const MaisonCloud = (() => {
     try{
       for(let page=0;page<100;page++){
         valideAcces();
-        const d=await requete("/functions/v1/fluence-bilan",{method:"POST",cache:"no-store",credentials:"omit",body:JSON.stringify({token,action:"progression",limite:200,...(curseur?{curseur}:{})})});
+        const d=await requete("/functions/v1/fluence-bilan",{method:"POST",cache:"no-store",credentials:"omit",body:JSON.stringify({token,action:"progression",avecTypeLecture:true,limite:200,...(curseur?{curseur}:{})})});
         valideAcces();
         if(!cles(d,["version","objectif","lectures","suivant"])||d.version!==1||!cles(d.objectif,["valeur","mode"])||!["manuel","automatique","attente"].includes(d.objectif.mode)||!(d.objectif.mode==="attente"?d.objectif.valeur===null:entier(d.objectif.valeur,0,d.objectif.mode==="manuel"?60000:66000))||!Array.isArray(d.lectures)||d.lectures.length>200||!(d.suivant===null||typeof d.suivant==="string"&&d.suivant.length>0&&d.suivant.length<=4096&&!/[\x00-\x20\x7f]/.test(d.suivant)))throw erreurProgres("reponse-invalide","Les progrès reçus ne sont pas lisibles. Réessayez.");
         objectif={valeur:d.objectif.valeur,mode:d.objectif.mode};
         for(const r of d.lectures){
-          if(!cles(r,["id","origine","ep","date","mclm","lus","erreurs","secondes"],["dernier","fautes"])||!UUID.test(r.id||"")||!["classe","maison"].includes(r.origine)||!mesureValide(r)||ids.has(r.id))throw erreurProgres("reponse-invalide","Les progrès reçus ne sont pas lisibles. Réessayez.");
+          if(!cles(r,["id","origine","ep","date","mclm","lus","erreurs","secondes"],["dernier","fautes","typeLecture"])||!UUID.test(r.id||"")||!["classe","maison"].includes(r.origine)||!mesureValide(r)||ids.has(r.id))throw erreurProgres("reponse-invalide","Les progrès reçus ne sont pas lisibles. Réessayez.");
           const ordre=[Date.parse(r.date),r.id.toLowerCase()];
           if(precedent&&(ordre[0]<precedent[0]||ordre[0]===precedent[0]&&ordre[1]<=precedent[1]))throw erreurProgres("reponse-invalide","L’ordre des progrès reçus est incomplet. Réessayez.");
           precedent=ordre;ids.add(r.id);lectures.push({...r,...(r.fautes?{fautes:r.fautes.slice()}:{})});
@@ -113,7 +113,7 @@ const MaisonCloud = (() => {
       if(Object.hasOwn(mesure,"dernier")&&(!entier(mesure.dernier,0,5000)||mesure.lus>mesure.dernier+1))delete mesure.dernier;
       if(Object.hasOwn(mesure,"fautes")&&(!Array.isArray(mesure.fautes)||mesure.fautes.length!==mesure.erreurs||new Set(mesure.fautes).size!==mesure.fautes.length||mesure.fautes.some(i=>!entier(i,0,mesure.dernier??5000))))delete mesure.fautes;
       if(!chaineId(ID_ELEVE,r.eleve)||![undefined,null,"classe","maison"].includes(r.origine)||!mesureValide(mesure)||r.origine==="maison"&&!chaineId(ID_SOURCE,r.sourceId)){invalides++;continue;}
-      lectures.push({id:r.id,child_ref:r.eleve,origine:r.origine==="maison"?"maison":"classe",...(r.origine==="maison"?{source_id:r.sourceId}:{}),ep:r.ep,date:new Date(r.date).toISOString(),mclm:r.mclm,lus:r.lus,erreurs:r.erreurs,secondes:r.secondes,...(Object.hasOwn(mesure,"dernier")?{dernier:mesure.dernier}:{}),...(Object.hasOwn(mesure,"fautes")?{fautes:mesure.fautes.slice()}:{} )});
+      lectures.push({id:r.id,child_ref:r.eleve,origine:r.origine==="maison"?"maison":"classe",...(r.origine==="maison"?{source_id:r.sourceId}:{}),ep:r.ep,date:new Date(r.date).toISOString(),mclm:r.mclm,lus:r.lus,erreurs:r.erreurs,secondes:r.secondes,...(Object.hasOwn(mesure,"typeLecture")?{typeLecture:mesure.typeLecture}:{}),...(Object.hasOwn(mesure,"dernier")?{dernier:mesure.dernier}:{}),...(Object.hasOwn(mesure,"fautes")?{fautes:mesure.fautes.slice()}:{} )});
     }
     return {p_eleves:eleves,p_lectures:lectures,p_suppressions:suppressions,invalides};
   }
@@ -196,7 +196,7 @@ const MaisonCloud = (() => {
     if(!session)throw new Error("Connectez l'espace de l'enseignante.");
     if(session.expire>Date.now()+60000)return session.access_token;
     if(!actualisation){const version=generation,refresh_token=session.refresh_token;actualisation=(async()=>{const d=await requete("/auth/v1/token?grant_type=refresh_token",{method:"POST",body:JSON.stringify({refresh_token})});await gardeSession(d,version);return session.access_token;})();}
-    const courante=actualisation;try{return await courante;}finally{if(actualisation===courante)actualisation=null;}
+    const courante=actualisation;try{return await courante;}catch(e){if([400,401,403].includes(e.status))e.reconnexionNecessaire=true;throw e;}finally{if(actualisation===courante)actualisation=null;}
   }
   async function api(path,options={}){const version=generation,identite=session?.user.id,token=await jeton();if(version!==generation||session?.user.id!==identite)throw new Error("Cette connexion a été annulée.");return requete(path,options,token);}
   async function demandeCode(email){
@@ -226,7 +226,7 @@ const MaisonCloud = (() => {
     const permis=await requete("/rest/v1/rpc/fluence_teacher_enabled",{method:"POST",body:"{}"},d.access_token);
     verifieGeneration(version);
     if(permis!==true)throw new Error("Ce compte n'est pas autorisé comme enseignante de Fluence.");
-    await gardeSession(d,version);verifieGeneration(version);infos.message="Connexion effectuée. Les bilans restent privés.";signale();
+    await gardeSession(d,version);verifieGeneration(version);infos={message:"Connexion effectuée. Les bilans restent privés.",recu:0,nonAssocies:0,derniereReception:0,erreur:false,reconnexionNecessaire:false};signale();
   }
   async function connecteCode(email,texte){
     if(Banc.ROLE==="parents")throw Error("Accès enseignante uniquement.");
@@ -237,12 +237,16 @@ const MaisonCloud = (() => {
   }
   async function deconnecte(){
     if(Banc.ROLE==="parents")return;
-    const token=session?.access_token,version=++generation;session=null;actualisation=null;dejaPublie.clear();publicationDemandee=false;messageProgres="";if(minuteurPublication){clearTimeout(minuteurPublication);minuteurPublication=null;}infos={message:"Espace déconnecté.",recu:0,nonAssocies:0};signale();
+    const token=session?.access_token,version=++generation;session=null;actualisation=null;dejaPublie.clear();publicationDemandee=false;messageProgres="";if(minuteurPublication){clearTimeout(minuteurPublication);minuteurPublication=null;}infos={message:"Espace déconnecté.",recu:0,nonAssocies:0,derniereReception:0,erreur:false,reconnexionNecessaire:false};signale();
     let erreur=null;try{await ecritSession(null,version);}catch(e){erreur=new Error("Impossible d'effacer la connexion enregistrée sur cet appareil. La déconnexion a aussi été demandée au service. Réessaie lorsque le stockage est disponible.");}
     if(token)try {await requete("/auth/v1/logout?scope=local",{method:"POST"},token);}catch(e){}
     if(erreur){if(version===generation){infos.message=erreur.message;signale();}throw erreur;}
   }
   const connectee=()=>Banc.ROLE!=="parents"&&!!session;
+  function statutReception(){
+    if(Banc.ROLE==="parents")return {configuree:configure(),connectee:false,enCours:false,message:"",recu:0,nonAssocies:0,derniereReception:0,erreur:false,reconnexionNecessaire:false};
+    return {configuree:configure(),connectee:connectee(),enCours:!!reception,message:infos.message,recu:infos.recu,nonAssocies:infos.nonAssocies,derniereReception:infos.derniereReception||0,erreur:!!infos.erreur,reconnexionNecessaire:!!infos.reconnexionNecessaire};
+  }
   async function invitations(){if(Banc.ROLE==="parents")throw Error("Accès enseignante uniquement.");return api("/rest/v1/fluence_accesses?select=id,child_ref,revoked,created_at&order=created_at.desc");}
   async function creeLien(eleveId){
     if(Banc.ROLE==="parents"||!Banc.Donnees.eleve(eleveId))throw new Error("Choisis un élève de la classe.");
@@ -266,16 +270,19 @@ const MaisonCloud = (() => {
           if(!eleve||!Banc.Donnees.eleve(eleve)){nonAssocies++;continue;}
           let r;try{r=EnvoiMaison.lit(JSON.stringify(row.payload));}catch(e){nonAssocies++;continue;}
           const id=EnvoiMaison.idLocal(r.id,eleve);
-          if(Banc.Donnees.contientResultat(id)||Banc.Donnees.contientBilan(r.id,eleve))continue;
           const record={...r,id,sourceId:r.id,eleve,nomDeclare:r.prenom,reception:row.received_at,source:"automatique"};delete record.prenom;
+          if(Banc.Donnees.contientResultat(id)||Banc.Donnees.contientBilan(r.id,eleve)){
+            if(Object.hasOwn(r,"typeLecture"))await Banc.Donnees.completeTypeLecture?.(record);
+            continue;
+          }
           if(!await Banc.Donnees.ajoute(record))throw new Error("Un bilan est reçu en ligne mais ne peut pas encore être enregistré sur cet appareil.");ajoutes++;
         }
         if(rows.length<500)break;
       }
       if(version!==generation||session?.user.id!==identite)return;
-      infos={message:nonAssocies?`${nonAssocies} bilan(s) en ligne à vérifier : élève absent de cet appareil ou texte différent. Relie l'appareil à ta classe pour retrouver les élèves.`:"Réception à jour. Les nouveaux bilans arrivent automatiquement quand Fluence est ouvert.",recu:ajoutes,nonAssocies};
-    }catch(e){if(version===generation&&session?.user.id===identite)infos.message=e.message||"Réception momentanément indisponible. Les bilans restent dans l'espace privé en ligne.";}finally{if(version===generation&&session?.user.id===identite)await synchronise();signale();}})();
-    try{await reception;}finally{reception=null;}
+      infos={message:nonAssocies?`${nonAssocies} bilan(s) en ligne à vérifier : élève absent de cet appareil ou texte différent. Relie l'appareil à ta classe pour retrouver les élèves.`:"Réception à jour. Les nouveaux bilans arrivent automatiquement quand Fluence est ouvert.",recu:ajoutes,nonAssocies,derniereReception:Date.now(),erreur:false,reconnexionNecessaire:false};
+    }catch(e){if(version===generation&&session?.user.id===identite){infos.erreur=true;infos.reconnexionNecessaire=!!e.reconnexionNecessaire||[401,403].includes(e.status);infos.message=infos.reconnexionNecessaire?"La connexion privée doit être renouvelée. Ouvre Accès parents pour te reconnecter. Les bilans restent enregistrés en ligne.":e.message||"Réception momentanément indisponible. Les bilans restent dans l'espace privé en ligne.";}}finally{if(version===generation&&session?.user.id===identite)await synchronise();}})();
+    signale();try{await reception;}finally{reception=null;signale();}
   }
   async function init(){
     if(demarre)return;demarre=true;
@@ -299,13 +306,15 @@ const MaisonCloud = (() => {
   }
   function vue(box){
     if(Banc.ROLE==="parents")return ()=>{};
-    const {esc,Donnees}=Banc;let vivant=true,afficheConnectee=null;
+    const {esc,Donnees}=Banc;let vivant=true,afficheFormulaire=null;
+    const besoinConnexion=()=>!connectee()||infos.reconnexionNecessaire;
     async function rend(){if(!vivant)return;
-      afficheConnectee=connectee();
+      afficheFormulaire=besoinConnexion();
       if(!configure()){box.innerHTML="<h2>Réception automatique privée</h2><p>La connexion au service privé est en préparation. Les liens personnels seront disponibles ici après son activation.</p>";return;}
-      if(!connectee()){
+      if(afficheFormulaire){
         box.innerHTML=`<h2>Connecter l'espace de l'enseignante</h2><p>Une seule connexion pour recevoir les résultats de tous tes élèves. Les bilans sont privés : seul ton compte autorisé peut les recevoir.</p><label class="label" for="cloud-email">Adresse e-mail</label><input id="cloud-email" type="email" autocomplete="email" style="width:100%"><div class="row start" style="margin-top:12px"><button class="btn primary" id="cloud-code">Recevoir un lien de connexion</button></div><p>Dans le navigateur, ouvre le lien du mail. Dans l’application iPhone : dans le mail reçu, fais un appui long sur le lien de connexion, choisis « Copier le lien », puis colle-le ici. Ne l’ouvre pas avant de le coller : il ne sert qu’une fois.</p><div id="cloud-verification"><label class="label" for="cloud-otp">Lien de connexion reçu par e-mail (ou code)</label><input id="cloud-otp" type="text" autocapitalize="off" spellcheck="false" autocomplete="off" aria-describedby="cloud-aide-lien" style="width:100%"><p class="muted" id="cloud-aide-lien">Les liens et QR codes des cartes sont réservés aux familles.</p><button class="btn primary" id="cloud-connexion" style="margin-top:10px">Se connecter</button></div><p id="cloud-info" role="status">${esc(infos.message)}</p>`;
         const info=box.querySelector("#cloud-info"),email=box.querySelector("#cloud-email"),code=box.querySelector("#cloud-code");
+        email.value=session?.user.email||"";
         code.onclick=async()=>{code.disabled=true;try{await demandeCode(email.value.trim());info.textContent="Le lien de connexion a été demandé. Consulte ta messagerie, puis ouvre le lien ou copie-le dans le champ ci-dessus.";}catch(e){info.textContent=e.message;}finally{code.disabled=false;}};
         box.querySelector("#cloud-connexion").onclick=async e=>{const b=e.currentTarget;b.disabled=true;try{await connecteCode(email.value.trim(),box.querySelector("#cloud-otp").value.trim());await rend();}catch(e){info.textContent=e.message;b.disabled=false;}};return;
       }
@@ -318,9 +327,9 @@ const MaisonCloud = (() => {
       box.querySelector("#cloud-partage").onclick=async()=>{try{const d={title:"Fluence à la maison",text:"Voici votre lien personnel pour imprimer les textes et transmettre les bilans de lecture à l'enseignante.",url:champ.value};if(Plateforme.partage)await Plateforme.partage.share(d);else if(navigator.share)await navigator.share(d);else box.querySelector("#cloud-copie").click();}catch(e){info.textContent=e?.name==="AbortError"?"Partage annulé.":"Le partage n'a pas abouti. Tu peux copier le lien.";}};
       liste();
     }
-    const retire=surChange(()=>{if(connectee()!==afficheConnectee){rend();return;}const p=box.querySelector(connectee()?"#cloud-reception":"#cloud-info");if(p)p.textContent=[infos.message,messageProgres].filter(Boolean).join(" ");});rend();return ()=>{vivant=false;retire();};
+    const retire=surChange(()=>{if(besoinConnexion()!==afficheFormulaire){rend();return;}const p=box.querySelector(afficheFormulaire?"#cloud-info":"#cloud-reception");if(p)p.textContent=[infos.message,messageProgres].filter(Boolean).join(" ");});rend();return ()=>{vivant=false;retire();};
   }
   function surChange(f){ecoutes.add(f);return ()=>ecoutes.delete(f);}
-  return {init,configure,parentActif,progressionParents,synchronise,etat,envoie,surChange,demandeCode,connecteCode,deconnecte,connectee,creeLien,invitations,revoque,recoit,vue};
+  return {init,configure,parentActif,progressionParents,synchronise,etat,envoie,surChange,demandeCode,connecteCode,deconnecte,connectee,statutReception,creeLien,invitations,revoque,recoit,vue};
 })();
 window.MaisonCloud=MaisonCloud;

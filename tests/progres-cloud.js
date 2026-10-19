@@ -7,10 +7,10 @@ function vrai(ok,t){assert.ok(ok,t);nb++;console.log("  ✓ "+t);}
 const uuid=n=>"10000000-0000-4000-8000-"+String(n).padStart(12,"0");
 const mesure=(n=1,plus={})=>({id:uuid(n),origine:n%2?"classe":"maison",ep:"E1",date:new Date(Date.UTC(2026,0,1,0,0,n)).toISOString(),mclm:43,lus:45,erreurs:2,secondes:60,dernier:44,fautes:[1,4],...plus});
 const page=(lectures=[],suivant=null)=>({version:1,objectif:{valeur:48,mode:"automatique"},lectures,suivant});
-const classe=()=>({classe:{eleves:[{id:"test-a",nom:"Test A",objectif:""},{id:"test-b",nom:"Test B",objectif:"0"}],maj:12345},resultats:{liste:[{...mesure(1),id:"lecture-classe-1",eleve:"test-a",nomPrive:"ne-pas-transmettre"},{...mesure(2),id:"maison:test-a:source-maison-2",eleve:"test-a",sourceId:"source-maison-2",nomDeclare:"Test Famille"},{id:"ancienne-classe-supprimee",suppr:true,date:"2026-01-01T00:00:00Z"},{id:"maison:test-b:source-supprime",suppr:true,origine:"maison",eleve:"test-b",sourceId:"source-supprime"}]},reglages:{vitesse:.8}});
-function contexte({parents=true,stockSession=!parents,donnees=classe(),reponse=()=>page([mesure()]),hash=null}={}){
+const classe=()=>({classe:{eleves:[{id:"test-a",nom:"Test A",objectif:""},{id:"test-b",nom:"Test B",objectif:"0"}],maj:12345},resultats:{liste:[{...mesure(1),id:"lecture-classe-1",typeLecture:"defi",eleve:"test-a",nomPrive:"ne-pas-transmettre"},{...mesure(2),id:"maison:test-a:source-maison-2",eleve:"test-a",sourceId:"source-maison-2",nomDeclare:"Test Famille"},{id:"ancienne-classe-supprimee",suppr:true,date:"2026-01-01T00:00:00Z"},{id:"maison:test-b:source-supprime",suppr:true,origine:"maison",eleve:"test-b",sourceId:"source-supprime"}]},reglages:{vitesse:.8}});
+function contexte({parents=true,stockSession=!parents,donnees=classe(),reponse=()=>page([mesure()]),hash=null,sessionExpiree=false}={}){
   const requetes=[],lecturesStock=[],ecrituresStock=[],ecoutes={},ecoutesDocument={},timers=new Map(),ecoutesDonnees=[];let compteur=0;
-  const memoire=new Map();if(stockSession)memoire.set("fluence-cloud-auth-v1",JSON.stringify({access_token:"jeton-synthetique",refresh_token:"renouvellement-synthetique",user:{id:"enseignante-fictive",email:"test@example.test"},expire:Date.now()+3600000}));
+  const memoire=new Map();if(stockSession)memoire.set("fluence-cloud-auth-v1",JSON.stringify({access_token:"jeton-synthetique",refresh_token:"renouvellement-synthetique",user:{id:"enseignante-fictive",email:"test@example.test"},expire:sessionExpiree?1:Date.now()+3600000}));
   const etat={donnees,reponse,erreurSync:false,pages:0,sync:[],attendSync:null,lectureClasse:0};
   const ecoute=(c,n,f)=>(c[n]||=[]).push(f);
   const stockage={getItem:k=>{lecturesStock.push(k);return memoire.get(k)||null;},setItem:(k,v)=>{ecrituresStock.push(k);memoire.set(k,v);}};
@@ -29,7 +29,8 @@ function contexte({parents=true,stockSession=!parents,donnees=classe(),reponse=(
     let data;
     if(url.endsWith("/functions/v1/fluence-bilan")){etat.pages++;data=await etat.reponse(req,etat.pages);}
     else if(url.includes("/fluence_sync_progress")){etat.sync.push(req);if(etat.attendSync)data=await etat.attendSync(req);else if(etat.erreurSync)throw new TypeError("Coupure simulée");else data={ok:true};}
-    else if(url.includes("/fluence_accesses"))data=[];
+    else if(url.includes("/fluence_accesses"))data=etat.attendReception?await etat.attendReception:[];
+    else if(url.includes("/auth/v1/token?grant_type=refresh_token"))data=Response.json({error:"refresh_token_not_found"},{status:400});
     else if(url.includes("/fluence_results")){if(etat.erreurReception)throw TypeError("Réception indisponible");data=[];}
     else if(url.includes("/auth/v1/logout"))data={};
     else throw Error("Endpoint inattendu : "+url);
@@ -49,10 +50,14 @@ async function refuse(c,code,label){let e;try{await c.cloud.progressionParents()
 (async()=>{
   const c=contexte({reponse:(r,n)=>n===1?page([mesure(1)],"curseur-opaque"):page([mesure(2)])});await c.initialise();const lu=await c.cloud.progressionParents();
   vrai(lu.lectures.length===2&&lu.objectif.valeur===48,"toutes les pages classe et maison sont réunies avant affichage");
-  vrai(c.requetes.length===2&&c.requetes[1].body.curseur==="curseur-opaque"&&c.requetes.every(r=>r.method==="POST"&&r.body.token===TOKEN&&r.body.action==="progression"&&r.body.limite===200),"secret personnel en POST et pagination opaque");
+  vrai(c.requetes.length===2&&c.requetes[1].body.curseur==="curseur-opaque"&&c.requetes.every(r=>r.method==="POST"&&r.body.token===TOKEN&&r.body.action==="progression"&&r.body.avecTypeLecture===true&&r.body.limite===200),"secret personnel en POST et pagination opaque");
   vrai(c.requetes.every(r=>!r.headers.authorization&&r.cache==="no-store"&&r.credentials==="omit"),"aucune session enseignante ni cookie dans les consultations parents");
   vrai(c.etat.lectureClasse===0&&!c.lecturesStock.some(k=>/auth|banc-db|liaison/.test(k))&&c.ecrituresStock.length===0,"consultation sans lire la classe ni conserver les progrès distants");
+  const typage=contexte({reponse:()=>page([mesure(1,{typeLecture:"entrainement"}),mesure(2,{typeLecture:"defi"}),mesure(3)])});
+  const types=(await typage.cloud.progressionParents()).lectures;
+  vrai(types[0].typeLecture==="entrainement"&&types[1].typeLecture==="defi"&&!Object.hasOwn(types[2],"typeLecture"),"types reconnus conservés, historique ancien sans classification inventée");
   const anomalies=[
+    ...[null,"lecture","Defi",["defi"],{},1].map(typeLecture=>[()=>page([mesure(1,{typeLecture})]),"type de lecture invalide"]),
     [()=>({...page(),version:2}),"version inconnue"],
     [()=>({...page(),owner:"autre-compte"}),"champ compte inattendu"],
     [()=>({...page(),objectif:{valeur:0,mode:"attente"}}),"objectif incohérent"],
@@ -88,6 +93,7 @@ async function refuse(c,code,label){let e;try{await c.cloud.progressionParents()
   const lot=e.etat.sync[0].body;
   vrai(lot.p_eleves.length===2&&lot.p_eleves[0].objectif_manuel===null&&lot.p_eleves[1].objectif_manuel===0&&lot.p_eleves.every(x=>x.maj===12345),"objectifs automatiques et manuels, y compris zéro, gardent la révision de classe");
   vrai(lot.p_lectures.length===2&&lot.p_lectures.some(x=>x.origine==="classe")&&lot.p_lectures.some(x=>x.origine==="maison"&&x.source_id==="source-maison-2"),"les lectures de classe et les maisons déjà importées sont projetées séparément");
+  vrai(lot.p_lectures.find(x=>x.id==="lecture-classe-1").typeLecture==="defi"&&!Object.hasOwn(lot.p_lectures.find(x=>x.origine==="maison"),"typeLecture"),"projection conserve le type capturé et l’absence historique");
   vrai(lot.p_suppressions.some(x=>x.id==="ancienne-classe-supprimee"&&!x.child_ref)&&lot.p_suppressions.some(x=>x.source_id==="source-supprime"),"les anciens tombstones classe et les suppressions maison gardent leur identité");
   vrai(!/nomPrive|nomDeclare|Test A|Test B|reglages|access_token|refresh_token|liaison/.test(JSON.stringify(lot)),"aucun nom, réglage, code de liaison ou jeton dans la projection");
   vrai(e.etat.sync[0].headers.authorization==="Bearer jeton-synthetique"&&JSON.stringify(e.etat.donnees)===avant,"la requête enseignante est authentifiée sans modifier les documents locaux");
@@ -98,6 +104,9 @@ async function refuse(c,code,label){let e;try{await c.cloud.progressionParents()
   const erreurs=classe();erreurs.resultats.liste.push({...mesure(3),id:"lecture-invalide",eleve:"test-a",mclm:-1},{...mesure(4),id:"lecture-legacy",eleve:"test-a",origine:"classe",secondes:0,dernier:2,fautes:[999]},{id:"maison:test-a:source-ancienne",suppr:true});
   const f=contexte({parents:false,donnees:erreurs});await f.initialise();const lignes=f.etat.sync.flatMap(x=>x.body.p_lectures);vrai(!lignes.some(x=>x.id==="lecture-invalide")&&lignes.some(x=>x.id==="lecture-legacy"&&x.secondes===0&&!Object.hasOwn(x,"fautes")&&!Object.hasOwn(x,"dernier")),"une donnée ancienne invalide n’empêche pas les autres ; le score historique reste conservé");
   vrai(f.etat.sync.flatMap(x=>x.body.p_suppressions).some(x=>x.source_id==="source-ancienne"&&x.child_ref==="test-a"),"une ancienne suppression maison retrouve son identité depuis l’ID stable");
+  const typesInvalides=classe();typesInvalides.resultats.liste.push({...mesure(5),id:"type-invalide",eleve:"test-a",typeLecture:"lecture"});
+  const invalide=contexte({parents:false,donnees:typesInvalides});await invalide.initialise();
+  vrai(!invalide.etat.sync.flatMap(x=>x.body.p_lectures).some(x=>x.id==="type-invalide"),"type invalide ignoré sans bloquer les autres lectures ni être supprimé localement");
   const grande=classe();grande.resultats.liste=Array.from({length:460},(_,i)=>({...mesure(i+1),id:"classe-lot-"+i,eleve:"test-a",origine:"classe",lus:400,erreurs:200,dernier:399,fautes:Array.from({length:200},(_,j)=>j)}));
   const g=contexte({parents:false,donnees:grande});await g.initialise();vrai(g.etat.sync.length>3&&g.etat.sync.flatMap(x=>x.body.p_lectures).length===460,"un historique volumineux est envoyé intégralement en plusieurs lots");
   vrai(g.etat.sync.every(x=>Buffer.byteLength(JSON.stringify(x.body))<=24000&&Object.values(x.body).every(a=>a.length<=200)),"chaque lot respecte 200 lignes et 24 Kio, sous la limite JSONB serveur");
@@ -105,5 +114,23 @@ async function refuse(c,code,label){let e;try{await c.cloud.progressionParents()
   h.etat.donnees.resultats.liste.push({...mesure(5),id:"lecture-retour-visible",eleve:"test-a"});await h.visible();vrai(h.etat.sync.at(-1).body.p_lectures[0].id==="lecture-retour-visible","le retour dans l’application actualise aussi les progrès");
   const receptionCoupee=contexte({parents:false});receptionCoupee.etat.erreurReception=true;await receptionCoupee.initialise();vrai(receptionCoupee.etat.sync.length===1&&receptionCoupee.etat.sync[0].body.p_lectures.length===2,"une panne de réception n’empêche pas la publication des lectures de classe");
   const i=contexte({parents:false});await i.initialise();let libere;i.etat.attendSync=()=>new Promise(r=>libere=r);i.etat.donnees.classe.maj++;i.etat.donnees.classe.eleves[0].objectif="88";const pending=i.cloud.synchronise();await Promise.resolve();await Promise.resolve();await i.cloud.deconnecte();libere({ok:true});await pending;const compte=i.etat.sync.length;i.change();await i.minuteurs();vrai(!i.cloud.connectee()&&i.etat.sync.length===compte,"une réponse tardive après déconnexion ne poursuit ni ne rétablit la synchronisation");
+  const statut=contexte({parents:false}),evenements=[];statut.cloud.surChange(()=>evenements.push(statut.cloud.statutReception()));
+  vrai(statut.cloud.statutReception().derniereReception===0,"aucun succès de réception inventé avant appel au service");
+  await statut.initialise();const initial=statut.cloud.statutReception();
+  vrai(initial.connectee&&!initial.enCours&&!initial.erreur&&initial.derniereReception>0,"statut succès seulement après réception terminée");
+  initial.message="modifié";vrai(statut.cloud.statutReception().message!=="modifié","le statut public est une copie sans modification des infos internes");
+  vrai(!/access_token|refresh_token|email|user|jeton-synthetique/.test(JSON.stringify(initial)),"statut sans compte ni secret");
+  let debloque;statut.etat.attendReception=new Promise(r=>debloque=r);const lecture=statut.cloud.recoit();
+  vrai(statut.cloud.statutReception().enCours&&evenements.at(-1).enCours,"le début de réception notifie les vues");
+  debloque([]);await lecture;statut.etat.attendReception=null;
+  vrai(!statut.cloud.statutReception().enCours&&!evenements.at(-1).enCours,"la fin libère et notifie le bouton Actualiser");
+  const date=statut.cloud.statutReception().derniereReception;statut.etat.erreurReception=true;await statut.cloud.recoit();
+  const echec=statut.cloud.statutReception();
+  vrai(echec.connectee&&echec.erreur&&!echec.reconnexionNecessaire&&echec.derniereReception===date,"panne réseau visible sans faux succès ni déconnexion");
+  const expiree=contexte({parents:false,sessionExpiree:true});await expiree.initialise();const refus=expiree.cloud.statutReception();
+  vrai(refus.connectee&&refus.erreur&&refus.reconnexionNecessaire&&refus.derniereReception===0,"session locale présente mais renouvellement refusé exige une reconnexion visible");
+  vrai(expiree.requetes.filter(x=>x.url.includes("/auth/v1/token")).length>=1&&!expiree.ecrituresStock.length,"refus de renouvellement ne supprime ni ne remplace la session");
+  await statut.cloud.deconnecte();vrai(!statut.cloud.statutReception().connectee&&statut.cloud.statutReception().derniereReception===0,"déconnexion remet à zéro le statut public");
+  vrai(!c.cloud.statutReception().connectee&&c.cloud.statutReception().message===""&&!c.cloud.statutReception().enCours,"mode parents n’expose aucun état enseignant");
   console.log(`\n${nb} vérifications de progrès privés réussies.`);
 })().catch(e=>{console.error(e);process.exitCode=1;});

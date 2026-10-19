@@ -39,6 +39,8 @@ La famille envoie `POST /functions/v1/fluence-bilan` avec `Content-Type: applica
 
 L’exemple de secret est volontairement invalide : aucun secret utilisable n’est publié. Les valeurs du bilan sont fictives. Les champs sont strictement limités à ce schéma. `owner`, `child_ref` et `access_id` ne sont jamais acceptés du parent : la fonction retrouve l’invitation active par le hash du secret et déduit son propriétaire. Le corps entier doit faire au plus 32 Kio. L’Edge Function et la base vérifient les bornes, la date, les erreurs, les doublons d’indices et le calcul du score. L’application enseignante vérifie aussi l’empreinte et les indices avec sa version exacte du texte. Le bilan reste une déclaration de la famille, distincte des essais de classe.
 
+Le champ facultatif `bilan.typeLecture` vaut exactement `entrainement` ou `defi`. Il est capturé avant de démarrer la lecture et reste attaché à cet essai lors d’un réessai d’envoi. Une lecture ancienne conserve l’absence du champ : aucun entraînement ni défi ne lui est attribué rétroactivement. Toutes les tentatives sont enregistrées et participent au calcul du meilleur score et de l’objectif.
+
 Chaque succès d’envoi, y compris une retransmission strictement identique, retourne HTTP 200 et seulement `{"id":"UUID","received_at":"horodatage serveur"}`. Ce reçu ne contient ni prénom, résultat, identifiant d’enfant, propriétaire, invitation ou données d’autres élèves. Le contrat d’envoi existant reste inchangé.
 
 | Statut | `error` | Sens |
@@ -65,7 +67,7 @@ Le même lien individuel existant autorise cette lecture ; il constitue donc un 
 {"token":"secret-hex64-généré-par-l-application","action":"progression","curseur":null,"limite":200}
 ```
 
-La requête utilise le même POST `/functions/v1/fluence-bilan`. `curseur` et `limite` sont facultatifs ; la limite vaut 200 par défaut, entre 1 et 200. Les champs supplémentaires, notamment `owner`, `child_ref` et `access_id`, sont refusés. Le serveur déduit l’unique enfant de l’invitation active, puis retourne :
+La requête utilise le même POST `/functions/v1/fluence-bilan`. `curseur`, `limite` et `avecTypeLecture` sont facultatifs ; la limite vaut 200 par défaut, entre 1 et 200. Les champs supplémentaires, notamment `owner`, `child_ref` et `access_id`, sont refusés. Le serveur déduit l’unique enfant de l’invitation active, puis retourne :
 
 ```json
 {
@@ -122,6 +124,16 @@ La RPC retourne seulement `{"ok":true}` après la transaction. Elle ne prend auc
 7. Mettre seulement l’URL Supabase et la clé publishable publique dans `src/maison-cloud-config.js`, puis tester avec des élèves fictifs et deux comptes enseignants distincts. Ne fournir les liens réels aux familles qu’après ce contrôle en environnement déployé.
 
 La fonction ne logue ni corps de requête, prénom, secret ou réponse de la base. Les paramètres sensibles et sauvegardes restent hors du dépôt. Les bilans sont stockés dans le projet Supabase avec contrôle d’accès ; ils ne sont pas servis par GitHub Pages.
+
+## Compatibilité du type de lecture
+
+Le nouveau client envoie `avecTypeLecture:true` à chaque page de progression. L’Edge Function ne retourne le champ optionnel `typeLecture` que pour cet opt-in explicite ; les anciens clients stricts reçoivent exactement leur ancien schéma. Une valeur de capacité autre qu’un booléen est refusée. Une lecture sans type reste sans type même pour un nouveau client.
+
+La migration `202610190004_fluence_reading_type.sql` étend uniquement les validateurs, la projection privée et le rejeu de synchronisation. Elle ne réécrit aucun historique et ne change ni les règles d’accès, ni les objectifs, ni les tombstones. Un ancien client peut réémettre une projection typée sans son champ nouveau si tout le reste est identique : la base conserve son type. Une projection maison autrefois importée sans ce champ peut être enrichie uniquement si le bilan brut du même propriétaire, enfant et source prouve le même type et les mêmes mesures. Les changements de type et la rétroclassification d’un ancien bilan sans type restent des conflits.
+
+L’appareil applique la même conservation aux imports déjà présents : même source, enfant, texte, date et mesures, type absent et aucune suppression. L’enrichissement n’altère que le type et sa signature de liaison ; les objectifs manuels et métadonnées existantes restent en place. Une erreur de sauvegarde apparaît comme un échec de réception et sera retentée.
+
+Pour déployer progressivement : déployer d’abord `functions/fluence-bilan/index.ts`, appliquer ensuite la migration 0004, puis publier le nouveau client. Le fichier Edge est autonome et peut remplacer le code existant dans l’éditeur du Dashboard, puis **Deploy updates**, sans créer de jeton d’administration. Conserver la vérification JWT de passerelle désactivée : le secret individuel est vérifié par le handler et PostgreSQL. Contrôler après déploiement une lecture ancienne sans capacité et une lecture avec `avecTypeLecture:true`. Voir la [procédure officielle Dashboard](https://supabase.com/docs/guides/functions/quickstart-dashboard) et la [configuration des fonctions](https://supabase.com/docs/guides/functions/function-configuration).
 
 ## Tests
 

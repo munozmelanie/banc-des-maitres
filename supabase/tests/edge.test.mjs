@@ -68,4 +68,18 @@ await status(request(),503,'erreur réseau ne confirme aucun succès',createHand
 await status(request(),503,'erreur base non prévue masquée',createHandler({...config,fetcher:async()=>Response.json({message:'private info'},{status:500})}));
 await status(request(),503,'reçu base malformé refusé',createHandler({...config,fetcher:async()=>Response.json([{id:'x'}])}));
 check(validePaquet(paquet,now).bilan.mclm===39,'normalisation conserve le score vérifié');
+check(!Object.hasOwn(validePaquet(paquet,now).bilan,'typeLecture'),'ancienne lecture reste sans type');
+for(const typeLecture of ['entrainement','defi']){
+ const typed=clone(paquet);typed.bilan.typeLecture=typeLecture;
+ check(validePaquet(typed,now)?.bilan.typeLecture===typeLecture,'type '+typeLecture+' conservé par validation');
+ const r=await status(request({token,paquet:typed}),200,'type '+typeLecture+' accepté');
+ check(JSON.parse(calls.at(-1).options.body).p_payload.bilan.typeLecture===typeLecture,'type '+typeLecture+' transmis sans changement à SQL');
+ check(!JSON.stringify(await r.json()).includes('typeLecture'),'reçu minimal ne dévoile pas le type');
+}
+for(const typeLecture of [null,'','Defi','lecture','defi ',1,true,[],['defi'],{}]){
+ const typed=clone(paquet);typed.bilan.typeLecture=typeLecture;const n=calls.length;
+ check(validePaquet(typed,now)===null,'type invalide refusé sans coercition');
+ await status(request({token,paquet:typed}),400,'type invalide refusé avant stockage');
+ check(calls.length===n,'type invalide ne touche pas SQL');
+}
 console.log(count+' contrôles Edge réussis (aucun appel réseau réel).');

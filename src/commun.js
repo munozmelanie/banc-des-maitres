@@ -223,6 +223,14 @@ const Banc = (() => {
       contientBilan:(sourceId,eleve)=>resultats.liste.some(r=>r.origine==="maison"&&r.sourceId===sourceId&&(eleve===undefined||r.eleve===eleve)),
       record:(eleve, sauf)=>{ const l = vivants().filter(r=>r.eleve===eleve && r.id!==sauf); return l.length ? Math.max(...l.map(r=>r.mclm)) : null; },
       async ajoute(r){ if (resultats.liste.some(x=>x.id===r.id)) return true; const ok = await ecritResultats({liste:resultats.liste.concat([r])}); if(ok) signale("resultats"); return ok; },
+      async completeTypeLecture(r){
+        if(!["entrainement","defi"].includes(r?.typeLecture))return false;
+        const ancien=resultats.liste.find(x=>x.id===r.id||x.origine==="maison"&&x.sourceId===r.sourceId&&x.eleve===r.eleve);
+        if(!ancien||Object.hasOwn(ancien,"typeLecture")||!Plateforme.memeBilanMaison(ancien,r))return false;
+        const ok=await ecritResultats({liste:resultats.liste.map(x=>x===ancien?{...x,typeLecture:r.typeLecture}:x)});
+        if(!ok)throw new Error("Le type d’un bilan reçu ne peut pas encore être enregistré sur cet appareil. Réessaie la réception.");
+        signale("resultats");return true;
+      },
       async supprime(id){ const avant=resultats.liste.find(x=>x.id===id), marque={id,suppr:true,date:new Date().toISOString()}; if(avant?.origine==="maison")Object.assign(marque,{origine:"maison",sourceId:avant.sourceId,eleve:avant.eleve}); const ok = await ecritResultats({liste:resultats.liste.filter(x=>x.id!==id).concat([marque])}); if(ok) signale("resultats"); return ok; },
       vitesse:()=>reglages.vitesse||0.8,
       async fixeVitesse(v){ reglages = {vitesse:v, maj:Date.now()}; try { await docs.g.set(reglages); } catch(e){} },
@@ -279,6 +287,8 @@ const Banc = (() => {
     r.fautes.forEach(i=>{ const m = toks[i] && nu(toks[i].t); if (m && !vus.has(m.toLowerCase())){ vus.add(m.toLowerCase()); res.push(m); } });
     return res;
   }
+  const libelleLecture = r => r.typeLecture==="defi" ? "Défi du 4ᵉ soir" : r.typeLecture==="entrainement" ? "Entraînement" : "Lecture";
+  const badgeLecture = r => `<span class="progression-type-lecture${r.typeLecture==="defi"?" progression-type-defi":""}">${libelleLecture(r)}</span>`;
   function carteResultat(r, b, nomEleve, ok){
     const cible = Donnees.objectifInfo(r.eleve), objectif = cible.valeur;
     const durs = motsDifficiles(r);
@@ -310,6 +320,18 @@ const Banc = (() => {
 
   /* ---------- vues partagées : progrès, élèves ---------- */
   const etatsProgres = new WeakMap();
+  function actualiseReceptionProgres(box,etat){
+    const info=box.querySelector("#progression-reception"),bouton=box.querySelector("#progression-actualiser"),connexion=box.querySelector("#acces-parents");
+    if(!info||!bouton)return;
+    const s=window.MaisonCloud?.statutReception?.()||{connectee:false};
+    const enCours=!!s.enCours||!!etat.receptionEnCours;
+    if(s.enCours||!s.connectee)etat.erreurReception="";
+    if(connexion){connexion.textContent="Se connecter";connexion.hidden=!!s.connectee&&!s.reconnexionNecessaire;}
+    bouton.hidden=!s.connectee;
+    bouton.setAttribute("aria-disabled",String(enCours));bouton.textContent=enCours?"Actualisation…":"Actualiser";
+    info.classList.toggle("progression-reception-erreur",!!(s.erreur||s.reconnexionNecessaire||etat.erreurReception));
+    info.textContent=!s.connectee?"Connecte-toi pour recevoir les bilans maison.":enCours?"Réception des bilans maison…":s.reconnexionNecessaire?"Reconnecte-toi pour recevoir les bilans maison.":etat.erreurReception||s.message||(s.erreur?"Réception momentanément indisponible. Vérifie la connexion, puis réessaie.":s.derniereReception?"Les bilans maison ont été vérifiés.":"Les bilans maison n’ont pas encore été vérifiés.");
+  }
   const dateProgres = (date, courte=false) => Number.isFinite(Date.parse(date)) ? new Date(date).toLocaleDateString("fr-FR",courte?{day:"numeric",month:"numeric"}:{day:"numeric",month:"long",year:"numeric"}) : "Date non précisée";
   const titreProgres = r => ep(r.ep)?.titre || r.ep;
   function grapheProgres(rs, objectif, petit){
@@ -325,8 +347,8 @@ const Banc = (() => {
       if(rs.length>1)h+=`<polygon points="${x(0)},${H-B} ${points} ${x(rs.length-1)},${H-B}" fill="url(#progression-degrade)"/><polyline points="${points}" class="progression-trace"/>`;
       const intervalles=Math.min(rs.length-1,petit?3:5),etiquettes=new Set(Array.from({length:intervalles+1},(_,i)=>intervalles?Math.round(i*(rs.length-1)/intervalles):0));
       rs.forEach((r,i)=>{
-        const label=`${dateProgres(r.date)} · ${titreProgres(r)} · ${r.mclm} MCLM`;
-        h+=`<g class="progression-point" role="button" tabindex="0" data-progress-point="${esc(r.id)}" aria-label="${esc(label+". Consulter cette lecture.")}"><title>${esc(label)}</title><circle cx="${x(i)}" cy="${y(r.mclm)}" r="20" fill="transparent"/><circle class="progression-point-visible" cx="${x(i)}" cy="${y(r.mclm)}" r="${i===rs.length-1?6:4.5}"/></g>`;
+        const label=`${dateProgres(r.date)} · ${titreProgres(r)} · ${libelleLecture(r)} · ${r.mclm} MCLM`;
+        h+=`<g class="progression-point" role="button" tabindex="0" data-progress-point="${esc(r.id)}" aria-label="${esc(label+". Consulter cette lecture.")}"><title>${esc(label)}</title><circle cx="${x(i)}" cy="${y(r.mclm)}" r="20" fill="transparent"/>${r.typeLecture==="defi"?`<path class="progression-point-visible progression-point-defi" d="M${x(i)},${y(r.mclm)-8}l8,8 -8,8 -8,-8Z"/>`:`<circle class="progression-point-visible" cx="${x(i)}" cy="${y(r.mclm)}" r="${i===rs.length-1?6:4.5}"/>`}</g>`;
         if(etiquettes.has(i))h+=`<text x="${x(i)}" y="${H-14}" text-anchor="${i===0&&rs.length>1?"start":i===rs.length-1&&rs.length>1?"end":"middle"}">${esc(dateProgres(r.date,true))}</text>`;
       });
     }
@@ -336,7 +358,7 @@ const Banc = (() => {
     if(ROLE==="parents")return;
     const ancien=box.querySelector("#progression"),scroller=box.closest("main"),scroll=scroller?.scrollTop||0;
     const actif=box.contains(document.activeElement)?document.activeElement:null;
-    const focus=actif&&["progression-recherche","progression-texte"].includes(actif.id)?{id:actif.id,debut:actif.selectionStart,fin:actif.selectionEnd}:null;
+    const focus=actif&&["progression-recherche","progression-texte","progression-actualiser","acces-parents"].includes(actif.id)?{id:actif.id,debut:actif.selectionStart,fin:actif.selectionEnd}:null;
     const etat=etatsProgres.get(box)||{origine:"classe",eleve:"",texte:"",recherche:"",ouverts:new Set(),tous:true};
     if(ancien){etat.ouverts=new Set([...box.querySelectorAll("[data-progress-lecture][open]")].map(d=>d.dataset.progressLecture));etat.tous=box.querySelector("#tous")?.open??etat.tous;}
     etatsProgres.set(box,etat);
@@ -347,7 +369,7 @@ const Banc = (() => {
     const score=v=>v===null?"—":String(v);
     const normalise=t=>String(t).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase("fr");
     box.innerHTML=`<section id="progression" class="progression${st?" progression-selection":""}">
-      <div class="progression-entete"><div><p class="progression-surtitre">SUIVI DES LECTURES</p><h1>Les progrès</h1><p class="muted">La progression de chaque élève, lecture après lecture.</p></div><div id="progression-acces"></div></div>
+      <div class="progression-entete"><div><p class="progression-surtitre">SUIVI DES LECTURES</p><h1>Les progrès</h1><p class="muted">La progression de chaque élève, lecture après lecture.</p></div><div id="progression-acces"><div class="progression-reception-actions"><button class="btn" type="button" id="progression-actualiser" aria-describedby="progression-reception">Actualiser</button></div><p id="progression-reception" role="status" aria-live="polite"></p></div></div>
       <div class="progression-origines" role="group" aria-label="Lieu de lecture"><button type="button" data-progress-origine="classe" aria-pressed="${!foyer}"><span aria-hidden="true">${'<svg viewBox="0 0 24 24"><path d="M3 9 12 3l9 6M5 8v12h14V8M9 20v-6h6v6M10 9h4"/>'}</svg></span>En classe</button><button type="button" data-progress-origine="maison" aria-pressed="${foyer}"><span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m3 11 9-8 9 8M5 9v12h14V9M9 21v-7h6v7"/></svg></span>À la maison</button></div>
       <div class="progression-contenu"><aside class="progression-liste"><div class="progression-liste-titre"><h2>Les élèves</h2><span>${eleves.length}</span></div><label class="progression-recherche" for="progression-recherche"><span class="sr-only">Rechercher un élève</span><input id="progression-recherche" type="search" autocomplete="off" placeholder="Rechercher un élève" value="${esc(etat.recherche)}"></label><div id="progression-eleves">
       ${eleves.map(e=>{const a=Donnees.progres(e.id,etat.origine);return `<button type="button" class="progression-eleve" data-progress-eleve="${esc(e.id)}" aria-pressed="${etat.eleve===e.id}"${normalise(e.nom).includes(normalise(etat.recherche))?"":" hidden"}><span class="progression-avatar" aria-hidden="true">${esc(lettres(e.nom))}</span><span class="progression-eleve-nom">${esc(e.nom)}<small>${a.nombre?`${a.nombre} lecture${a.nombre>1?"s":""}`:"Aucune lecture"}</small></span><span class="progression-eleve-score">${score(a.dernier)}${a.dernier!==null?"<small>MCLM</small>":""}</span></button>`;}).join("")}
@@ -355,8 +377,8 @@ const Banc = (() => {
       <div class="progression-detail" id="progression-detail">${st?`<button class="btn progression-retour" id="progression-retour" type="button">← Tous les élèves</button><section class="progression-carte"><div class="progression-fiche-entete"><div><p class="progression-surtitre">${lieu}</p><h2 id="progression-titre" tabindex="-1">${esc(st.nom)}</h2></div><div class="progression-objectif" id="progression-objectif">${p.objectif.valeur!==null?`<span>Objectif${p.objectif.mode==="automatique"?" automatique":" manuel"}</span><strong><span data-progress-objectif-valeur>${esc(p.objectif.valeur)}</span> <small>MCLM</small></strong>`:"<span>Objectif automatique</span><strong class=\"progression-objectif-attente\">Après la première lecture</strong>"}</div></div>
       <div class="progression-filtre"><label for="progression-texte">Texte</label><select id="progression-texte"><option value="">Tous les textes</option>${EPS.filter(e=>estDisponible(e)||Donnees.progres(st.id,etat.origine).lectures.some(r=>r.ep===e.id)).map(e=>`<option value="${esc(e.id)}"${etat.texte===e.id?" selected":""}>${esc(e.titre)}</option>`).join("")}</select></div>
       <div class="progression-stats"><div><span>Dernière lecture</span><strong data-progress-stat="dernier">${score(p.dernier)}</strong><small>MCLM</small></div><div><span>Meilleur résultat</span><strong data-progress-stat="meilleur">${score(p.meilleur)}</strong><small>MCLM</small></div><div><span>Depuis la première</span><strong data-progress-stat="evolution" class="${p.evolution>0?"progression-hausse":""}">${p.evolution===null?"—":(p.evolution>0?"+":"")+p.evolution}</strong><small>MCLM</small></div><div><span>Lectures</span><strong data-progress-stat="lectures">${p.nombre}</strong><small>${lieu.toLocaleLowerCase("fr")}</small></div></div>
-      <div class="progression-graphique"><div class="progression-legende"><span><i></i> Mots corrects par minute</span>${p.objectif.valeur!==null?'<span><i class="progression-tiret"></i> Objectif</span>':""}</div>${p.mesures.length?grapheProgres(p.mesures,p.objectif.valeur,compacte||innerWidth<680):`<div class="progression-vide"><span aria-hidden="true">↗</span><h3>${p.nombre?"Pas encore de mesure à tracer":"Pas encore de lecture"}</h3><p>${etat.texte?"Aucune lecture pour ce texte":"Les lectures "+(foyer?"faites à la maison":"faites en classe")} ${p.nombre?"avec un score et une date valides.":etat.texte?" "+lieu.toLocaleLowerCase("fr")+".":"apparaîtront ici."}</p></div>`}</div><p class="progression-note">${etat.texte?"Lectures de ce texte, dans l’ordre chronologique.":"Plusieurs textes peuvent avoir des difficultés différentes. Choisis un texte pour comparer ses lectures."}${foyer?" Bilans déclarés par la famille.":""}</p>
-      </section><details class="progression-carte progression-lectures" id="tous"${etat.tous?" open":""}><summary>Les lectures <span>${p.nombre}</span></summary><div id="progression-lectures">${p.lectures.length?p.lectures.slice().reverse().map(r=>{const durs=motsDifficiles(r);return `<details class="progression-lecture" data-progress-lecture="${esc(r.id)}"${etat.ouverts.has(r.id)?" open":""}><summary><span class="progression-lecture-texte">${esc(titreProgres(r))}<small>${esc(dateProgres(r.date))} · lecture ${r.essai}</small></span><span class="progression-lecture-score">${Number.isSafeInteger(r.mclm)&&r.mclm>=0?r.mclm:"—"}<small>MCLM</small></span></summary><div class="progression-lecture-detail"><dl><div><dt>Mots lus</dt><dd>${esc(r.lus??"—")}</dd></div><div><dt>Erreurs</dt><dd>${esc(r.erreurs??"—")}</dd></div><div><dt>Temps</dt><dd>${esc(r.secondes??"—")} s</dd></div></dl>${durs.length?`<p class="label">Mots à retravailler</p><div class="hard">${durs.map(m=>`<span>${esc(m)}</span>`).join("")}</div>`:""}<button type="button" class="btn danger" data-suppr="${esc(r.id)}">Supprimer cette lecture</button><p class="muted progression-suppression-info" role="status"></p></div></details>`;}).join(""):'<p class="muted">Les prochaines lectures seront consultables ici.</p>'}</div></details>`:`<section class="progression-carte progression-bienvenue"><div class="progression-bienvenue-icone" aria-hidden="true"><svg viewBox="0 0 80 80"><path d="M14 60h54M18 54V38m18 16V27m18 27V15"/><path class="progression-fleche" d="m17 28 18-13 15 3 17-12m-10 0h10v10"/></svg></div><h2>Choisis un élève</h2><p>Retrouve ses lectures ${foyer?"à la maison":"en classe"},<br>ses progrès et son objectif.</p></section>`}</div></div>
+      <div class="progression-graphique"><div class="progression-legende"><span><i></i> Mots corrects par minute</span>${p.objectif.valeur!==null?'<span><i class="progression-tiret"></i> Objectif</span>':""}${p.mesures.some(r=>r.typeLecture==="defi")?'<span><i class="progression-losange"></i> Défi du 4ᵉ soir</span>':""}</div>${p.mesures.length?grapheProgres(p.mesures,p.objectif.valeur,compacte||innerWidth<680):`<div class="progression-vide"><span aria-hidden="true">↗</span><h3>${p.nombre?"Pas encore de mesure à tracer":"Pas encore de lecture"}</h3><p>${etat.texte?"Aucune lecture pour ce texte":"Les lectures "+(foyer?"faites à la maison":"faites en classe")} ${p.nombre?"avec un score et une date valides.":etat.texte?" "+lieu.toLocaleLowerCase("fr")+".":"apparaîtront ici."}</p></div>`}</div><p class="progression-note">${etat.texte?"Lectures de ce texte, dans l’ordre chronologique.":"Plusieurs textes peuvent avoir des difficultés différentes. Choisis un texte pour comparer ses lectures."}${foyer?" Bilans déclarés par la famille.":""}</p>
+      </section><details class="progression-carte progression-lectures" id="tous"${etat.tous?" open":""}><summary>Les lectures <span>${p.nombre}</span></summary><div id="progression-lectures">${p.lectures.length?p.lectures.slice().reverse().map(r=>{const durs=motsDifficiles(r);return `<details class="progression-lecture" data-progress-lecture="${esc(r.id)}"${etat.ouverts.has(r.id)?" open":""}><summary><span class="progression-lecture-texte">${esc(titreProgres(r))}<small>${esc(dateProgres(r.date))} · lecture ${r.essai}</small>${badgeLecture(r)}</span><span class="progression-lecture-score">${Number.isSafeInteger(r.mclm)&&r.mclm>=0?r.mclm:"—"}<small>MCLM</small></span></summary><div class="progression-lecture-detail"><dl><div><dt>Mots lus</dt><dd>${esc(r.lus??"—")}</dd></div><div><dt>Erreurs</dt><dd>${esc(r.erreurs??"—")}</dd></div><div><dt>Temps</dt><dd>${esc(r.secondes??"—")} s</dd></div></dl>${durs.length?`<p class="label">Mots à retravailler</p><div class="hard">${durs.map(m=>`<span>${esc(m)}</span>`).join("")}</div>`:""}<button type="button" class="btn danger" data-suppr="${esc(r.id)}">Supprimer cette lecture</button><p class="muted progression-suppression-info" role="status"></p></div></details>`;}).join(""):'<p class="muted">Les prochaines lectures seront consultables ici.</p>'}</div></details>`:`<section class="progression-carte progression-bienvenue"><div class="progression-bienvenue-icone" aria-hidden="true"><svg viewBox="0 0 80 80"><path d="M14 60h54M18 54V38m18 16V27m18 27V15"/><path class="progression-fleche" d="m17 28 18-13 15 3 17-12m-10 0h10v10"/></svg></div><h2>Choisis un élève</h2><p>Retrouve ses lectures ${foyer?"à la maison":"en classe"},<br>ses progrès et son objectif.</p></section>`}</div></div>
       <details class="progression-sauvegarde"><summary>Sauvegarder ou restaurer les données</summary><div class="row start"><button class="btn" id="exp" type="button">Exporter une sauvegarde</button><button class="btn" id="progression-importer" type="button">Importer une sauvegarde</button><input type="file" id="imp" accept="application/json,.json" hidden></div><p class="muted" id="ioinfo" role="status"></p><p class="muted">La sauvegarde contient tous les élèves et toutes les lectures, en classe et à la maison.</p></details></section>`;
     box.querySelectorAll("[data-progress-origine]").forEach(b=>b.onclick=()=>{etat.origine=b.dataset.progressOrigine;vueProgres(box,compacte);box.querySelector(`[data-progress-origine="${etat.origine}"]`).focus({preventScroll:true});});
     box.querySelectorAll("[data-progress-eleve]").forEach(b=>b.onclick=()=>{etat.eleve=b.dataset.progressEleve;vueProgres(box,compacte);box.querySelector("#progression-titre")?.focus({preventScroll:true});if(innerWidth<760)scroller?.scrollTo({top:0});});
@@ -376,7 +398,17 @@ const Banc = (() => {
     box.querySelector("#progression-importer").onclick=()=>box.querySelector("#imp").click();
     box.querySelector("#imp").onchange=async e=>{const f=e.target.files[0];if(!f)return;try{if(!await Donnees.importe(JSON.parse(await f.text())))throw Error();vueProgres(box,compacte);box.querySelector(".progression-sauvegarde").open=true;box.querySelector("#ioinfo").textContent="Sauvegarde importée.";}catch(e){const info=box.querySelector("#ioinfo");if(info)info.textContent="Ce fichier n’a pas pu être importé. Vérifie la sauvegarde et le stockage de cet appareil.";}};
     EnvoiMaison.ajouteBouton(box);
-    const acces=box.querySelector("#acces-parents");if(acces)box.querySelector("#progression-acces").appendChild(acces);
+    const acces=box.querySelector("#acces-parents");if(acces)box.querySelector(".progression-reception-actions").prepend(acces);
+    // Une seule écoute par conteneur ; une notification ne reconstruit jamais la fiche en cours.
+    if(!etat.retireReception)etat.retireReception=window.MaisonCloud?.surChange?.(()=>actualiseReceptionProgres(box,etat));
+    box.querySelector("#progression-actualiser").onclick=async()=>{
+      if(etat.receptionEnCours||window.MaisonCloud?.statutReception?.().enCours)return;
+      etat.receptionEnCours=true;etat.erreurReception="";actualiseReceptionProgres(box,etat);
+      try{await window.MaisonCloud.recoit();}
+      catch(e){etat.erreurReception="Impossible d’actualiser les bilans maison. Vérifie la connexion, puis réessaie.";}
+      finally{etat.receptionEnCours=false;actualiseReceptionProgres(box,etat);}
+    };
+    actualiseReceptionProgres(box,etat);
     if(ancien&&scroller)scroller.scrollTop=scroll;
     if(focus){const champ=box.querySelector("#"+focus.id);if(champ){champ.focus({preventScroll:true});if(focus.debut!==null)champ.setSelectionRange?.(focus.debut,focus.fin);}}
   }
@@ -533,6 +565,6 @@ const Banc = (() => {
     else { document.getElementById("app-ecran").hidden = false; await Ecran.demarre(); }
     await MaisonCloud.init(); EnvoiMaison.recoitLien();
   }
-  return { DATA, EPS, ROLE, $, el, esc, estMot, nu, ep, estDisponible, textesDisponibles, textesFamille, ouvertFamille, dateFamille, estTamallette, libelleEpisode, etapesEpisode, motsDefi, ajouteRupture, DUREE, ImportClasse, Donnees, Lien, calcule, bilan, carteResultat, motsDifficiles, courbe, vueProgres, vueEleves, actualiseObjectifs, prepareImpression, imprimeTexte, bip, compteRebours, demarre };
+  return { DATA, EPS, ROLE, $, el, esc, estMot, nu, ep, estDisponible, textesDisponibles, textesFamille, ouvertFamille, dateFamille, estTamallette, libelleEpisode, etapesEpisode, motsDefi, ajouteRupture, DUREE, ImportClasse, Donnees, Lien, calcule, bilan, carteResultat, libelleLecture, motsDifficiles, courbe, vueProgres, vueEleves, actualiseObjectifs, prepareImpression, imprimeTexte, bip, compteRebours, demarre };
 })();
 window.Banc = Banc;

@@ -1,0 +1,5 @@
+project_id = "fluence"
+
+# La fonction vérifie le secret individuel elle-même ; les parents n'ont pas de JWT.
+[functions.fluence-bilan]
+verify_jwt = false

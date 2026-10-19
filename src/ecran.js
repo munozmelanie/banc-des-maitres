@@ -6,10 +6,19 @@
 const Ecran = (() => {
   const { EPS, $, el, esc, estMot, ep, estTamallette, libelleEpisode, etapesEpisode, motsDefi, DUREE, Donnees, Lien, calcule, bilan, carteResultat, courbe, vueProgres, vueEleves, bip } = Banc;
   const view = $("#view"), audio = $("#audio");
+  const maison = Banc.ROLE === "parents";
+  let optionsMaison = {}, reglagesLecteur = maison ? {vitesse:()=>0.8, fixeVitesse:()=>{}} : Donnees;
   let route = {name:"home"};
   let cleanup = ()=>{};
 
-  function go(r){ stopAudio(); route = r; render(); $("#main").scrollTop = 0; }
+  function go(r){
+    if (maison){
+      const E = r && r.name === "episode" && ep(r.id), s = r && r.step;
+      r = E && Number.isInteger(s) && s >= 0 && s <= 4 ? {name:"episode",id:E.id,step:!E.audio && (s===2 || s===3) ? 1:s} : {name:"home"};
+    }
+    stopAudio(); route = r; render(); $("#main").scrollTop = 0;
+    if (maison) window.scrollTo(0,0);
+  }
   document.querySelectorAll("#app-ecran [data-go]").forEach(b=>b.addEventListener("click", ()=>go({name:b.dataset.go})));
   $("#home-link").addEventListener("click", ()=>go({name:"home"}));
   $("#home-link").addEventListener("keydown", e=>{ if (e.key==="Enter") go({name:"home"}); });
@@ -25,8 +34,9 @@ const Ecran = (() => {
 
   /* ---------- Accueil ---------- */
   function renderHome(){
-    view.innerHTML = `<h1 style="font-size:clamp(28px,3.4vw,46px)">Le feuilleton de la période 2</h1>
-    <p class="lead">Sept enquêtes de Maya, Sami, Jules et Romy. Chaque semaine, un papier écrit à l'encre verte attend la bande sous le banc des maîtres.</p>
+    view.innerHTML = `<h1 style="font-size:clamp(28px,3.4vw,46px)">${maison ? "Un moment de lecture ensemble" : "Le feuilleton de la période 2"}</h1>
+    <p class="lead">${maison ? "Choisissez un texte. Préparez les mots, écoutez la voix et entraînez-vous à lire. Un adulte peut ensuite accompagner le défi d’une minute." : "Sept enquêtes de Maya, Sami, Jules et Romy. Chaque semaine, un papier écrit à l'encre verte attend la bande sous le banc des maîtres."}</p>
+    ${maison ? '<h2 class="collection">Le banc des maîtres</h2>' : ""}
     <div class="eps" id="eps"></div>
     ${EPS.some(estTamallette)?`<section class="collection"><h2>Tamallette · période 2</h2><p class="lead">Les textes prévus pour la période : les mots à préparer, la lecture et le défi d'une minute.</p><div class="eps" id="eps-tamallette"></div></section>`:""}`;
     EPS.forEach(E=>{
@@ -38,6 +48,7 @@ const Ecran = (() => {
       b.addEventListener("click", ()=>go({name:"episode", id:E.id, step:0}));
       $(tamallette ? "#eps-tamallette" : "#eps").appendChild(b);
     });
+    if (maison && optionsMaison.accueil) optionsMaison.accueil(view);
   }
 
   /* ---------- Séance ---------- */
@@ -47,11 +58,23 @@ const Ecran = (() => {
     const step = route.step||0;
     view.innerHTML = `<div class="ephead"><button class="btn" id="back" aria-label="Retour aux textes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><h2>${esc(libelleEpisode(EP))} — ${esc(EP.titre)}</h2><nav class="steps" id="steps" aria-label="Étapes de la séance"></nav></div><div class="panel" id="panel"></div>`;
     $("#back").onclick = ()=>go({name:"home"});
-    etapesEpisode(EP).forEach((s,i)=>{ const b = el("button",{class:"step", type:"button"}, `<i>${i+1}</i>${s}`); if (i===step) b.setAttribute("aria-current","step"); b.onclick = ()=>go({name:"episode", id:EP.id, step:i}); $("#steps").appendChild(b); });
+    if (maison){
+      const imprimer = el("button",{class:"btn",id:"maison-imprimer",type:"button"},"Imprimer le texte");
+      imprimer.onclick = ()=>{ if(optionsMaison.imprime) optionsMaison.imprime(EP); };
+      $("#steps").before(imprimer);
+    }
+    let numero = 0;
+    etapesEpisode(EP).forEach((s,i)=>{
+      if (maison && (i===5 || (!EP.audio && (i===2 || i===3)))) return;
+      const b = el("button",{class:"step", type:"button", "data-step":String(i)}, `<i>${++numero}</i>${s}`); if (i===step) b.setAttribute("aria-current","step"); b.onclick = ()=>go({name:"episode", id:EP.id, step:i}); $("#steps").appendChild(b);
+    });
     const P = $("#panel");
     if (step===0) stepWords(P);
     else if (step>=1 && step<=3) stepReader(P, ["listen","echo","choir"][step-1]);
-    else if (step===4) stepDefi(P);
+    else if (step===4){
+      if (maison){ if (optionsMaison.defi) cleanup = optionsMaison.defi(P,EP) || (()=>{}); }
+      else stepDefi(P);
+    }
     else stepProgress(P);
   }
 
@@ -90,8 +113,8 @@ const Ecran = (() => {
      </div>
      <div class="echobar" id="echobar" hidden><strong>À vous !</strong><button class="btn" id="again" data-tele>Réécouter</button><button class="btn primary" id="enext" data-tele>Phrase suivante</button></div>`;
     if (hasAudio){
-      let sp = Donnees.vitesse(); if (m==="choir" && sp>0.8) sp = 0.8;
-      $("#speed").onclick = e=>{ const b = e.target.closest("button"); if (b){ setSpeed(+b.dataset.v); Donnees.fixeVitesse(+b.dataset.v); } };
+      let sp = reglagesLecteur.vitesse(); if (m==="choir" && sp>0.8) sp = 0.8;
+      $("#speed").onclick = e=>{ const b = e.target.closest("button"); if (b){ setSpeed(+b.dataset.v); reglagesLecteur.fixeVitesse(+b.dataset.v); } };
       $("#play").onclick = togglePlay;
       $("#again").onclick = ()=>{ if (echoSent!==null) playSentence(echoSent); };
       $("#enext").onclick = echoNext;
@@ -139,6 +162,7 @@ const Ecran = (() => {
     annonce();
   }
   function fit(box, k){
+    if (maison){ box.style.removeProperty("--fs"); return; }
     const holder = box.parentElement;
     const avail = holder.clientHeight-parseFloat(getComputedStyle(holder).paddingTop)*2;
     let fs = Math.max(18, Math.min(window.innerHeight*k, window.innerWidth*k*0.56));
@@ -274,7 +298,7 @@ const Ecran = (() => {
 
   /* ---------- Clavier ---------- */
   document.addEventListener("keydown", e=>{
-    if (route.name!=="episode" || Banc.ROLE!=="ecran") return;
+    if (route.name!=="episode" || !["ecran","parents"].includes(Banc.ROLE)) return;
     if (e.target.closest && e.target.closest("input")) return;
     const st = route.step||0;
     if (st>=1 && st<=3){
@@ -299,7 +323,7 @@ const Ecran = (() => {
     if (Defi) e.defi = {etat:Defi.etat, eleve:Defi.eleve, local:Defi.local ? 1 : 0};
     return e;
   }
-  function annonce(){ clearTimeout(tAnnonce); tAnnonce = setTimeout(()=>{ const e = etat(), s = JSON.stringify(e); if (s===dernierEtat) return; dernierEtat = s; Lien.emit("ecran", e); }, 120); }
+  function annonce(){ if (maison) return; clearTimeout(tAnnonce); tAnnonce = setTimeout(()=>{ const e = etat(), s = JSON.stringify(e); if (s===dernierEtat) return; dernierEtat = s; Lien.emit("ecran", e); }, 120); }
   const relance = () => { dernierEtat = ""; annonce(); };
   function commande(d){
     if (!d) return;
@@ -317,6 +341,7 @@ const Ecran = (() => {
   const L = Plateforme.Liaison;
   function majPastille(){ const on = Lien.relie(); $("#b-tel-dot").classList.toggle("on", on); $("#b-tel-txt").textContent = on ? "Téléphone relié" : "Relier le téléphone"; const f = $("#lier-etat"); if (f) f.innerHTML = on ? `<span class="dot on"></span>Téléphone relié !` : `<span class="dot"></span>En attente du téléphone…`; }
   function fenetre(){
+    if (maison) return;
     const code = L.code(); if (!code) return;
     const lien = L.lienTel(code);
     const v = el("div",{class:"voile", id:"lier"});
@@ -335,10 +360,11 @@ const Ecran = (() => {
     v.querySelector("#lier-neuf").onclick = async e=>{ const b = e.currentTarget; if (b.dataset.sur!=="1"){ b.dataset.sur = "1"; b.textContent = "Le téléphone devra se relier à nouveau : confirmer ?"; return; } await L.nouveau(); location.hash = ""; location.reload(); };
     v.querySelector("#lier-ok").focus();
   }
-  $("#b-tel").addEventListener("click", fenetre);
+  if (!maison) $("#b-tel").addEventListener("click", fenetre);
   document.addEventListener("keydown", e=>{ if (e.key==="Escape" && $("#lier")) $("#lier").remove(); });
 
   async function demarre(){
+    if (maison) return demarreMaison(optionsMaison);
     Donnees.surChange(q=>{ if (q==="classe" || q==="resultats"){ if (route.name==="students" && q==="classe" && !document.activeElement.closest("#f")) vueEleves(view); else if (route.name==="progress") vueProgres(view); else if (route.name==="episode" && route.step===5) renderEpisode(); else if (route.name==="episode" && route.step===4 && q==="classe" && !Defi?.etat?.match(/run|pick/)) renderEpisode(); } });
     render();
     const room = await Lien.init();
@@ -349,6 +375,18 @@ const Ecran = (() => {
       majPastille();
     } else $("#b-tel").hidden = true;
   }
-  return { demarre, go, etat, route:()=>route };
+  function demarreMaison(options={}){
+    if (!maison) return;
+    optionsMaison = options;
+    reglagesLecteur = {vitesse:options.vitesse || (()=>0.8), fixeVitesse:options.fixeVitesse || (()=>{})};
+    $("#app-tel").hidden = true; $("#app-ecran").hidden = false;
+    document.title = "Fluence à la maison";
+    $("#home-link span").textContent = "Fluence à la maison";
+    document.querySelectorAll("#app-ecran [data-enseignant]").forEach(b=>b.hidden=true);
+    $("#maison-bilans").hidden = false;
+    $("#maison-bilans").onclick = ()=>{ go({name:"home"}); const h=$("#maison-historique"); if(h){h.scrollIntoView({block:"start"});h.focus({preventScroll:true});} };
+    go({name:"home"});
+  }
+  return { demarre, demarreMaison, go, etat, route:()=>route };
 })();
 window.Ecran = Ecran;

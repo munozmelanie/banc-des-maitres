@@ -1,0 +1,11 @@
+{
+  "name": "fluence-backend-tests",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "node run-sql.mjs && node edge.test.mjs" },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.10",
+    "@electric-sql/pglite-pgtap": "0.0.11"
+  },
+  "engines": { "node": ">=24" }
+}

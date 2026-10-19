@@ -27,7 +27,7 @@ L'appli est séparée du Bateau-école, mais construite sur le même principe :
 
 - **l'écran de la classe** : le site, ouvert dans le navigateur de l'ordinateur du TBI ;
 - **le téléphone de la maîtresse**, relié à l'écran : une télécommande, et surtout le **défi mené depuis le téléphone**. La maîtresse touche en silence les mots mal lus et, à la fin, le dernier mot lu ; l'élève lit au tableau, l'écran montre le chrono puis le résultat (record, mots à retravailler) ;
-- **les données restent dans les appareils** : les prénoms et les résultats sont enregistrés dans l'ordinateur et dans le téléphone. La liaison les transmet chiffrés entre les deux appareils ; ils ne sont publiés ni sur le site ni dans ce dépôt.
+- **les données de classe restent dans les appareils** : les prénoms et les résultats sont enregistrés dans l'ordinateur et dans le téléphone. La liaison les transmet chiffrés entre les deux appareils ; ils ne sont publiés ni sur le site ni dans ce dépôt. Les bilans envoyés par les familles peuvent aussi être conservés dans le service privé de réception décrit ci-dessous.
 
 ## Utiliser l'appli
 
@@ -48,6 +48,22 @@ Les deux appareils se recopient la classe et tous les résultats à chaque liais
 
 **Sans internet** : `hors-ligne/Le banc des maîtres - HORS LIGNE.html` est un seul fichier avec les voix et les images, à copier sur l'ordinateur de la classe (dossier « Le banc des maîtres » des Ressources Trans). Le téléphone ne peut s'y relier que si l'ordinateur a internet.
 
+### S'entraîner à la maison et transmettre les bilans
+
+L'[accès parents](https://munozmelanie.github.io/banc-des-maitres/#parents) ouvre les textes, les voix disponibles et le défi accompagné par un adulte. Aucun compte parent n'est nécessaire. L'enfant peut lire sur une feuille : **Imprimer le texte** ouvre une version sobre, avec le titre et les références, sans commandes ni résultats. Le parent garde le téléphone pour démarrer le chrono, toucher les mots mal lus, puis indiquer le dernier mot lu. La lecture sur écran reste possible.
+
+Pour recevoir automatiquement les bilans, l'enseignante ouvre **Élèves** ou **Progrès › Accès parents et bilans maison**. Après activation du service privé, elle choisit **Recevoir un lien de connexion** à son adresse e-mail autorisée. Dans le navigateur, elle peut ouvrir le lien reçu ; pour connecter l'application iPhone, elle copie le lien complet du message dans le champ de connexion de Fluence, sans l'ouvrir auparavant : le lien ne sert qu'une fois. L'application vérifie le compte et son autorisation avant de conserver la session. Un code numérique reste accepté si le service en fournit un. Une fois connectée, l'enseignante choisit un élève et crée son lien personnel. Le parent peut corriger le prénom affiché avant le défi ; l'association à l'élève reste celle du lien créé par l'enseignante.
+
+Chaque lien personnel contient un secret aléatoire de 256 bits. Il autorise l'envoi pour un seul enfant et ne contient ni identifiant de classe, ni liste d'élèves, ni code de télécommande. Le service conserve l'empreinte du secret. Le lien doit être transmis à la famille concernée et peut être désactivé depuis Fluence. Il ne permet pas de lire les bilans d'autres familles. L'espace parents ne charge ni les données de classe présentes sur l'appareil ni la session privée de l'enseignante.
+
+À la fin du défi, le bilan est gardé dans l'historique familial et placé dans une file locale d'envoi. Les historiques et les prénoms sont séparés par lien personnel sur un appareil partagé ; chaque bilan en attente garde le lien sous lequel il a été créé. Avec un lien personnel actif, Fluence tente de le transmettre au service privé. **Reçu** apparaît uniquement après un accusé de réception valide du serveur ; cela signifie que le bilan est disponible dans l'espace privé, même si l'application de l'enseignante est fermée. En cas de coupure, le bilan reste en attente et peut être réessayé. Les essais automatiques reprennent quand la page est ouverte et connectée. Si le navigateur refuse le stockage, un message demande de garder la page ouverte ; le bilan reste disponible en mémoire pendant la séance.
+
+L'enseignante retrouve les nouveaux bilans en ouvrant Fluence avec son compte connecté ; elle peut aussi choisir **Actualiser les bilans**. Les bilans sont associés par le service au bon élève. Le score est recalculé à partir du dernier mot, des erreurs et du temps, et l'empreinte du texte est vérifiée. Un élève absent de l'appareil ou un texte différent est signalé pour vérification. Les bilans restent des lectures déclarées par la famille : ils apparaissent dans **Bilans maison enregistrés**, séparément des essais et records de classe. Une fois reçus dans l'application, ils sont inclus dans les sauvegardes et la liaison chiffrée entre les appareils de l'enseignante. Les identifiants empêchent les doublons ; une suppression confirmée n'est pas annulée lors de la réception suivante.
+
+Le lien commun `#parents`, éventuellement accompagné du prénom prérempli, donne accès à la lecture et à l'impression sans activer la réception automatique. **Envoyer le bilan** par l'ENT ou la messagerie reste une solution de secours : le parent choisit le destinataire dans la feuille de partage. Sans partage disponible, le bilan et son lien sont copiés, ou un fichier JSON est téléchargé pour être joint au message. Fluence ne confirme pas la livraison de ce message. L'enseignante ouvre le lien reçu ou importe le fichier, vérifie l'élève associé et valide **Ajouter au suivi maison**.
+
+La réception automatique nécessite un projet Supabase privé configuré et déployé, selon [le guide du service](supabase/README.md). `src/maison-cloud-config.js` contient uniquement l'URL du projet et sa clé publique ; aucune clé secrète n'y a sa place. Les règles d'accès et la fonction de réception sont dans `supabase/`. Aucun jeton familial, compte, prénom ni résultat réel ne doit entrer dans les sources ou le site public. Les bilans familiaux passent par ce service privé ; les relais de la télécommande restent réservés aux appareils de l'enseignante.
+
 ## Comment ça marche
 
 | | |
@@ -62,6 +78,11 @@ Les deux appareils se recopient la classe et tous les résultats à chaque liais
 | `src/commun.js` | les données (classe, résultats), le calcul du défi, les progrès, les élèves |
 | `src/ecran.js` | l'écran de la classe : épisodes, les six étapes, télécommande reçue |
 | `src/telephone.js` | le téléphone : liaison, télécommande, défi, élèves, progrès |
+| `src/parents.js` | lecteur et défi familiaux, historique local séparé |
+| `src/envoi-maison.js` | lien parents, partage explicite des bilans, import et suivi par l'enseignante |
+| `src/maison-cloud.js` | file d'envoi familiale, connexion autorisée de l'enseignante et réception privée |
+| `src/maison-cloud-config.js` | URL et clé publique du service, vides tant que la réception n'est pas activée |
+| `supabase/` | règles d'accès aux données privées, fonction de réception et tests du service |
 | `src/audio/`, `src/img/` | les voix (MP3) et les illustrations (WebP) prêtes pour le site |
 | `outils/build.py` | assemble `www/` (le site) et, avec `--hors-ligne`, le fichier unique |
 | `outils/voix.py` | prépare un enregistrement : transcription, reprises coupées, son nettoyé |
@@ -82,7 +103,8 @@ Il faut Python 3 et Node. Lancer `npm install` une fois.
 ```
 python3 outils/build.py                 # crée www/ (le site)
 python3 outils/build.py --hors-ligne    # et le fichier unique pour un ordinateur sans internet
-npm test                                # assemble et teste dans Chromium : écran seul, téléphone relié par un relais local, petits écrans
+npm test                                # assemble et teste la classe, la maison et l'impression, sans envoi réel
+npm run test:parents                    # contrôles ciblés des parcours familiaux et de la réception simulée
 python3 outils/voix.py                  # prépare les nouveaux enregistrements (pip install faster-whisper ; ffmpeg)
 python3 outils/voix.py E5 --refaire     # recoupe un épisode avec sa transcription déjà faite
 python3 outils/voix.py T1               # prépare la voix du premier texte Tamallette
@@ -92,6 +114,12 @@ sh outils/publier.sh                    # enregistre, envoie et publie (voir plu
 ```
 
 `tests/app.js` essaie l'écran seul : la voix et le surligneur, la page qui se tourne, l'écho, le défi et son calcul. Il essaie ensuite le téléphone relié : code tapé, télécommande, défi mené depuis le téléphone, résultat sur l'écran, essai recopié. Il vérifie qu'un ordinateur tout neuf retrouve la classe et les essais auprès du téléphone, que la suppression d'un essai se propage, et qu'une sauvegarde de la première version s'importe. Il couvre aussi la voix et l'écho de T1, les textes T2 à T6 sans voix, le changement de source audio, et le partage du lien depuis un téléphone neuf. `#essai-rapide` à la fin de l'adresse ramène le défi à 8 secondes, pour les essais.
+
+`tests/parents.js` vérifie l'isolation de la classe et de la liaison, la lecture, le défi, la persistance familiale et les échecs de partage/stockage. `tests/envoi-maison.js` couvre l'import explicite, les doublons, les suppressions et le suivi maison synchronisé. `tests/maison-cloud.js` vérifie la file persistante, les accusés de réception, l'isolation des liens de deux enfants, l'autorisation de l'enseignante et la réception avec une API simulée. `tests/parents-cloud-ui.js` contrôle les états visibles d'envoi et de réessai ; `tests/impression.js` vérifie les feuilles imprimables. Tous utilisent des élèves fictifs, des partages simulés et aucun véritable envoi vers un compte.
+
+`tests/concurrence-resultats.js` simule les délais et les erreurs de stockage natif : les ajouts simultanés, les suppressions et les réceptions distantes doivent conserver tous les résultats confirmés sans ressusciter un essai supprimé.
+
+Les contrôles du service privé se lancent séparément avec **Node 24 ou plus** : `npm --prefix supabase/tests install --ignore-scripts`, puis `npm run test:backend`. Ils exécutent les règles SQL dans un PostgreSQL local embarqué et la fonction de réception avec des requêtes simulées. Aucun projet Supabase en ligne n'est utilisé. Les dépendances de ces tests restent séparées de celles de l'application.
 
 ## Publier
 

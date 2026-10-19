@@ -236,6 +236,53 @@ select.sel{width:100%;min-height:52px;border-radius:12px;border:1.5px solid var(
   .fenetre{grid-template-columns:minmax(0,1fr);justify-items:center}
 }
 html[data-role="tel"] body{overflow:hidden}
+/* Le lecteur familial garde une taille de texte confortable et défile naturellement. */
+html[data-role="parents"] body{overflow:auto}
+html[data-role="parents"] .app{height:auto;min-height:100%;max-width:1100px;margin:auto}
+html[data-role="parents"] main{overflow:visible}
+html[data-role="parents"] [data-enseignant]{display:none!important}
+html[data-role="parents"] .bar .brand{flex-basis:100%;font-size:24px}
+html[data-role="parents"] .panel{height:auto;min-height:0;gap:12px}
+html[data-role="parents"] .stage{display:flex;flex-direction:column;gap:16px}
+html[data-role="parents"] .pic img{max-height:32vh}
+html[data-role="parents"] .textbox{height:auto;padding:20px}
+html[data-role="parents"] .text{font-size:clamp(21px,3vw,26px);line-height:1.7;max-height:none}
+html[data-role="parents"] .text.title{font-size:32px;line-height:1.3}
+html[data-role="parents"] .controls{background:var(--bg);padding-block:12px;justify-content:center}
+html[data-role="parents"] .echobar{position:sticky;left:auto;transform:none;bottom:12px;max-width:100%;margin:0 auto}
+html[data-role="parents"] .flash{min-height:260px}
+html[data-role="parents"] .flash .word{font-size:clamp(36px,8vw,76px)}
+html[data-role="parents"] .eps{grid-template-columns:repeat(auto-fit,minmax(min(250px,100%),1fr))}
+html[data-role="parents"] .step{padding:0 10px}
+.maison-stockage{margin:0 16px 12px;padding:10px 14px;border-radius:12px;background:var(--err-soft);color:var(--err)}
+.maison-identite{display:grid;gap:8px;max-width:520px}
+.maison-identite input{width:100%;min-height:48px;border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--paper)}
+.maison-pilotage{position:sticky;top:0;z-index:4;background:var(--paper);border:1.5px solid var(--line);border-radius:16px;padding:12px;margin-block:12px}
+.maison-pilotage .chrono{justify-content:space-between;flex-wrap:wrap}
+.maison-pilotage p{margin:8px 0}
+.maison-pilotage.termine{position:static}
+.maison-texte{padding:18px;background:var(--paper);border-radius:18px;border:1.5px solid var(--line)}
+.maison-texte .w{touch-action:manipulation}
+.maison-historique{margin-top:28px;scroll-margin-top:16px}
+.maison-historique .card{margin-top:12px}
+.maison-bilan h3{font-size:22px;margin-block:6px}
+.maison-bilan .row{margin-top:14px}
+.maison-bilan [data-envoi-info]{margin-bottom:0;overflow-wrap:anywhere}
+.maison-erreur{color:var(--err);font-weight:700}
+#maison-impression{display:none}
+@media print{
+  @page{size:A4;margin:18mm}
+  html[data-impression="texte"],html[data-impression="texte"] body{height:auto!important;margin:0!important;padding:0!important;overflow:visible!important;background:#fff!important;color:#111!important}
+  html[data-impression="texte"] body > :not(#maison-impression){display:none!important}
+  html[data-impression="texte"] #maison-impression{display:block!important;font-family:var(--font-read);font-size:13.5pt;line-height:1.65;color:#111;background:#fff}
+  #maison-impression h1{font-family:var(--font-read);font-size:21pt;line-height:1.3;margin:0 0 9mm;break-after:avoid;text-align:center}
+  #maison-impression p{margin:0 0 4mm;orphans:3;widows:3}
+  #maison-impression .impression-mot{padding:0;margin:0;color:inherit;background:none}
+  #maison-impression footer{font-size:8.5pt;line-height:1.4;margin-top:8mm;break-inside:avoid;color:#444}
+  html[data-impression="texte"] #maison-impression.texte-long{font-size:12.5pt;line-height:1.55}
+  #maison-impression.texte-long h1{margin-bottom:7mm}
+  #maison-impression.texte-long p{margin-bottom:3mm}
+}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -247,11 +294,13 @@ html[data-role="tel"] body{overflow:hidden}
       <span>Fluence</span>
     </div>
     <button class="btn" data-go="home">Textes</button>
-    <button class="btn" data-go="students">Élèves</button>
-    <button class="btn" data-go="progress">Progrès</button>
-    <button class="btn" id="b-tel" title="Relier le téléphone de la maîtresse"><span class="dot" id="b-tel-dot"></span><span id="b-tel-txt">Relier le téléphone</span></button>
-    <button class="btn" id="fs" title="Plein écran" aria-label="Plein écran"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+    <button class="btn" data-go="students" data-enseignant>Élèves</button>
+    <button class="btn" data-go="progress" data-enseignant>Progrès</button>
+    <button class="btn" id="b-tel" data-enseignant title="Relier le téléphone de la maîtresse"><span class="dot" id="b-tel-dot"></span><span id="b-tel-txt">Relier le téléphone</span></button>
+    <button class="btn" id="fs" data-enseignant title="Plein écran" aria-label="Plein écran"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+    <button class="btn" id="maison-bilans" hidden>Mes bilans à la maison</button>
   </div>
+  <p class="maison-stockage" id="maison-stockage" role="status" hidden></p>
   <main id="main"><div class="wrap view" id="view"></div></main>
   <audio id="audio" preload="auto"></audio>
 </div>
@@ -272,6 +321,7 @@ html[data-role="tel"] body{overflow:hidden}
     <button data-tab="progres"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18"/><path d="M5 16l4-5 4 3 6-8"/></svg>Progrès</button>
   </nav>
 </div>
+<section id="maison-impression" aria-hidden="true"></section>
 __SCRIPTS__
 </body>
 </html>

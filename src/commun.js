@@ -141,6 +141,7 @@ const Banc = (() => {
       return {classe:cl, resultats:{liste:li}, vitesse:+d.speed||0.8};
     }
     async function init(){
+      if (ROLE==="parents") throw new Error("Les données de classe ne sont pas accessibles dans l'espace parents.");
       db = await window.claude.use("db");
       docs.c = db.doc("banc/classe"); docs.r = db.doc("banc/resultats"); docs.g = db.doc("banc/reglages");
       let c = (await docs.c.get()).data(), r = (await docs.r.get()).data(), g = (await docs.g.get()).data();
@@ -153,22 +154,33 @@ const Banc = (() => {
       docs.r.onSnapshot(s=>{ if (s.distant && s.exists){ resultats = s.data(); signale("resultats"); } });
       docs.g.onSnapshot(s=>{ if (s.distant && s.exists){ reglages = s.data(); signale("reglages"); } });
     }
-    const vivants = () => resultats.liste.filter(r=>!r.suppr && r.eleve && r.ep);
+    const valides = () => resultats.liste.filter(r=>!r.suppr && r.eleve && r.ep);
+    const vivants = () => valides().filter(r=>r.origine!=="maison");
     /* les essais, avec leur numéro (par élève et par épisode, dans l'ordre des dates) */
     function essais(){
       const n = {};
       return vivants().slice().sort((a,b)=>String(a.date).localeCompare(String(b.date))).map(r=>{ const k = r.eleve+"|"+r.ep; n[k] = (n[k]||0)+1; return Object.assign({essai:n[k]}, r); });
     }
-    async function ecritResultats(){ try { await docs.r.set(resultats); return true; } catch(e){ return false; } }
+    async function ecritResultats(suivants=resultats){
+      try {
+        await docs.r.set(suivants);
+        const confirmes=(await docs.r.get()).data();
+        resultats=Plateforme.fusionResultats(resultats,confirmes);
+        return true;
+      } catch(e){ return false; }
+    }
     return { init,
       eleves:()=>classe.eleves, eleve:id=>classe.eleves.find(e=>e.id===id)||null,
       nom:id=>{ const e = classe.eleves.find(x=>x.id===id); return e ? e.nom : "Élève"; },
       async enregistreEleves(liste){ const nouvelle = {eleves:liste, maj:Date.now()}; try { await docs.c.set(nouvelle); classe = nouvelle; signale("classe"); return true; } catch(e){ return false; } },
       sansEssais:()=>resultats.liste.length===0,
       essais, essaisDe:(eleve, epId)=>essais().filter(r=>r.eleve===eleve && (!epId || r.ep===epId)),
+      essaisMaison:()=>valides().filter(r=>r.origine==="maison").sort((a,b)=>String(a.date).localeCompare(String(b.date))),
+      contientResultat:id=>resultats.liste.some(r=>r.id===id),
+      contientBilan:(sourceId,eleve)=>resultats.liste.some(r=>r.origine==="maison"&&r.sourceId===sourceId&&(eleve===undefined||r.eleve===eleve)),
       record:(eleve, sauf)=>{ const l = vivants().filter(r=>r.eleve===eleve && r.id!==sauf); return l.length ? Math.max(...l.map(r=>r.mclm)) : null; },
-      async ajoute(r){ if (resultats.liste.some(x=>x.id===r.id)) return true; resultats = {liste:resultats.liste.concat([r])}; const ok = await ecritResultats(); signale("resultats"); return ok; },
-      async supprime(id){ resultats = {liste:resultats.liste.filter(x=>x.id!==id).concat([{id, suppr:true, date:new Date().toISOString()}])}; const ok = await ecritResultats(); signale("resultats"); return ok; },
+      async ajoute(r){ if (resultats.liste.some(x=>x.id===r.id)) return true; const ok = await ecritResultats({liste:resultats.liste.concat([r])}); if(ok) signale("resultats"); return ok; },
+      async supprime(id){ const avant=resultats.liste.find(x=>x.id===id), marque={id,suppr:true,date:new Date().toISOString()}; if(avant?.origine==="maison")Object.assign(marque,{origine:"maison",sourceId:avant.sourceId,eleve:avant.eleve}); const ok = await ecritResultats({liste:resultats.liste.filter(x=>x.id!==id).concat([marque])}); if(ok) signale("resultats"); return ok; },
       vitesse:()=>reglages.vitesse||0.8,
       async fixeVitesse(v){ reglages = {vitesse:v, maj:Date.now()}; try { await docs.g.set(reglages); } catch(e){} },
       surChange(f){ ecoutes.add(f); return ()=>ecoutes.delete(f); },
@@ -179,8 +191,8 @@ const Banc = (() => {
         if (d && d.format==="banc-des-maitres/sauvegarde"){ cl = d.classe; re = d.resultats; vi = d.reglages && d.reglages.vitesse; }
         else { const v1 = depuisV1(d); if (v1){ cl = v1.classe; re = v1.resultats; vi = v1.vitesse; } }
         if (!cl || !Array.isArray(cl.eleves) || !re || !Array.isArray(re.liste)) return false;
-        classe = {eleves:cl.eleves, maj:Date.now()}; resultats = Plateforme.fusionResultats(resultats, re);
-        await docs.c.set(classe); await ecritResultats(); if (vi) await this.fixeVitesse(vi);
+        classe = {eleves:cl.eleves, maj:Date.now()}; const suivants = Plateforme.fusionResultats(resultats, re);
+        await docs.c.set(classe); if(!await ecritResultats(suivants)){signale("classe");return false;} if (vi) await this.fixeVitesse(vi);
         signale("classe"); signale("resultats"); return true;
       } };
   })();
@@ -191,6 +203,7 @@ const Banc = (() => {
     const etats = new Set();
     const signale = () => etats.forEach(f=>{ try { f(autres>0); } catch(e){} });
     async function init(){
+      if (ROLE==="parents") return null;
       room = await window.claude.use("room");
       if (!room) return null;
       room.presence({role:ROLE});
@@ -283,6 +296,7 @@ const Banc = (() => {
     box.querySelector("#imp").onchange = async e=>{ const f = e.target.files[0]; if (!f) return; const info = box.querySelector("#ioinfo");
       try { const ok = await Donnees.importe(JSON.parse(await f.text())); if (!ok) throw 0; vueProgres(box, compacte); box.querySelector("#ioinfo").textContent = "Sauvegarde importée."; }
       catch(err){ info.textContent = "Ce fichier n'est pas une sauvegarde de Fluence."; } };
+    EnvoiMaison.ajouteBouton(box);
   }
   function vueEleves(box){
     /* Une copie reçue du téléphone ne doit pas effacer une prévisualisation en cours. */
@@ -350,15 +364,18 @@ const Banc = (() => {
         apercu.hidden=true;vueEleves(box);box.querySelector("#ok").textContent=`Import enregistré : ${plan.ajoutes} élève(s) ajouté(s), ${plan.reconnus} déjà présent(s).`;
       } catch(err){ info.textContent=err.message||"Impossible d'importer cette liste.";bouton.disabled=false; }
     };
+    EnvoiMaison.ajouteBouton(box);
   }
 
   let actx = null;
   function bip(){ try { actx = actx || new (window.AudioContext||window.webkitAudioContext)(); const o = actx.createOscillator(), g = actx.createGain(); o.frequency.value = 880; g.gain.setValueAtTime(.25, actx.currentTime); g.gain.exponentialRampToValueAtTime(.001, actx.currentTime+.6); o.connect(g).connect(actx.destination); o.start(); o.stop(actx.currentTime+.6); } catch(e){} }
 
   async function demarre(){
+    if (ROLE==="parents"){ await MaisonCloud.init(); await Parents.demarre(); return; }
     await Donnees.init();
     if (ROLE==="tel"){ document.getElementById("app-tel").hidden = false; await Telephone.demarre(); }
     else { document.getElementById("app-ecran").hidden = false; await Ecran.demarre(); }
+    await MaisonCloud.init(); EnvoiMaison.recoitLien();
   }
   return { DATA, EPS, ROLE, $, el, esc, estMot, nu, ep, estTamallette, libelleEpisode, etapesEpisode, motsDefi, DUREE, ImportClasse, Donnees, Lien, calcule, bilan, carteResultat, motsDifficiles, courbe, vueProgres, vueEleves, bip, demarre };
 })();

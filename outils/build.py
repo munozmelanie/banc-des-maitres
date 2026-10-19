@@ -58,8 +58,27 @@ def donnees():
 
 
 POLICES = [("Andika", "400", "normal", "andika-400-normal"), ("Andika", "700", "normal", "andika-700-normal"), ("Grandstander", "100 900", "normal", "grandstander")]
-SCRIPTS = ["plateforme.js", "commun.js", "ecran.js", "telephone.js"]
+SCRIPTS = ["maison-cloud-config.js", "plateforme.js", "commun.js", "ecran.js", "telephone.js", "parents.js", "envoi-maison.js", "maison-cloud.js"]
 VENDOR = ["nostr-lite.js", "mqtt.min.js", "qrcode.js"]
+
+
+def verifie_config_maison():
+    """Refuse de publier une clé serveur à la place de la clé publique."""
+    try:
+        contenu = lire(S / "maison-cloud-config.js").split("window.BANC_MAISON =", 1)[1].strip().removesuffix(";")
+        config = json.loads(contenu)
+        if set(config) != {"url", "publishableKey"}: raise ValueError()
+        url, cle = config["url"], config["publishableKey"]
+        if url == "" and cle == "": return
+        if not isinstance(cle, str) or not isinstance(url, str) or not re.fullmatch(r"https://[a-z0-9-]+\.supabase\.co", url): raise ValueError()
+        if re.fullmatch(r"sb_publishable_[A-Za-z0-9_-]+", cle): return
+        morceaux = cle.split(".")
+        if len(morceaux) == 3:
+            payload = json.loads(base64.urlsafe_b64decode(morceaux[1] + "=" * (-len(morceaux[1]) % 4)))
+            if payload.get("role") == "anon": return
+        raise ValueError()
+    except Exception:
+        raise SystemExit("Configuration maison refusée : utiliser uniquement l'URL Supabase et sa clé publique publishable/anon. Aucune clé secrète ne peut être publiée.")
 
 
 def page(eps, web, en_ligne, media=None):
@@ -85,6 +104,7 @@ def page(eps, web, en_ligne, media=None):
 
 
 def main():
+    verifie_config_maison()
     eps, rapport = donnees()
     web = adresse_web()
     if W.exists(): shutil.rmtree(W)

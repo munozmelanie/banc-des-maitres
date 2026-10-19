@@ -19,7 +19,7 @@ const Plateforme = (() => {
   /* stockage durable : Preferences dans l'appli (iOS peut vider le localStorage d'une vue web), localStorage sinon */
   const Stock = {
     async get(k){ if (Prefs){ try { const r = await Prefs.get({key:k}); if (r && r.value!=null) return r.value; } catch(e){} } return lsG(k); },
-    async set(k,v){ lsS(k,v); if (Prefs){ try { await Prefs.set({key:k, value:v}); } catch(e){} } },
+    async set(k,v){ if (Prefs){ await Prefs.set({key:k, value:v}); lsS(k,v); } else localStorage.setItem(k,v); },
     async del(k){ lsD(k); if (Prefs){ try { await Prefs.remove({key:k}); } catch(e){} } }
   };
   const te = new TextEncoder(), td = new TextDecoder();
@@ -30,16 +30,19 @@ const Plateforme = (() => {
   const deb64 = s => { const b=atob(s); const u=new Uint8Array(b.length); for (let i=0;i<b.length;i++) u[i]=b.charCodeAt(i); return u; };
 
   /* ---------- rôle de l'appareil : « ecran » (ordinateur de la classe) ou « tel » (télécommande de la maîtresse) ---------- */
+  const PARENTS = /[#&]parents\b/.test(location.hash);
   const petit = () => Math.min(screen.width||innerWidth, screen.height||innerHeight) < 600;
   function role(){
     const h = location.hash;
+    // Un lien famille ne lit ni ne remplace le rôle de l'espace enseignant.
+    if (PARENTS) return "parents";
     if (/[#&]tel\b/.test(h)) lsS(P+"role", "tel");
     else if (/[#&]ecran\b/.test(h)) lsS(P+"role", "ecran");
     const r = lsG(P+"role");
     if (r==="tel" || r==="ecran") return r;
     return petit() ? "tel" : "ecran";
   }
-  const changeRole = r => { lsS(P+"role", r); };
+  const changeRole = r => { if(!PARENTS) lsS(P+"role", r); };
 
   /* ---------- code de liaison : 10 caractères (base 32 de Crockford), affiché XXXXX-XXXXX ---------- */
   const ALPHA = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
@@ -186,14 +189,26 @@ const Plateforme = (() => {
   /* ---------- sauvegarde (même interface que la capacité db) ---------- */
   const DB = (() => {
     const cache = new Map(), ecoutes = new Map();
+    let ecrituresResultats = Promise.resolve();
     const cle = p => "banc-db:"+p;
     async function lit(p){ if (cache.has(p)) return cache.get(p); let v = null; try { v = JSON.parse(await Stock.get(cle(p))||"null"); } catch(e){} cache.set(p, v); return v; }
     const snap = (p, v, distant) => ({ id:p.split("/").pop(), path:p, exists:!!(v && v.data!=null), distant:!!distant,
       data:()=> v && v.data!=null ? JSON.parse(JSON.stringify(v.data)) : undefined });
     function notifie(p, v, distant){ (ecoutes.get(p)||new Set()).forEach(f=>{ try { f(snap(p,v,distant)); } catch(e){ console.error(e); } }); }
-    async function ecrit(p, data, distant){
-      const v = {data, rev:Date.now()}; cache.set(p, v); await Stock.set(cle(p), JSON.stringify(v));
-      if (!distant) Sync.change(p); notifie(p, v, distant); return v;
+    function ecrit(p, data, distant){
+      const estResultats = p==="banc/resultats";
+      if(estResultats) data=JSON.parse(JSON.stringify(data));
+      const execute = async()=>{
+        // Preferences est asynchrone : fusionner seulement au moment d'écrire,
+        // après toute écriture locale ou distante déjà engagée.
+        const contenu = estResultats ? fusionResultats((await lit(p))?.data, data) : data;
+        const v = {data:contenu, rev:Date.now()}; await Stock.set(cle(p), JSON.stringify(v)); cache.set(p, v);
+        if (!distant) Sync.change(p); notifie(p, v, distant); return v;
+      };
+      if(!estResultats)return execute();
+      const tache=ecrituresResultats.then(execute);
+      ecrituresResultats=tache.catch(()=>{}); // Un échec n'empêche pas la sauvegarde suivante.
+      return tache;
     }
     function doc(p){ return { id:p.split("/").pop(), path:p,
       async get(){ return snap(p, await lit(p)); },
@@ -293,6 +308,7 @@ const Plateforme = (() => {
       return normalise(await Stock.get(CLE));
     }
     function assure(){
+      if (role()==="parents") return Promise.resolve(null);
       if (assurance) return assurance;
       assurance = (async()=>{
         await ouvre();
@@ -302,6 +318,7 @@ const Plateforme = (() => {
       return assurance;
     }
     function ouvre(){
+      if (role()==="parents") return Promise.resolve(null);
       if (promesse) return promesse;
       promesse = (async()=>{
         code = await litCode();
@@ -317,9 +334,9 @@ const Plateforme = (() => {
     return { ouvre, assure, code:()=>code, normalise, WEB,
       lienTel:c=>WEB() ? WEB() + "#lien=" + (c||code) + "&tel" : "",
       lienEcran:c=>WEB() && (c||code) ? WEB() + "#lien=" + (c||code) + "&ecran" : "",
-      async fixe(c){ c = normalise(c); if (!c) return false; await Stock.set(CLE, c); return true; },
-      async oublie(){ await Stock.del(CLE); },
-      async nouveau(){ const c = nouveauCode(); await Stock.set(CLE, c); return c; },
+      async fixe(c){ if (role()==="parents") return false; c = normalise(c); if (!c) return false; await Stock.set(CLE, c); return true; },
+      async oublie(){ if (role()==="parents") return; await Stock.del(CLE); },
+      async nouveau(){ if (role()==="parents") return null; const c = nouveauCode(); await Stock.set(CLE, c); return c; },
       etat:()=>room ? room._etat() : [], pairs:()=>room ? room._pairs() : [],
       qr(texte, taille){ if (!window.qrcode || !texte) return ""; const q = qrcode(0,"M"); q.addData(texte); q.make();
         return q.createSvgTag({cellSize:Math.max(2, Math.floor((taille||240)/(q.getModuleCount()+8))), margin:4, scalable:true}); } };
@@ -349,6 +366,7 @@ const Plateforme = (() => {
   }
 
   window.claude = { use: async name => {
+    if (role()==="parents" && (name==="db" || name==="room")) return null;
     if (name==="db") return DB;
     if (name==="room") return await Liaison.ouvre();
     if (name==="downloads") return Telechargements;

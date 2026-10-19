@@ -2,7 +2,7 @@
 //  1. l'écran de la classe seul : épisodes, élèves, mots, voix et surligneur, écho, défi d'une minute, progrès, sauvegarde ;
 //  2. le téléphone relié par un relais local : code tapé, télécommande, défi mené depuis le téléphone,
 //     résultats recopiés sur l'écran, puis un ordinateur remis à zéro qui retrouve tout auprès du téléphone ;
-//  3. Tamallette P2 : lecture sans voix ni image, défi et résultats séparés du feuilleton ;
+//  3. Tamallette P2 : voix de T1, lecture sans voix de T2 à T6, aucun emplacement d'image, défis séparés du feuilleton ;
 //  4. un téléphone neuf partage le lien puis retrouve un ordinateur neuf ; partage, annulation et copie ;
 //  5. petits écrans : pas de défilement horizontal.
 // Usage : python3 outils/build.py && npm test
@@ -36,7 +36,7 @@ let ok = 0; const vrai = (c, m) => { if (!c) throw new Error("ÉCHEC : " + m); o
     const ctxE = await b.newContext();
     let tbi = await ouvre(ctxE, base + Q + "#ecran");
     await attends(() => tbi.evaluate(() => document.querySelectorAll(".ep").length === 13), 5000, "accueil");
-    vrai(await tbi.evaluate(() => [...document.querySelectorAll(".chip.ok")].filter(c => c.textContent === "Voix enregistrée").length) === 7, "les 7 épisodes ont leur voix");
+    vrai(await tbi.evaluate(() => [...document.querySelectorAll(".chip.ok")].filter(c => c.textContent === "Voix enregistrée").length) === 8, "les 7 épisodes et T1 ont leur voix");
     await tbi.screenshot({ path: path.join(CAPT, "1-accueil.png") });
     await tbi.click("[data-go=students]"); await tbi.fill("#n0", "Test A"); await tbi.fill("#g0", "70"); await tbi.fill("#n1", "Test B"); await tbi.click("#sv");
     await attends(() => tbi.evaluate(() => Banc.Donnees.eleves()[0].nom === "Test A"), 3000, "élèves enregistrés");
@@ -197,9 +197,44 @@ let ok = 0; const vrai = (c, m) => { if (!c) throw new Error("ÉCHEC : " + m); o
     vrai(await p2.evaluate(() => document.querySelectorAll("#eps .ep").length === 7 && document.querySelectorAll("#eps-tamallette .ep").length === 6), "l'accueil sépare les 7 épisodes et les 6 textes Tamallette");
     vrai(await p2.evaluate(() => [1,2,3,4,5,6].every(n => {
       const x = Banc.ep("T" + n);
-      return x && x.collection === "tamallette-p2" && x.audio === null && x.nbMots > 50 && x.mots.length > 0 && x.source && x.pages.slice(1).every(p => p.img === null && p.a === null && p.b === null);
-    })), "les 6 textes Tamallette sont complets, attribués, et ne déclarent aucune voix ou image absente");
-    for (const id of ["T1", "T2", "T3", "T4", "T5", "T6"]){
+      return x && x.collection === "tamallette-p2" && x.nbMots > 50 && x.mots.length > 0 && x.source && x.pages.slice(1).every(p => p.img === null) && (n === 1
+        ? /T1\.mp3$/.test(x.audio) && x.pages.slice(1).every(p => Number.isFinite(p.a) && p.b > p.a && p.toks.every(t => Number.isFinite(t[1]) && t[2] >= t[1]))
+        : x.audio === null && x.pages.slice(1).every(p => p.a === null && p.b === null));
+    })), "les 6 textes Tamallette sont complets et attribués ; seule la voix T1 est présente et alignée, aucune image absente n'est déclarée");
+    await p2.click("[data-ep=E1]"); await p2.click(".step >> nth=1"); await p2.click("#play");
+    await attends(() => p2.evaluate(() => !document.querySelector("#audio").paused), 5000, "voix du feuilleton avant T1");
+    await p2.click("[data-go=home]"); await p2.click("[data-ep=T1]"); await p2.click(".step >> nth=1");
+    vrai(await p2.evaluate(() => {
+      const a = document.querySelector("#audio"), stage = document.querySelector(".stage"), texte = document.querySelector(".textbox");
+      return a.dataset.ep === "T1" && /\/T1\.mp3$/.test(a.src) && a.paused && a.currentTime < 0.15 && /J['’]écoute/.test(document.querySelectorAll(".step")[1].textContent) && document.querySelector("#pic").hidden && !document.querySelector(".ph, .noaudio") && texte.getBoundingClientRect().width >= stage.getBoundingClientRect().width - 2;
+    }), "passer du feuilleton à T1 charge la bonne voix, en pause, avec un texte en pleine largeur sans faux emplacement d'image");
+    await p2.click("#play");
+    await attends(() => p2.evaluate(() => {
+      const a = document.querySelector("#audio");
+      return !a.paused && a.readyState >= 2 && /^Page 1 \/ /.test(document.querySelector("#pno").textContent) && !!document.querySelector("#txt .w.on");
+    }), 10000, "voix et surlignage de T1");
+    vrai(await p2.evaluate(() => {
+      const a = document.querySelector("#audio"), mots = [...document.querySelectorAll("#txt .w")], i = mots.findIndex(x => x.classList.contains("on")), mot = Banc.ep("T1").pages[1].toks[i];
+      return a.dataset.ep === "T1" && a.playbackRate === 0.8 && mot && mots[i].textContent === mot[0] && a.currentTime >= mot[1] - 0.15 && a.currentTime <= mot[2] + 0.2;
+    }), "la nouvelle voix T1 se lit à la vitesse choisie et surligne le mot aligné de la première page");
+    await p2.click(".step >> nth=2"); await p2.click("#next"); await p2.click("#play");
+    await attends(() => p2.evaluate(() => !document.querySelector("#echobar").hidden), 15000, "première phrase T1 en écho");
+    vrai(await p2.evaluate(() => {
+      const a = document.querySelector("#audio"), fin = Banc.ep("T1").pages[1].sents[0][3];
+      return a.paused && document.querySelectorAll("#txt .s")[0].classList.contains("echo") && a.currentTime >= fin && a.currentTime < fin + 1;
+    }), "l'écho T1 s'arrête à la fin de sa première phrase et attend la classe");
+    await p2.click(".step >> nth=1"); await p2.click("#play");
+    await attends(() => p2.evaluate(() => !document.querySelector("#audio").paused), 5000, "T1 en lecture avant un texte sans audio");
+    await p2.click("[data-go=home]"); await p2.click("[data-ep=T3]"); await p2.click(".step >> nth=1"); await p2.click("#next");
+    await p2.click("#txt .w >> nth=0");
+    vrai(await p2.evaluate(() => document.querySelector("#audio").paused && !document.querySelector("#play, #txt .w.on") && /Voix à venir/.test(document.querySelector(".noaudio").textContent)), "passer de T1 en lecture à T3 arrête la voix ; toucher un mot sans enregistrement ne relance aucun son");
+    await p2.click("[data-go=home]"); await p2.click("[data-ep=E1]"); await p2.click(".step >> nth=1");
+    vrai(await p2.evaluate(() => {
+      const a = document.querySelector("#audio");
+      return a.dataset.ep === "E1" && /\/E1\.mp3$/.test(a.src) && a.paused && a.currentTime < 0.15 && !document.querySelector("#pic").hidden;
+    }), "revenir au feuilleton après T3 restaure sa propre voix et son illustration, au début et en pause");
+    await p2.click("[data-go=home]");
+    for (const id of ["T2", "T3", "T4", "T5", "T6"]){
       await p2.click(`[data-ep=${id}]`);
       vrai(await p2.evaluate(() => /Tamallette/.test(document.querySelector(".ephead h2").textContent) && !/Épisode/.test(document.querySelector(".ephead h2").textContent) && /Je lis/.test(document.querySelectorAll(".step")[1].textContent)), id + " porte son libellé Tamallette et propose « Je lis »");
       await p2.click(".step >> nth=1"); await p2.click("#next");
@@ -207,7 +242,7 @@ let ok = 0; const vrai = (c, m) => { if (!c) throw new Error("ÉCHEC : " + m); o
         const stage = document.querySelector(".stage"), texte = document.querySelector(".textbox");
         return document.querySelector("#pic").hidden && !document.querySelector(".ph") && !document.querySelector("#play") && /Voix à venir/.test(document.querySelector(".noaudio").textContent) && document.querySelectorAll("#txt .w").length > 0 && texte.getBoundingClientRect().width >= stage.getBoundingClientRect().width - 2;
       }), id + " se lit en pleine largeur, sans faux emplacement d'image ni commande audio");
-      if (id === "T1"){
+      if (id === "T3"){
         await p2.click(".step >> nth=2"); await p2.click("#next");
         vrai(await p2.evaluate(() => !document.querySelector("#play") && document.querySelector("#audio").paused && /Voix à venir/.test(document.querySelector(".noaudio").textContent)), "l'étape écho reste lisible sans lancer une autre voix");
         await p2.screenshot({ path: path.join(CAPT, "11-tamallette-lecture.png") });
@@ -217,21 +252,21 @@ let ok = 0; const vrai = (c, m) => { if (!c) throw new Error("ÉCHEC : " + m); o
     await p2.evaluate(async () => {
       await Banc.Donnees.ajoute({ id:"test-episode-temoin", eleve:"e1", ep:"E1", date:"2026-10-10T10:00:00.000Z", mclm:50, lus:52, erreurs:2, secondes:60 });
     });
-    await p2.click("[data-ep=T1]"); await p2.click(".step >> nth=4");
+    await p2.click("[data-ep=T3]"); await p2.click(".step >> nth=4");
     await p2.click("#who [data-eleve=e1]"); await p2.click("#go"); await p2.click("#txt .w >> nth=2");
     await attends(() => p2.evaluate(() => /dernier mot/.test(document.querySelector("#hint").textContent)), 10000, "fin du défi Tamallette");
     await p2.click("#txt .w >> nth=19");
     await attends(() => p2.evaluate(() => !document.querySelector("#res").hidden), 3000, "résultat Tamallette");
     vrai(await p2.evaluate(() => {
-      const t = Banc.Donnees.essaisDe("e1", "T1"), e = Banc.Donnees.essaisDe("e1", "E1");
-      return t.length === 1 && t[0].ep === "T1" && t[0].essai === 1 && t[0].lus === 20 && t[0].erreurs === 1 && e.length === 1 && e[0].id === "test-episode-temoin" && e[0].mclm === 50;
-    }), "le défi Tamallette conserve T1 et son numéro d'essai sans modifier le résultat E1");
+      const t = Banc.Donnees.essaisDe("e1", "T3"), e = Banc.Donnees.essaisDe("e1", "E1");
+      return t.length === 1 && t[0].ep === "T3" && t[0].essai === 1 && t[0].lus === 20 && t[0].erreurs === 1 && e.length === 1 && e[0].id === "test-episode-temoin" && e[0].mclm === 50;
+    }), "le défi Tamallette sans audio conserve T3 et son numéro d'essai sans modifier le résultat E1");
     await p2.click("[data-go=progress]");
     vrai(await p2.evaluate(() => {
       const titres = [...document.querySelectorAll("#tab th")].map(x => x.textContent);
       const textes = [...document.querySelectorAll("#tab2 tbody tr")].map(x => x.children[2].textContent);
-      return titres.includes("É1") && titres.includes("T1") && textes.includes("É1") && textes.includes("T1") && /T1·1/.test(document.querySelector("#charts").textContent);
-    }), "les tableaux et courbes distinguent É1 et T1");
+      return titres.includes("É1") && titres.includes("T3") && textes.includes("É1") && textes.includes("T3") && /T3·1/.test(document.querySelector("#charts").textContent);
+    }), "les tableaux et courbes distinguent É1 et T3");
     await p2.close(); await ctxP2.close();
 
     console.log("4. Premier lien envoyé depuis le téléphone");
@@ -267,12 +302,12 @@ let ok = 0; const vrai = (c, m) => { if (!c) throw new Error("ÉCHEC : " + m); o
     vrai(await partageEcran.evaluate(c => Banc.ROLE === "ecran" && Plateforme.Liaison.code() === c, partageCode), "ouvrir le lien sur un ordinateur neuf suffit pour relier les deux appareils");
     vrai(await partageTel.locator("#t-envoi").isVisible(), "le bouton de partage reste disponible quand l'écran est relié");
     await attends(() => partageTel.evaluate(() => document.querySelectorAll("[data-ep]").length === 13), 5000, "liste du nouvel écran");
-    await partageTel.click("[data-ep=T1]");
-    await attends(() => partageEcran.evaluate(() => Ecran.route().id === "T1"), 5000, "Tamallette ouvert à distance");
+    await partageTel.click("[data-ep=T3]");
+    await attends(() => partageEcran.evaluate(() => Ecran.route().id === "T3"), 5000, "Tamallette ouvert à distance");
     await attends(() => partageTel.evaluate(() => /Je lis/.test(document.querySelector("[data-nav='1']").textContent)), 5000, "lecture libre sur la télécommande");
     await partageTel.click("[data-nav='1']");
     await attends(() => partageTel.evaluate(() => !!document.querySelector(".noaudio") && !document.querySelector("[data-clic=play]")), 5000, "Tamallette sans audio sur le téléphone");
-    vrai(await partageTel.evaluate(() => /Tamallette/.test(document.querySelector("#t-main h2").textContent)), "la télécommande ouvre T1 avec les bons libellés et sans commande de voix");
+    vrai(await partageTel.evaluate(() => /Tamallette/.test(document.querySelector("#t-main h2").textContent)), "la télécommande ouvre T3 avec les bons libellés et sans commande de voix");
     await partageTel.evaluate(() => {
       Object.defineProperty(navigator, "share", { configurable:true, value:undefined });
       Object.defineProperty(navigator, "clipboard", { configurable:true, value:{ writeText:async () => { throw new Error("Presse-papiers indisponible pour cet essai"); } } });
@@ -289,8 +324,8 @@ let ok = 0; const vrai = (c, m) => { if (!c) throw new Error("ÉCHEC : " + m); o
       const options = [...document.querySelectorAll("#t-ep option")];
       return options.length === 13 && options.filter(x => /^T/.test(x.value)).length === 6 && options.filter(x => /^T/.test(x.value)).every(x => /Tamallette/.test(x.textContent) && !/Épisode/.test(x.textContent));
     }), "le sélecteur de défi du téléphone contient les 13 textes et distingue Tamallette");
-    await partageTel.selectOption("#t-ep", "T1");
-    vrai(await partageTel.evaluate(() => document.querySelectorAll("#t-txt .w").length === Banc.motsDefi(Banc.ep("T1")).length), "le défi T1 sur téléphone affiche tout le texte sans dépendre d'un enregistrement");
+    await partageTel.selectOption("#t-ep", "T3");
+    vrai(await partageTel.evaluate(() => document.querySelectorAll("#t-txt .w").length === Banc.motsDefi(Banc.ep("T3")).length), "le défi T3 sur téléphone affiche tout le texte sans dépendre d'un enregistrement");
     await partageTel.screenshot({ path:path.join(CAPT, "12-tamallette-telephone.png"), fullPage:true });
 
     console.log("5. Petits écrans");

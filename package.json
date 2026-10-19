@@ -6,7 +6,7 @@
   "scripts": {
     "build": "python3 outils/build.py",
     "hors-ligne": "python3 outils/build.py --hors-ligne",
-    "test": "python3 outils/build.py && node tests/import-classe.js && node tests/app.js && node tests/vitesse.js --chromium",
+    "test": "python3 outils/build.py && python3 -B tests/voix.py && node tests/import-classe.js && node tests/app.js && node tests/vitesse.js --chromium",
     "voix": "python3 outils/voix.py",
     "images": "python3 outils/images.py",
     "sync": "python3 outils/build.py && npx cap sync",

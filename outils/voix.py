@@ -93,11 +93,17 @@ def place(texte, morceau):
 
 
 def analyse(texte, words, sil):
-    """Passages relus : on garde la dernière lecture. Rend les intervalles de temps à couper et la fin de la lecture."""
+    """Passages relus : on garde la dernière lecture. Rend les intervalles de temps à couper, la fin de la lecture
+    et, si la lectrice a continué après le dernier mot du texte, le moment où le son doit s'arrêter."""
     gardes = []  # (morceau, début, fin dans le texte)
     coupes = []
+    suite = None
     for g in groupes(words, sil):
         p = place(texte, g)
+        if gardes and gardes[-1][2] >= len(texte) - 1 and not p:
+            # Une reprise finale encore reconnue doit passer par la détection des reprises ci-dessous.
+            suite = g[0][1]  # seul un passage hors du texte marque la suite à laisser de côté
+            break
         if not p: continue  # bruit, ou transcription inventée dans un silence
         d, f, _ = p
         if gardes and d <= gardes[-1][2] - 2:  # retour en arrière d'au moins trois mots : une reprise
@@ -109,17 +115,18 @@ def analyse(texte, words, sil):
                 coupes.append((round(max(0.0, premier - 0.15), 3), round(g[0][1] - 0.15, 3)))
         gardes.append((g, d, f))
     fin = max((x[0][-1][2] for x in gardes), default=None)
-    return coupes, fin
+    arret = None if fin is None or suite is None else round(max(fin + 0.15, min(fin + 1.2, suite - 0.12)), 3)
+    return coupes, fin, arret
 
 
-def coupe(src, dst, coupes, fin_parole):
-    """Son nettoyé : passages coupés, silence final raccourci, volume égalisé, MP3 mono 64 kb/s."""
+def coupe(src, dst, coupes, fin_parole, arret=None):
+    """Son nettoyé : passages coupés, silence final raccourci (ou arrêt avant la suite lue en trop), volume égalisé, MP3 mono 64 kb/s."""
     dur = duree(src)
     garde = []; t = 0.0
     for a, b in sorted(coupes):
         if a > t: garde.append((t, a))
         t = max(t, b)
-    garde.append((t, min(dur, fin_parole + 1.2)))
+    garde.append((t, min(dur, arret if arret is not None else fin_parole + 1.2)))
     parts = "".join(f"[0:a]atrim={a:.3f}:{b:.3f},asetpts=PTS-STARTPTS[p{i}];" for i, (a, b) in enumerate(garde))
     filtre = parts + "".join(f"[p{i}]" for i in range(len(garde))) + f"concat=n={len(garde)}:v=0:a=1,highpass=f=70,loudnorm=I=-16:TP=-1.5:LRA=11[s]"
     subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(src), "-filter_complex", filtre, "-map", "[s]", "-ac", "1", "-ar", "44100",
@@ -170,14 +177,15 @@ def main():
             brut.write_text(json.dumps(b, ensure_ascii=False), encoding="utf-8")
         texte = [norm(t) for p in ep["pages"] for t in tokens(p)]
         texte = [x for x in texte if x]
-        cps, fin_parole = analyse(texte, b["words"], b["sil"])
+        cps, fin_parole, arret = analyse(texte, b["words"], b["sil"])
         if fin_parole is None: print(ep["id"], ": enregistrement méconnaissable, laissé de côté"); continue
         dst = AUDIO / (ep["id"] + ".mp3")
-        garde = coupe(src, dst, cps, fin_parole)
+        garde = coupe(src, dst, cps, fin_parole, arret)
         dur, sil = silences(dst)
         words = decale(b["words"], garde)
         out.write_text(json.dumps(dict(source=src.name, coupes=cps, dur=dur, sil=sil, words=words), ensure_ascii=False), encoding="utf-8")
-        print(ep["id"], ": prêt,", round(dur, 1), "s", ("; reprise coupée : " + ", ".join(f"{a:.1f}–{b:.1f} s" for a, b in cps)) if cps else "", flush=True)
+        print(ep["id"], ": prêt,", round(dur, 1), "s", ("; reprise coupée : " + ", ".join(f"{a:.1f}–{b:.1f} s" for a, b in cps)) if cps else "",
+              f"; lecture arrêtée à {arret:.1f} s (la suite dépasse le texte)" if arret is not None else "", flush=True)
 
 
 if __name__ == "__main__":

@@ -8,7 +8,7 @@ Appli de fluence pour les APC de CM1 : un feuilleton en épisodes d'environ 250 
 
 Les personnages (Maya, Sami, Jules, Romy, Gaspard, Marcel le cuisinier et la maîtresse) sont inventés. Chaque semaine, un papier écrit à l'encre verte attend la bande sous le banc des maîtres, le banc de la cour où s'assoient les enseignants.
 
-Une seconde collection contient les six textes Tamallette prévus dans le plan P2 de Claude. Les textes se lisent dès maintenant, avec les mots à préparer et le défi d'une minute ; les enregistrements seront ajoutés plus tard.
+Une seconde collection contient les six textes Tamallette prévus dans le plan P2 de Claude. Les textes se lisent dès maintenant, avec les mots à préparer et le défi d'une minute. **T1, Le trafiquant d’ombres**, possède aussi son enregistrement, avec le surligneur, l'écho et le chœur. Les voix de T2 à T6 seront ajoutées plus tard.
 
 | Identifiant | Semaine | Texte |
 |---|---|---|
@@ -91,7 +91,7 @@ python3 outils/icones.py                # décline le nouveau logo en icônes we
 sh outils/publier.sh                    # enregistre, envoie et publie (voir plus bas)
 ```
 
-`tests/app.js` essaie l'écran seul : la voix et le surligneur, la page qui se tourne, l'écho, le défi et son calcul. Il essaie ensuite le téléphone relié : code tapé, télécommande, défi mené depuis le téléphone, résultat sur l'écran, essai recopié. Il vérifie qu'un ordinateur tout neuf retrouve la classe et les essais auprès du téléphone, que la suppression d'un essai se propage, et qu'une sauvegarde de la première version s'importe. Il couvre aussi les six textes Tamallette sans voix et le partage du lien depuis un téléphone neuf. `#essai-rapide` à la fin de l'adresse ramène le défi à 8 secondes, pour les essais.
+`tests/app.js` essaie l'écran seul : la voix et le surligneur, la page qui se tourne, l'écho, le défi et son calcul. Il essaie ensuite le téléphone relié : code tapé, télécommande, défi mené depuis le téléphone, résultat sur l'écran, essai recopié. Il vérifie qu'un ordinateur tout neuf retrouve la classe et les essais auprès du téléphone, que la suppression d'un essai se propage, et qu'une sauvegarde de la première version s'importe. Il couvre aussi la voix et l'écho de T1, les textes T2 à T6 sans voix, le changement de source audio, et le partage du lien depuis un téléphone neuf. `#essai-rapide` à la fin de l'adresse ramène le défi à 8 secondes, pour les essais.
 
 ## Publier
 

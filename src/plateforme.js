@@ -283,14 +283,23 @@ const Plateforme = (() => {
     return r;
   }
 
-  /* ---------- code de liaison : l'écran de la classe le crée, le téléphone le reçoit (QR code ou code tapé) ---------- */
+  /* ---------- code de liaison : créé par l'écran ou le téléphone, partagé par QR code, lien ou saisie ---------- */
   const Liaison = (() => {
-    let code = null, promesse = null, room = null;
+    let code = null, promesse = null, assurance = null, room = null;
     const CLE = P+"liaison";
     async function litCode(){
       const m = /[#&?]lien=([0-9A-Za-z-]+)/.exec(location.href);
       if (m){ const c = normalise(m[1]); if (c){ await Stock.set(CLE, c); return c; } }
       return normalise(await Stock.get(CLE));
+    }
+    function assure(){
+      if (assurance) return assurance;
+      assurance = (async()=>{
+        await ouvre();
+        if (!code){ code = nouveauCode(); await Stock.set(CLE, code); }
+        return code;
+      })().finally(()=>{ assurance = null; });
+      return assurance;
     }
     function ouvre(){
       if (promesse) return promesse;
@@ -305,8 +314,9 @@ const Plateforme = (() => {
     }
     /* adresse du site pour le téléphone : celle de la page, ou celle du site publié (page ouverte depuis un fichier, appli) */
     const WEB = () => (/^https?:$/.test(location.protocol) && !NATIF) ? location.href.replace(/[?#].*$/,"") : (window.BANC_WEB || "");
-    return { ouvre, code:()=>code, normalise, WEB,
+    return { ouvre, assure, code:()=>code, normalise, WEB,
       lienTel:c=>WEB() ? WEB() + "#lien=" + (c||code) + "&tel" : "",
+      lienEcran:c=>WEB() && (c||code) ? WEB() + "#lien=" + (c||code) + "&ecran" : "",
       async fixe(c){ c = normalise(c); if (!c) return false; await Stock.set(CLE, c); return true; },
       async oublie(){ await Stock.del(CLE); },
       async nouveau(){ const c = nouveauCode(); await Stock.set(CLE, c); return c; },
@@ -344,6 +354,6 @@ const Plateforme = (() => {
     if (name==="downloads") return Telechargements;
     return null;
   } };
-  return { NATIF, Liaison, Stock, eveille, rid, normalise, role, changeRole, fusionResultats, lsG, lsS };
+  return { NATIF, Liaison, Stock, partage:plug("Share"), eveille, rid, normalise, role, changeRole, fusionResultats, lsG, lsS };
 })();
 window.Plateforme = Plateforme;

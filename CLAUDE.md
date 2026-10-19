@@ -11,7 +11,7 @@ C'est une appli séparée du Bateau-école, construite sur le même principe (si
    python3 outils/build.py
    npm test
    ```
-3. Publier : `sh outils/publier.sh`. Le script fait le commit et le push sur `main` (la seule branche des sources). Il assemble ensuite le site et le pousse sur la branche `gh-pages`, servie par GitHub Pages (en une à deux minutes). Il refait aussi le fichier hors ligne et le copie dans le dossier « Le banc des maîtres » des Ressources Trans. Il faut `gh` connecté à un compte qui peut écrire dans le dépôt.
+3. Publier : `sh outils/publier.sh`. Le script fait le commit et le push sur `main` (la seule branche des sources). Il assemble ensuite le site et le pousse sur la branche `gh-pages`, servie par GitHub Pages (en une à deux minutes). Il refait aussi le fichier hors ligne et le copie dans le dossier « Le banc des maîtres » des Ressources Trans. Il faut une connexion GitHub déjà enregistrée par Git sur le Mac, avec accès en écriture au dépôt. `gh` n’est pas nécessaire.
 
 ## Nouveaux enregistrements ou nouvelles images
 

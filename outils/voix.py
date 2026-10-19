@@ -1,6 +1,7 @@
 """Prépare les enregistrements de la maîtresse pour l'appli.
 
 Usage : python3 outils/voix.py                 traite tous les enregistrements de contenu/enregistrements/ (E1.m4a, « Épisode 2.m4a »…)
+        python3 outils/voix.py T1             prépare un texte Tamallette (T1.m4a…T6.m4a)
         python3 outils/voix.py E5 --refaire    retraite un épisode déjà prêt (son et coupes), avec la transcription déjà faite
         python3 outils/voix.py E5 --retranscrire   refait aussi la transcription (après un nouvel enregistrement)
 
@@ -139,8 +140,9 @@ def decale(words, garde):
 
 def fichier_de(eid):
     n = eid[1:]
+    motif = rf"(^E|pisode\s*){n}\b" if eid.startswith("E") else rf"^T{n}\b"
     for f in sorted(ENR.iterdir()) if ENR.exists() else []:
-        if f.suffix.lower() in (".m4a", ".mp3", ".wav", ".aac", ".caf", ".mp4") and re.search(rf"(^E|pisode\s*){n}\b", unicodedata.normalize("NFC", f.stem), re.I):
+        if f.suffix.lower() in (".m4a", ".mp3", ".wav", ".aac", ".caf", ".mp4") and re.search(motif, unicodedata.normalize("NFC", f.stem), re.I):
             return f
     return None
 
@@ -148,7 +150,7 @@ def fichier_de(eid):
 def main():
     retranscrire = "--retranscrire" in sys.argv
     refaire = retranscrire or "--refaire" in sys.argv
-    voulus = [a for a in sys.argv[1:] if re.fullmatch(r"E\d+", a)]
+    voulus = [a for a in sys.argv[1:] if re.fullmatch(r"[ET]\d+", a)]
     TR.mkdir(parents=True, exist_ok=True); AUDIO.mkdir(parents=True, exist_ok=True)
     for ep in episodes():
         if voulus and ep["id"] not in voulus: continue

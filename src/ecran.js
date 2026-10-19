@@ -4,7 +4,7 @@
    et peut mener le défi : il compte les erreurs en silence, l'écran montre le chrono puis le résultat. */
 "use strict";
 const Ecran = (() => {
-  const { EPS, $, el, esc, estMot, ep, motsDefi, DUREE, Donnees, Lien, calcule, bilan, carteResultat, courbe, vueProgres, vueEleves, bip } = Banc;
+  const { EPS, $, el, esc, estMot, ep, estTamallette, libelleEpisode, etapesEpisode, motsDefi, DUREE, Donnees, Lien, calcule, bilan, carteResultat, courbe, vueProgres, vueEleves, bip } = Banc;
   const view = $("#view"), audio = $("#audio");
   let route = {name:"home"};
   let cleanup = ()=>{};
@@ -27,28 +27,27 @@ const Ecran = (() => {
   function renderHome(){
     view.innerHTML = `<h1 style="font-size:clamp(28px,3.4vw,46px)">Le feuilleton de la période 2</h1>
     <p class="lead">Sept enquêtes de Maya, Sami, Jules et Romy. Chaque semaine, un papier écrit à l'encre verte attend la bande sous le banc des maîtres.</p>
-    <div class="eps" id="eps"></div>`;
-    const g = $("#eps");
+    <div class="eps" id="eps"></div>
+    ${EPS.some(estTamallette)?`<section class="collection"><h2>Tamallette · période 2</h2><p class="lead">Les textes prévus pour la période : les mots à préparer, la lecture et le défi d'une minute.</p><div class="eps" id="eps-tamallette"></div></section>`:""}`;
     EPS.forEach(E=>{
-      const n = E.pages.length-1, imgs = E.pages.slice(1).filter(p=>p.img).length;
-      const b = el("button",{class:"ep", type:"button"});
-      b.innerHTML = (E.pages[1] && E.pages[1].img ? `<img class="vign" src="${esc(E.pages[1].img)}" alt="" loading="lazy">` : `<div class="vign"></div>`) +
-        `<span class="num">Épisode ${E.num}</span><b>${esc(E.titre)}</b><span class="meta">${esc(E.semaine)} · ${esc(E.theme)}</span><span class="meta">${E.nbMots} mots</span>
-        <span class="chips"><span class="chip ${E.audio?"ok":""}">${E.audio?"Voix enregistrée":"Voix à venir"}</span><span class="chip ${imgs===n?"ok":""}">${imgs===n?"Images prêtes":"Images "+imgs+"/"+n}</span></span>`;
+      const n = E.pages.length-1, imgs = E.pages.slice(1).filter(p=>p.img).length, tamallette = estTamallette(E);
+      const b = el("button",{class:"ep"+(tamallette ? " ep-texte" : ""), type:"button", "data-ep":E.id});
+      b.innerHTML = (E.pages[1] && E.pages[1].img ? `<img class="vign" src="${esc(E.pages[1].img)}" alt="" loading="lazy">` : (tamallette ? "" : `<div class="vign"></div>`)) +
+        `<span class="num">${esc(libelleEpisode(E))}</span><b>${esc(E.titre)}</b><span class="meta">${esc(E.semaine)} · ${esc(E.theme)}</span><span class="meta">${E.nbMots} mots</span>
+        <span class="chips"><span class="chip ${E.audio?"ok":""}">${E.audio?"Voix enregistrée":"Voix à venir"}</span>${tamallette?"":`<span class="chip ${imgs===n?"ok":""}">${imgs===n?"Images prêtes":"Images "+imgs+"/"+n}</span>`}</span>`;
       b.addEventListener("click", ()=>go({name:"episode", id:E.id, step:0}));
-      g.appendChild(b);
+      $(tamallette ? "#eps-tamallette" : "#eps").appendChild(b);
     });
   }
 
   /* ---------- Séance ---------- */
-  const STEPS = ["Les mots","J'écoute","L'écho","Le chœur","Le défi","Les progrès"];
   let EP = null, page = 1, wordSpans = [], sentSpans = [], cur = -1, raf = 0, playing = false, stopAt = null, onStop = ()=>{}, echoSent = null, waiting = false, mode = "listen";
   function renderEpisode(){
     EP = ep(route.id);
     const step = route.step||0;
-    view.innerHTML = `<div class="ephead"><button class="btn" id="back" aria-label="Retour aux épisodes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><h2>Épisode ${EP.num} — ${esc(EP.titre)}</h2><nav class="steps" id="steps" aria-label="Étapes de la séance"></nav></div><div class="panel" id="panel"></div>`;
+    view.innerHTML = `<div class="ephead"><button class="btn" id="back" aria-label="Retour aux textes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><h2>${esc(libelleEpisode(EP))} — ${esc(EP.titre)}</h2><nav class="steps" id="steps" aria-label="Étapes de la séance"></nav></div><div class="panel" id="panel"></div>`;
     $("#back").onclick = ()=>go({name:"home"});
-    STEPS.forEach((s,i)=>{ const b = el("button",{class:"step", type:"button"}, `<i>${i+1}</i>${s}`); if (i===step) b.setAttribute("aria-current","step"); b.onclick = ()=>go({name:"episode", id:EP.id, step:i}); $("#steps").appendChild(b); });
+    etapesEpisode(EP).forEach((s,i)=>{ const b = el("button",{class:"step", type:"button"}, `<i>${i+1}</i>${s}`); if (i===step) b.setAttribute("aria-current","step"); b.onclick = ()=>go({name:"episode", id:EP.id, step:i}); $("#steps").appendChild(b); });
     const P = $("#panel");
     if (step===0) stepWords(P);
     else if (step>=1 && step<=3) stepReader(P, ["listen","echo","choir"][step-1]);
@@ -81,7 +80,7 @@ const Ecran = (() => {
   /* 2-4. Le lecteur : écoute, écho, chœur */
   const LIB = {listen:"Écouter", echo:"Écouter la phrase", choir:"Lire avec la voix"};
   function stepReader(P, m){
-    mode = m; page = 0;
+    mode = m; page = 0; onStop = ()=>{};
     const hasAudio = !!EP.audio;
     P.innerHTML = `<div class="stage"><div class="pic" id="pic"></div><div class="textbox"><div class="text" id="txt" lang="fr"></div></div></div>
      <div class="controls">
@@ -92,20 +91,22 @@ const Ecran = (() => {
      <div class="echobar" id="echobar" hidden><strong>À vous !</strong><button class="btn" id="again" data-tele>Réécouter</button><button class="btn primary" id="enext" data-tele>Phrase suivante</button></div>`;
     if (hasAudio){
       let sp = Donnees.vitesse(); if (m==="choir" && sp>0.8) sp = 0.8;
-      setSpeed(sp);
       $("#speed").onclick = e=>{ const b = e.target.closest("button"); if (b){ setSpeed(+b.dataset.v); Donnees.fixeVitesse(+b.dataset.v); } };
       $("#play").onclick = togglePlay;
       $("#again").onclick = ()=>{ if (echoSent!==null) playSentence(echoSent); };
       $("#enext").onclick = echoNext;
       if (audio.dataset.ep!==EP.id){ audio.src = EP.audio; audio.dataset.ep = EP.id; }
+      setSpeed(sp);
     }
+    // Le même élément audio est réutilisé : chaque mode reprend au début, en pause.
+    try { audio.currentTime = 0; } catch(e){}
     const saute = d => { const w = playing && mode!=="echo"; stopAudio(); showPage(page+d); if (w && EP.pages[page].a!=null) playFrom(EP.pages[page].a, null); };
     $("#prev").onclick = ()=>saute(-1);
     $("#next").onclick = ()=>saute(1);
     showPage(0);
     cleanup = ()=>{};
   }
-  function setSpeed(v){ audio.playbackRate = v; audio.preservesPitch = true; audio.webkitPreservesPitch = true; const s = $("#speed"); if (s) s.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed", String(+b.dataset.v===v))); }
+  function setSpeed(v){ audio.defaultPlaybackRate = v; audio.playbackRate = v; audio.preservesPitch = true; audio.webkitPreservesPitch = true; const s = $("#speed"); if (s) s.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed", String(+b.dataset.v===v))); }
   function showPage(p){
     page = Math.max(0, Math.min(p, EP.pages.length-1));
     const P = EP.pages[page];
@@ -113,16 +114,19 @@ const Ecran = (() => {
     $("#prev").disabled = page===0; $("#next").disabled = page===EP.pages.length-1;
     const pic = $("#pic"); pic.innerHTML = "";
     const img = P.img || (page===0 && EP.pages[1] && EP.pages[1].img);
-    if (img) pic.appendChild(el("img",{src:img, alt:page===0 ? `Épisode ${EP.num}` : `Illustration de la page ${page}`}));
-    else pic.appendChild(el("div",{class:"ph"}, `<div><b>${EP.id}-${page===0?1:page}</b>Image à venir</div>`));
+    const texteSeul = estTamallette(EP) && !img;
+    pic.hidden = texteSeul; pic.parentElement.classList.toggle("texte-seul", texteSeul);
+    if (img) pic.appendChild(el("img",{src:img, alt:page===0 ? libelleEpisode(EP) : `Illustration de la page ${page}`}));
+    else if (!texteSeul) pic.appendChild(el("div",{class:"ph"}, `<div><b>${EP.id}-${page===0?1:page}</b>Image à venir</div>`));
     const box = $("#txt"); box.className = "text"+(page===0 ? " title" : ""); box.innerHTML = "";
-    if (page===0) box.appendChild(el("span",{class:"muted", style:"display:block;font-size:.42em;font-family:var(--font-read);font-weight:700"}, `Épisode ${EP.num}`));
+    if (page===0) box.appendChild(el("span",{class:"muted", style:"display:block;font-size:.42em;font-family:var(--font-read);font-weight:700"}, esc(libelleEpisode(EP))));
     wordSpans = []; sentSpans = [];
     P.sents.forEach((s,si)=>{
       const ss = el("span",{class:"s"});
       for (let i=s[0]; i<=s[1]; i++){ const w = el("span",{class:"w"}); w.textContent = P.toks[i][0]; w.onclick = ()=>playWord(i); ss.appendChild(w); wordSpans[i] = w; if (i<s[1]) ss.appendChild(document.createTextNode(" ")); }
       box.appendChild(ss); sentSpans[si] = ss; if (si<P.sents.length-1) box.appendChild(document.createTextNode(" "));
     });
+    if (page===0 && EP.source) box.appendChild(el("small", {class:"muted", style:"display:block;margin-top:18px;font-size:15px;font-family:var(--font-read);font-weight:400;line-height:1.5"}, esc(EP.source)));
     cur = -1; if ($("#echobar")) $("#echobar").hidden = true; waiting = false; echoSent = null;
     fit(box, page===0 ? 0.09 : 0.058);
     annonce();
@@ -253,12 +257,12 @@ const Ecran = (() => {
     Donnees.eleves().forEach(st=>{
       const rs = Donnees.essaisDe(st.id, EP.id), c = el("div",{class:"card chart"});
       const durs = [...new Set(rs.flatMap(r=>Banc.motsDifficiles(r)))].slice(0,14);
-      c.innerHTML = `<h3 style="font-size:20px">${esc(st.nom)}</h3><p class="muted" style="margin:2px 0 6px">${rs.length?`${rs.length} essai${rs.length>1?"s":""} sur cet épisode`:"Aucun essai sur cet épisode"}</p>`+
+      c.innerHTML = `<h3 style="font-size:20px">${esc(st.nom)}</h3><p class="muted" style="margin:2px 0 6px">${rs.length?`${rs.length} essai${rs.length>1?"s":""} sur ce texte`:"Aucun essai sur ce texte"}</p>`+
         courbe(rs.map(r=>({v:r.mclm, l:"essai "+r.essai})), +st.objectif||0, `Progrès de ${st.nom}`)+
         (durs.length?`<div class="label" style="margin-top:8px">Mots à retravailler</div><div class="hard">${durs.map(m=>`<span>${esc(m)}</span>`).join("")}</div>`:"");
       box.appendChild(c);
     });
-    P.innerHTML = `<p class="lead">Les mots lus correctement par minute à chaque essai du défi, sur cet épisode. Le point plein est le meilleur essai.</p>`; P.appendChild(box);
+    P.innerHTML = `<p class="lead">Les mots lus correctement par minute à chaque essai du défi, sur ce texte. Le point plein est le meilleur essai.</p>`; P.appendChild(box);
   }
 
   /* ---------- Clavier ---------- */
@@ -312,7 +316,7 @@ const Ecran = (() => {
     v.innerHTML = `<div class="fenetre" role="dialog" aria-modal="true" aria-labelledby="lier-t">
       ${lien?`<div class="qr" aria-label="QR code de liaison">${L.qr(lien, 320)}</div>`:""}
       <div><h2 id="lier-t" style="font-size:clamp(26px,3vw,38px)">Relier ton téléphone</h2>
-        <ol>${lien?`<li>Vise ce QR code avec l'appareil photo du téléphone.</li><li>Touche le lien qui apparaît : la télécommande s'ouvre, déjà reliée.</li><li>Sans appareil photo : ouvre <b>${esc(lien.replace(/#.*$/,""))}</b> sur le téléphone et tape ce code :</li>`:`<li>Sur le téléphone, ouvre le site du banc des maîtres.</li><li>Tape ce code :</li>`}</ol>
+        <ol>${lien?`<li>Vise ce QR code avec l'appareil photo du téléphone.</li><li>Touche le lien qui apparaît : la télécommande s'ouvre, déjà reliée.</li><li>Sans appareil photo : ouvre <b>${esc(lien.replace(/#.*$/,""))}</b> sur le téléphone et tape ce code :</li>`:`<li>Sur le téléphone, ouvre le site Fluence.</li><li>Tape ce code :</li>`}</ol>
         <div class="code" style="margin-top:8px">${esc(code)}</div>
         <div class="etat-lien" id="lier-etat" role="status"></div>
         <p class="muted" style="margin:14px 0 0">Les messages entre les deux appareils sont chiffrés avec ce code. Les prénoms et les résultats restent dans l'ordinateur et le téléphone.</p>

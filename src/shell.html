@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Le banc des maîtres</title>
+<title>Fluence</title>
 <meta name="description" content="Fluence au TBI : le feuilleton lu par la maîtresse, l'écho, le chœur et le défi d'une minute, avec le téléphone en télécommande.">
 <meta name="theme-color" content="#1D7F48">
 <meta name="format-detection" content="telephone=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Banc des maîtres">
+<meta name="apple-mobile-web-app-title" content="Fluence">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 __TETE__
 <style>
@@ -56,7 +56,7 @@ button,input,select{font:inherit;color:inherit}
 .wrap{width:100%;max-width:1720px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 .bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-block:10px}
 .brand{font-family:var(--font-display);font-weight:800;font-size:clamp(20px,2.2vw,30px);margin-right:auto;display:flex;align-items:center;gap:10px;min-width:0;cursor:pointer}
-.brand svg{width:44px;height:30px;flex:none}
+.brand img{width:44px;height:44px;flex:none;border-radius:10px}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;min-width:48px;padding:0 16px;border-radius:12px;border:1.5px solid var(--line);background:var(--paper);cursor:pointer;font-weight:700;font-size:16px;color:var(--ink);text-decoration:none;-webkit-tap-highlight-color:transparent}
 .btn:hover{border-color:var(--green)}
 .btn.primary{background:var(--green);border-color:var(--green);color:var(--green-ink)}
@@ -82,6 +82,8 @@ h1,h2,h3{font-family:var(--font-display);font-weight:800;margin:0;text-wrap:bala
 .eps{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px;margin-top:20px}
 .ep{display:flex;flex-direction:column;gap:6px;text-align:left;background:var(--paper);border:1.5px solid var(--line);border-radius:18px;padding:0 0 16px;cursor:pointer;min-width:0;overflow:hidden;color:var(--ink)}
 .ep:hover{border-color:var(--green)}
+.ep.ep-texte{padding-top:18px}
+.collection{margin-top:36px}
 .ep>*:not(.vign){margin-inline:18px}
 .ep .vign{aspect-ratio:16/9;width:100%;object-fit:cover;background:repeating-linear-gradient(135deg,var(--wood-soft) 0 14px,var(--paper) 14px 28px);margin-bottom:6px}
 .ep .num{font-family:var(--font-display);font-weight:800;color:var(--green);font-size:15px;letter-spacing:.06em;text-transform:uppercase}
@@ -111,6 +113,8 @@ h1,h2,h3{font-family:var(--font-display);font-weight:800;margin:0;text-wrap:bala
 
 /* Lecteur */
 .stage{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);grid-template-rows:minmax(0,1fr);gap:clamp(14px,2vw,32px);align-items:center}
+.stage.texte-seul{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr)}
+.stage.texte-seul .text{max-width:65ch;margin-inline:auto}
 .pic{height:100%;min-height:0;display:flex;align-items:center;justify-content:center}
 .pic img,.ph{max-height:100%;max-width:100%;aspect-ratio:1;object-fit:contain;border-radius:18px;background:var(--paper);box-shadow:0 0 0 1.5px var(--line)}
 .ph{width:100%;display:grid;place-items:center;text-align:center;padding:24px;background:repeating-linear-gradient(135deg,var(--wood-soft) 0 18px,var(--paper) 18px 36px);color:var(--wood);font-weight:700}
@@ -185,7 +189,7 @@ details.all summary{cursor:pointer;font-weight:700;min-height:44px;display:flex;
 .tel{height:100%;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px)}
 .tel header{display:flex;align-items:center;gap:10px;padding:10px 16px 8px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 .tel header .brand{font-size:20px}
-.tel header .brand svg{width:36px;height:24px}
+.tel header .brand img{width:36px;height:36px;border-radius:8px}
 .pastille{display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:var(--ink-soft);background:var(--paper);border:1.5px solid var(--line);border-radius:999px;padding:6px 12px;white-space:nowrap}
 .tel main{padding:4px 16px 24px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 .tel h2{font-size:24px;margin:6px 0 4px}
@@ -239,10 +243,10 @@ html[data-role="tel"] body{overflow:hidden}
 <div class="app" id="app-ecran" hidden>
   <div class="wrap bar">
     <div class="brand" id="home-link" role="button" tabindex="0" title="Accueil">
-      <svg viewBox="0 0 44 30" aria-hidden="true"><rect x="2" y="6" width="40" height="5" rx="2" fill="var(--wood)"/><rect x="2" y="14" width="40" height="5" rx="2" fill="var(--wood)"/><rect x="6" y="19" width="4" height="10" rx="1.5" fill="var(--wood)"/><rect x="34" y="19" width="4" height="10" rx="1.5" fill="var(--wood)"/><rect x="18" y="16" width="9" height="6" rx="1" fill="var(--paper)" stroke="var(--green)" stroke-width="1.5" transform="rotate(-8 22 19)"/></svg>
-      <span>Le banc des maîtres</span>
+      <img src="__LOGO__" alt="" width="44" height="44">
+      <span>Fluence</span>
     </div>
-    <button class="btn" data-go="home">Épisodes</button>
+    <button class="btn" data-go="home">Textes</button>
     <button class="btn" data-go="students">Élèves</button>
     <button class="btn" data-go="progress">Progrès</button>
     <button class="btn" id="b-tel" title="Relier le téléphone de la maîtresse"><span class="dot" id="b-tel-dot"></span><span id="b-tel-txt">Relier le téléphone</span></button>
@@ -255,8 +259,8 @@ html[data-role="tel"] body{overflow:hidden}
 <div class="tel" id="app-tel" hidden>
   <header>
     <div class="brand" style="margin-right:auto">
-      <svg viewBox="0 0 44 30" aria-hidden="true"><rect x="2" y="6" width="40" height="5" rx="2" fill="var(--wood)"/><rect x="2" y="14" width="40" height="5" rx="2" fill="var(--wood)"/><rect x="6" y="19" width="4" height="10" rx="1.5" fill="var(--wood)"/><rect x="34" y="19" width="4" height="10" rx="1.5" fill="var(--wood)"/><rect x="18" y="16" width="9" height="6" rx="1" fill="var(--paper)" stroke="var(--green)" stroke-width="1.5" transform="rotate(-8 22 19)"/></svg>
-      <span>Le banc des maîtres</span>
+      <img src="__LOGO__" alt="" width="44" height="44">
+      <span>Fluence</span>
     </div>
     <span class="pastille" id="t-lien"><span class="dot" id="t-dot"></span><span id="t-lien-txt">Pas relié</span></span>
   </header>

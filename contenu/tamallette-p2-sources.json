@@ -1,0 +1,199 @@
+{
+  "organisation": "Ordre et dates du plan de rattrapage P1 → P2 (CM1), préparé dans Claude.",
+  "comptage": "L’application compte ses mots affichés, selon la même règle que le feuilleton. Les compteurs du livret imprimé peuvent différer, notamment pour les apostrophes et traits d’union.",
+  "textes": [
+    {
+      "id": "T1",
+      "titre": "Le trafiquant d’ombres",
+      "semaine": "2 au 6 novembre",
+      "type": "official_fluence_excerpt",
+      "sources": [
+        {
+          "pdf_pages": [
+            1
+          ],
+          "printed_text_number": 7,
+          "fichier": "9 - Fluence - textes de la P2.pdf"
+        },
+        {
+          "pdf_pages": [
+            3
+          ],
+          "printed_pages": [
+            48
+          ],
+          "fichier": "MANUEL_P2.pdf"
+        }
+      ],
+      "credit": "Wlodarczyk, I., Bielecki, J. (2016). Le trafiquant d’ombres, Des histoires qui filent la trouille. Éditions Amaterra.",
+      "compteur_imprime": 210,
+      "mots_dans_application": 191,
+      "note": "Le texte de la fiche est repris avec une typographie harmonisée, sans les compteurs ni les appels de notes.",
+      "elements_exclus": [],
+      "pages_application": 4
+    },
+    {
+      "id": "T2",
+      "titre": "Le grimoire d’Elfie",
+      "semaine": "9 au 13 novembre",
+      "type": "reading_comic_transcription_not_official_fluence",
+      "sources": [
+        {
+          "pdf_pages": [
+            2,
+            3,
+            4
+          ],
+          "original_album_pages": [
+            32,
+            33,
+            34
+          ],
+          "fichier": "11 - Textes de la P2 pour la maison.pdf"
+        },
+        {
+          "pdf_pages": [
+            9,
+            10,
+            11
+          ],
+          "printed_pages": [
+            54,
+            55,
+            56
+          ],
+          "fichier": "MANUEL_P2.pdf"
+        }
+      ],
+      "credit": "Arleston, Albert, Mini Luvin (2021). Le grimoire d’Elfie, pp. 32–34. Drake.",
+      "compteur_imprime": null,
+      "mots_dans_application": 336,
+      "note": "Le livret de fluence ne contient aucune fiche pour cette BD. Cette transcription de lecture ne doit pas être présentée comme une fiche de fluence Tamallette.",
+      "elements_exclus": [
+        "Bruitages et cris purement non lexicaux (croassements, souffle, cris, éclaboussure, coups à la porte).",
+        "Inscriptions décoratives sur les enseignes et les tranches/couvertures des livres."
+      ],
+      "pages_application": 8
+    },
+    {
+      "id": "T3",
+      "titre": "Le choulame",
+      "semaine": "16 au 20 novembre",
+      "type": "official_fluence_excerpt",
+      "sources": [
+        {
+          "pdf_pages": [
+            2
+          ],
+          "printed_text_number": 8,
+          "fichier": "9 - Fluence - textes de la P2.pdf"
+        },
+        {
+          "pdf_pages": [
+            17
+          ],
+          "printed_pages": [
+            62
+          ],
+          "fichier": "MANUEL_P2.pdf"
+        }
+      ],
+      "credit": "Conte d’Asie.",
+      "compteur_imprime": 262,
+      "mots_dans_application": 241,
+      "note": "Le texte de la fiche est repris avec une typographie harmonisée, sans les compteurs ni les appels de notes.",
+      "elements_exclus": [],
+      "pages_application": 5
+    },
+    {
+      "id": "T4",
+      "titre": "Le pouvoir des fleurs",
+      "semaine": "23 au 27 novembre",
+      "type": "official_fluence_excerpt",
+      "sources": [
+        {
+          "pdf_pages": [
+            3
+          ],
+          "printed_text_number": 9,
+          "fichier": "9 - Fluence - textes de la P2.pdf"
+        },
+        {
+          "pdf_pages": [
+            25
+          ],
+          "printed_pages": [
+            70
+          ],
+          "fichier": "MANUEL_P2.pdf"
+        }
+      ],
+      "credit": "Paroles : Souchon, A. – Musique : Voulzy, L. (1992). Album : Caché derrière.",
+      "compteur_imprime": 218,
+      "mots_dans_application": 205,
+      "note": "Le texte de la fiche est repris avec une typographie harmonisée, sans les compteurs ni les appels de notes.",
+      "elements_exclus": [],
+      "pages_application": 4
+    },
+    {
+      "id": "T5",
+      "titre": "La fée qui ne voulait pas être remerciée",
+      "semaine": "30 novembre au 4 décembre",
+      "type": "official_fluence_excerpt",
+      "sources": [
+        {
+          "pdf_pages": [
+            4
+          ],
+          "printed_text_number": 10,
+          "fichier": "9 - Fluence - textes de la P2.pdf"
+        },
+        {
+          "pdf_pages": [
+            31
+          ],
+          "printed_pages": [
+            76
+          ],
+          "fichier": "MANUEL_P2.pdf"
+        }
+      ],
+      "credit": "Rivais, Y., Laclos, M. (2006). Les sorcières sont N. R. V. L’école des loisirs.",
+      "compteur_imprime": 165,
+      "mots_dans_application": 158,
+      "note": "Le texte de la fiche est repris avec une typographie harmonisée, sans les compteurs ni les appels de notes.",
+      "elements_exclus": [],
+      "pages_application": 4
+    },
+    {
+      "id": "T6",
+      "titre": "Le feuilleton d’Hermès",
+      "semaine": "7 au 11 décembre",
+      "type": "official_fluence_excerpt",
+      "sources": [
+        {
+          "pdf_pages": [
+            5
+          ],
+          "printed_text_number": 11,
+          "fichier": "9 - Fluence - textes de la P2.pdf"
+        },
+        {
+          "pdf_pages": [
+            37
+          ],
+          "printed_pages": [
+            82
+          ],
+          "fichier": "MANUEL_P2.pdf"
+        }
+      ],
+      "credit": "Szaac, M. (2006). Le feuilleton d’Hermès. Bayard. [Graphie de la fiche source.]",
+      "compteur_imprime": 253,
+      "mots_dans_application": 235,
+      "note": "Le texte de la fiche est repris avec une typographie harmonisée, sans les compteurs ni les appels de notes.",
+      "elements_exclus": [],
+      "pages_application": 4
+    }
+  ]
+}

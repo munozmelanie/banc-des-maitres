@@ -79,5 +79,6 @@ def episodes():
         info = infos.get(eid, {})
         eps.append(dict(id=eid, num=int(eid[1:]), titre=typo(titre), pages=pages,
                         semaine=info.get("semaine", ""), theme=info.get("theme", ""),
+                        collection=info.get("collection", "feuilleton"), source=info.get("source", ""),
                         mots=[typo(m) for m in info.get("mots", [])]))
     return eps

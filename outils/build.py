@@ -1,7 +1,7 @@
 """Assemble l'appli.
 
 Usage :
-  python3 outils/build.py               crée www/ : le site (publié tout seul sur GitHub Pages à chaque envoi sur main)
+  python3 outils/build.py               crée www/ : le site (envoyé sur GitHub Pages par outils/publier.sh)
   python3 outils/build.py --hors-ligne  crée aussi « hors-ligne/Le banc des maîtres - HORS LIGNE.html » : un seul fichier
                                         à ouvrir sur l'ordinateur de la classe sans internet (voix et images comprises)
 
@@ -51,6 +51,7 @@ def donnees():
             img = S / "img" / f'{e["id"]}-{k}.webp'
             sortie.append(dict(img=f'img/{e["id"]}-{k}.webp' if k and img.exists() else None, a=p["a"], b=p["b"], toks=p["toks"], sents=p["sents"]))
         eps.append(dict(id=e["id"], num=e["num"], titre=e["titre"], semaine=e["semaine"], theme=e["theme"], mots=e["mots"],
+                        collection=e["collection"], source=e["source"],
                         audio=f'audio/{e["id"]}.mp3' if sortie[1]["a"] is not None else None,
                         nbMots=sum(1 for p in sortie[1:] for t in p["toks"] if est_mot(t[0])), pages=sortie))
     return eps, rapport
@@ -64,7 +65,7 @@ VENDOR = ["nostr-lite.js", "mqtt.min.js", "qrcode.js"]
 def page(eps, web, en_ligne, media=None):
     ff = "".join('@font-face{font-family:"%s";font-style:%s;font-weight:%s;font-display:swap;src:url(data:font/woff2;base64,%s) format("woff2")}\n'
                  % (n, st, w, base64.b64encode((S / "polices" / (f + ".woff2")).read_bytes()).decode()) for n, w, st, f in POLICES)
-    tete = ('<link rel="manifest" href="manifest.webmanifest">\n<link rel="icon" href="icones/icone-192.png">\n<link rel="apple-touch-icon" href="icones/icone-180.png">'
+    tete = ('<link rel="manifest" href="manifest.webmanifest">\n<link rel="icon" href="icones/icone-192.png?v=2">\n<link rel="apple-touch-icon" href="icones/icone-180.png?v=2">'
             if en_ligne else "")
     data = dict(episodes=eps)
     if media:  # version hors ligne : voix et images dans la page
@@ -79,7 +80,8 @@ def page(eps, web, en_ligne, media=None):
     else:
         scripts = "".join(f"<script>\n{js(lire(S / 'vendor' / v))}\n</script>\n" for v in VENDOR)
     scripts += f"<script>\n{donnees}\n</script>\n" + "".join(f"<script>\n{js(lire(S / f))}\n</script>\n" for f in SCRIPTS) + "<script>Banc.demarre();</script>\n"
-    return lire(S / "shell.html").replace("__TETE__", tete).replace("__POLICES__", ff).replace("__SCRIPTS__", scripts)
+    logo = media("icones/icone-192.png") if media else "icones/icone-192.png?v=2"
+    return lire(S / "shell.html").replace("__TETE__", tete).replace("__LOGO__", logo).replace("__POLICES__", ff).replace("__SCRIPTS__", scripts)
 
 
 def main():
@@ -91,7 +93,7 @@ def main():
     for d in ("img", "audio", "vendor", "icones"):
         if (S / d).is_dir(): shutil.copytree(S / d, W / d, ignore=shutil.ignore_patterns(".*", "*.md"))
     (W / "manifest.webmanifest").write_text(json.dumps({
-        "name": "Le banc des maîtres", "short_name": "Banc des maîtres", "lang": "fr", "display": "standalone",
+        "name": "Fluence", "short_name": "Fluence", "lang": "fr", "display": "standalone",
         "background_color": "#F2F4EF", "theme_color": "#1D7F48",
         "icons": [{"src": "icones/icone-192.png", "sizes": "192x192", "type": "image/png"}, {"src": "icones/icone-512.png", "sizes": "512x512", "type": "image/png"},
                   {"src": "icones/icone-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}]}, ensure_ascii=False, indent=1), encoding="utf-8")
@@ -100,7 +102,7 @@ def main():
     taille = sum(f.stat().st_size for f in W.rglob("*") if f.is_file())
     print("www/ :", (W / "index.html").stat().st_size // 1024, "Ko pour index.html,", round(taille / 1e6, 1), "Mo en tout", ("; adresse publiée : " + web) if web else "")
     if "--hors-ligne" in sys.argv:
-        types = {".mp3": "audio/mpeg", ".webp": "image/webp"}
+        types = {".mp3": "audio/mpeg", ".webp": "image/webp", ".png": "image/png"}
         media = lambda chemin: f"data:{types[pathlib.Path(chemin).suffix]};base64," + base64.b64encode((S / chemin).read_bytes()).decode()
         H = ROOT / "hors-ligne"; H.mkdir(exist_ok=True)
         f = H / "Le banc des maîtres - HORS LIGNE.html"

@@ -1,6 +1,6 @@
 {
   "appId": "com.pookee.bancdesmaitres",
-  "appName": "Banc des maîtres",
+  "appName": "Fluence",
   "webDir": "www",
   "ios": {
     "contentInset": "never"

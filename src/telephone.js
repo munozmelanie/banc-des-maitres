@@ -4,13 +4,12 @@
    Élèves et Progrès : les mêmes que sur l'écran, gardés aussi dans le téléphone. */
 "use strict";
 const Telephone = (() => {
-  const { EPS, $, el, esc, ep, motsDefi, DUREE, Donnees, Lien, calcule, bilan, carteResultat, vueProgres, vueEleves, bip } = Banc;
+  const { EPS, $, el, esc, ep, estTamallette, libelleEpisode, etapesEpisode, motsDefi, DUREE, Donnees, Lien, calcule, bilan, carteResultat, vueProgres, vueEleves, bip } = Banc;
   const L = Plateforme.Liaison, lsG = Plateforme.lsG, lsS = Plateforme.lsS;
   const main = $("#t-main");
   const ONGLETS = ["ecran","defi","eleves","progres"];
   let onglet = ONGLETS.includes(lsG("banc-des-maitres-onglet")) ? lsG("banc-des-maitres-onglet") : "ecran";
   let E = null; // ce que montre l'écran de la classe (dernier état reçu)
-  const ETAPES = ["Les mots","J'écoute","L'écho","Le chœur","Le défi","Les progrès"];
 
   function majLien(){
     const on = Lien.relie();
@@ -31,7 +30,7 @@ const Telephone = (() => {
   /* ---------- Écran : relier, puis télécommande ---------- */
   function carteLier(titre){
     return `<div class="card"><h2>${titre}</h2>
-      <ol style="margin:8px 0 0;padding-left:1.3em"><li>Sur l'ordinateur de la classe, ouvre le banc des maîtres et touche <b>Relier le téléphone</b>.</li><li>Vise le QR code avec l'appareil photo de ce téléphone, puis touche le lien.</li><li>Ou tape le code affiché sous le QR code :</li></ol>
+      <ol style="margin:8px 0 0;padding-left:1.3em"><li>Sur l'ordinateur de la classe, ouvre Fluence et touche <b>Relier le téléphone</b>.</li><li>Vise le QR code avec l'appareil photo de ce téléphone, puis touche le lien.</li><li>Ou tape le code affiché sous le QR code :</li></ol>
       <form class="champ" id="t-code"><input id="t-code-in" placeholder="XXXXX-XXXXX" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Code de liaison"><button class="btn primary">Relier</button></form>
       <p class="muted" id="t-code-err" role="status" style="margin:8px 0 0"></p></div>`;
   }
@@ -41,38 +40,76 @@ const Telephone = (() => {
       if (!c){ $("#t-code-err").textContent = "Le code a 10 lettres ou chiffres, par exemple 7KQ2M-X9D4A."; return; }
       await L.fixe(c); history.replaceState(null, "", location.pathname+location.search); location.reload(); };
   }
+  function carteEnvoi(){
+    const url = L.code() ? L.lienEcran() : "";
+    return `<div class="card" style="margin-top:12px"><button class="btn primary" id="t-envoi">Envoyer le lien à l’ordinateur</button>
+      <p class="muted" style="margin:8px 0 0">Ouvre le lien sur l'ordinateur de la classe : il se reliera à ce téléphone.</p>
+      <p id="t-envoi-info" role="status" style="margin:8px 0 0"></p>
+      <p id="t-envoi-lien" style="margin:8px 0 0;overflow-wrap:anywhere"${url?"":" hidden"}>${url?`<a href="${esc(url)}" target="_blank" rel="noopener">${esc(url)}</a>`:""}</p></div>`;
+  }
+  function brancheEnvoi(){ const b = $("#t-envoi"); if (b) b.onclick = envoieLien; }
+  async function envoieLien(){
+    const b = $("#t-envoi"), avant = L.code(); if (!b || b.disabled) return;
+    b.disabled = true;
+    let cree = false;
+    try {
+      const code = await L.assure(), url = L.lienEcran(code); cree = !avant;
+      if (!url){ $("#t-envoi-info").textContent = "L'adresse du site n'est pas encore disponible."; return; }
+      const lien = $("#t-envoi-lien"); lien.hidden = false; lien.innerHTML = `<a href="${esc(url)}" target="_blank" rel="noopener">${esc(url)}</a>`;
+      const donnees = {title:"Fluence", text:"Ouvre ce lien sur l'ordinateur de la classe :", url};
+      const annule = e => e && (e.name==="AbortError" || /cancel|annul|abort/i.test(String(e.code||"")+" "+String(e.message||"")));
+      let partage = false;
+      if (Plateforme.partage){
+        try { await Plateforme.partage.share({...donnees, dialogTitle:"Envoyer le lien"}); partage = true; }
+        catch(e){ if (annule(e)) return; }
+      }
+      if (!partage && navigator.share){
+        try { await navigator.share(donnees); partage = true; }
+        catch(e){ if (annule(e)) return; }
+      }
+      if (partage) $("#t-envoi-info").textContent = "Le lien est prêt. Ouvre-le sur l'ordinateur de la classe.";
+      else {
+        try { await navigator.clipboard.writeText(url); $("#t-envoi-info").textContent = "Lien copié. Colle-le dans un message ou dans le navigateur de l'ordinateur."; }
+        catch(e){ $("#t-envoi-info").textContent = "Copie le lien ci-dessous pour l'ouvrir sur l'ordinateur de la classe."; }
+      }
+    } catch(e){ const info = $("#t-envoi-info"); if (info) info.textContent = "Le lien n'a pas pu être préparé. Réessaie."; }
+    finally {
+      if (cree){ history.replaceState(null, "", location.pathname+location.search+"#lien="+L.code()+"&tel"); location.reload(); }
+      else if (b.isConnected) b.disabled = false;
+    }
+  }
   function astuce(){
     const ios = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
     if (Plateforme.NATIF || !ios || navigator.standalone || lsG("banc-des-maitres-astuce")) return "";
-    return `<div class="card astuce" id="t-astuce"><b>Pour que le téléphone garde les résultats</b><p style="margin:6px 0 10px">Ajoute le banc des maîtres à l'écran d'accueil : bouton <b>Partager</b> de Safari, puis <b>Sur l'écran d'accueil</b>. Ouvre-le ensuite depuis son icône.</p><button class="btn" id="t-astuce-ok">Compris</button></div>`;
+    return `<div class="card astuce" id="t-astuce"><b>Pour que le téléphone garde les résultats</b><p style="margin:6px 0 10px">Ajoute Fluence à l'écran d'accueil : bouton <b>Partager</b> de Safari, puis <b>Sur l'écran d'accueil</b>. Ouvre-le ensuite depuis son icône.</p><button class="btn" id="t-astuce-ok">Compris</button></div>`;
   }
   function rendEcran(){
-    if (!L.code()){ main.innerHTML = carteLier("Relie ce téléphone à l'écran de la classe") + `<p class="muted" style="margin-top:14px">Sans écran relié, le défi, les élèves et les progrès marchent aussi sur le téléphone seul.</p><button class="btn" id="t-role" style="margin-top:6px">Lire le feuilleton sur ce téléphone</button>`; brancheLier(); $("#t-role").onclick = ()=>{ Plateforme.changeRole("ecran"); location.reload(); }; return; }
+    if (!L.code()){ main.innerHTML = carteLier("Relie ce téléphone à l'écran de la classe") + carteEnvoi() + `<p class="muted" style="margin-top:14px">Sans écran relié, le défi, les élèves et les progrès marchent aussi sur le téléphone seul.</p><button class="btn" id="t-role" style="margin-top:6px">Lire les textes sur ce téléphone</button>`; brancheLier(); brancheEnvoi(); $("#t-role").onclick = ()=>{ Plateforme.changeRole("ecran"); location.reload(); }; return; }
     let h = astuce();
     if (!Lien.relie() || !E){
-      h += `<div class="card"><h2>L'écran de la classe n'est pas là</h2><p style="margin:6px 0 0">Ouvre le banc des maîtres sur l'ordinateur de la classe : il se relie tout seul à ce téléphone, avec internet.</p><p class="muted" style="margin:8px 0 0">Code de liaison : <b>${esc(L.code())}</b></p></div>
-        <details class="card" style="margin-top:12px"><summary style="font-weight:700;min-height:44px;display:flex;align-items:center;cursor:pointer">Relier un autre écran</summary>${carteLier("Nouveau code")}</details>`;
-      main.innerHTML = h; brancheLier(); brancheAstuce(); return;
+      h += `<div class="card"><h2>L'écran de la classe n'est pas là</h2><p style="margin:6px 0 0">Ouvre Fluence sur l'ordinateur de la classe : il se relie tout seul à ce téléphone, avec internet.</p><p class="muted" style="margin:8px 0 0">Code de liaison : <b>${esc(L.code())}</b></p></div>
+        <details class="card" style="margin-top:12px"><summary style="font-weight:700;min-height:44px;display:flex;align-items:center;cursor:pointer">Relier un autre écran</summary>${carteLier("Nouveau code")}</details>` + carteEnvoi();
+      main.innerHTML = h; brancheLier(); brancheAstuce(); brancheEnvoi(); return;
     }
     if (E.son===0) h += `<div class="card astuce"><b>Le son est bloqué sur l'ordinateur.</b> Touche une fois l'écran de la classe, puis réessaie.</div>`;
     if (E.vue==="episode" && ep(E.ep)){
       const X = ep(E.ep);
-      h += `<div class="card"><div class="label">Sur l'écran</div><h2>Épisode ${X.num} — ${esc(X.titre)}</h2>
-        <div class="etapes">${ETAPES.map((s,i)=>`<button class="btn${i===E.etape?" primary":""}" data-nav="${i}">${i+1}. ${s}</button>`).join("")}</div></div>`;
+      h += `<div class="card"><div class="label">Sur l'écran</div><h2>${esc(libelleEpisode(X))} — ${esc(X.titre)}</h2>
+        <div class="etapes">${etapesEpisode(X).map((s,i)=>`<button class="btn${i===E.etape?" primary":""}" data-nav="${i}">${i+1}. ${s}</button>`).join("")}</div></div>`;
       h += `<div class="card">`;
       if (E.etape===0) h += `<div class="label">Mot affiché</div><div style="font-size:30px;font-weight:700;margin:4px 0 2px">${esc(E.mot||"")}</div>`;
-      if (E.etape>=1 && E.etape<=3) h += `<div class="label">${E.page ? `Page ${E.page} / ${E.pages}` : "Titre"}${E.lecture ? " · lecture en cours" : ""}${E.attente ? " · à vous !" : ""}</div>`;
+      if (E.etape>=1 && E.etape<=3) h += `<div class="label">${E.page ? `Page ${E.page} / ${E.pages}` : "Titre"}${E.lecture ? " · lecture en cours" : ""}${E.attente ? " · à vous !" : ""}</div>${X.audio?"":`<p class="noaudio">Voix à venir : lecture libre.</p>`}`;
       if (E.etape===4){ h += `<p style="margin:0">Le défi se mène dans l'onglet <b>Défi</b> : tu notes les erreurs, l'écran montre le chrono puis le résultat.</p><div class="tele"><button class="btn primary" id="t-vers-defi">Ouvrir le défi</button></div>`; }
-      else if (E.etape===5) h += `<p style="margin:0">L'écran montre les progrès du groupe sur cet épisode.</p>`;
+      else if (E.etape===5) h += `<p style="margin:0">L'écran montre les progrès du groupe sur ce texte.</p>`;
       h += boutons(E.boutons) + `</div>`;
     } else if (E.vue==="home"){
-      h += `<div class="card"><div class="label">Sur l'écran : les épisodes</div><h2>Quel épisode ouvrir ?</h2><div class="liste">${EPS.map(X=>`<button class="btn" data-ep="${X.id}"><span><b>Épisode ${X.num} — ${esc(X.titre)}</b><small>${esc(X.semaine)}${X.audio?"":" · voix à venir"}</small></span></button>`).join("")}</div></div>`;
+      h += `<div class="card"><div class="label">Sur l'écran : les textes</div><h2>Quel texte ouvrir ?</h2>${[false,true].map(t=>{ const textes = EPS.filter(X=>!!estTamallette(X)===t); return textes.length ? `<h3 style="margin-top:16px">${t?"Tamallette · période 2":"Le feuilleton"}</h3><div class="liste">${textes.map(X=>`<button class="btn" data-ep="${X.id}"><span><b>${esc(libelleEpisode(X))} — ${esc(X.titre)}</b><small>${esc(X.semaine)}${X.audio?"":" · voix à venir"}</small></span></button>`).join("")}</div>` : ""; }).join("")}</div>`;
     } else {
       h += `<div class="card"><div class="label">Sur l'écran</div><h2>${E.vue==="students" ? "Les élèves" : "Les progrès"}</h2></div>`;
     }
-    h += `<div class="row start" style="margin-top:14px"><button class="btn" data-vue="home">Épisodes</button><button class="btn" data-vue="students">Élèves</button><button class="btn" data-vue="progress">Progrès</button></div>
-      <p class="muted" style="margin-top:14px">Code de liaison : ${esc(L.code())}</p>`;
-    main.innerHTML = h; brancheAstuce();
+    h += `<div class="row start" style="margin-top:14px"><button class="btn" data-vue="home">Textes</button><button class="btn" data-vue="students">Élèves</button><button class="btn" data-vue="progress">Progrès</button></div>
+      <p class="muted" style="margin-top:14px">Code de liaison : ${esc(L.code())}</p>` + carteEnvoi();
+    main.innerHTML = h; brancheAstuce(); brancheEnvoi();
     main.querySelectorAll("[data-nav]").forEach(b=>b.onclick = ()=>cmd({nav:{vue:"episode", ep:E.ep, etape:+b.dataset.nav}}));
     main.querySelectorAll("[data-ep]").forEach(b=>b.onclick = ()=>cmd({nav:{vue:"episode", ep:b.dataset.ep, etape:0}}));
     main.querySelectorAll("[data-vue]").forEach(b=>b.onclick = ()=>cmd({nav:{vue:b.dataset.vue}}));
@@ -101,7 +138,7 @@ const Telephone = (() => {
     const ecranOccupe = E && E.defi && E.defi.local && Lien.relie();
     let h = "";
     if (D.etat==="choix"){
-      h += `<div class="card"><label class="label" for="t-ep">Texte</label><select class="sel" id="t-ep" style="margin-top:6px">${EPS.map(x=>`<option value="${x.id}"${x.id===X.id?" selected":""}>Épisode ${x.num} — ${esc(x.titre)}</option>`).join("")}</select>
+      h += `<div class="card"><label class="label" for="t-ep">Texte</label><select class="sel" id="t-ep" style="margin-top:6px">${[false,true].map(t=>{ const textes = EPS.filter(x=>!!estTamallette(x)===t); return textes.length ? `<optgroup label="${t?"Tamallette · période 2":"Le feuilleton"}">${textes.map(x=>`<option value="${x.id}"${x.id===X.id?" selected":""}>${esc(libelleEpisode(x))} — ${esc(x.titre)}</option>`).join("")}</optgroup>` : ""; }).join("")}</select>
         <div class="label" style="margin-top:14px">Qui lit ?</div><div class="who" id="t-who" style="margin-top:8px">${Donnees.eleves().map(s=>`<button type="button" data-eleve="${esc(s.id)}" aria-pressed="${s.id===D.eleve?"true":"false"}">${esc(s.nom)}</button>`).join("")}</div>
         <p class="muted" id="t-essai" style="margin:8px 0 0">${D.eleve ? `Essai n° ${Donnees.essaisDe(D.eleve, X.id).length+1} sur ce texte` : ""}</p>
         ${ecranOccupe ? `<p class="hint">Un défi est en cours sur l'écran de la classe.</p>` : ""}
@@ -109,7 +146,7 @@ const Telephone = (() => {
         <p class="muted" style="margin:6px 0 0">${Lien.relie() ? "Le texte s'affiche sur l'écran de la classe ; touche ici les mots mal lus." : "Sans écran relié : l'élève lit sur le texte imprimé ou au tableau."} ${DUR} secondes.</p></div>`;
     } else if (D.etat!=="fini"){
       const reste = Math.max(0, Math.ceil(DUR-D.ecoule));
-      h += `<div class="card"><div class="label">${esc(Donnees.nom(D.eleve))} · Épisode ${X.num}</div>
+      h += `<div class="card"><div class="label">${esc(Donnees.nom(D.eleve))} · ${esc(libelleEpisode(X))}</div>
         <div class="chrono"><span class="big-num" id="t-reste">${D.etat==="lecture" ? reste : "0"}</span><span class="muted">secondes</span></div>
         <div class="timer"><i id="t-bar" style="width:${Math.min(100, D.ecoule/DUR*100)}%"></i></div>
         <p class="hint" id="t-hint" style="margin:10px 0 0">${D.etat==="lecture" ? "Touche les mots mal lus (un deuxième toucher annule)." : "Temps écoulé ! Touche le dernier mot lu."}</p></div>`;

@@ -130,5 +130,117 @@
    "enquêteurs",
    "dépasse"
   ]
+ },
+ "T1": {
+  "semaine": "2 au 6 novembre",
+  "theme": "Tamallette · fluence P2",
+  "collection": "tamallette-p2",
+  "mots": [
+   "Hildebert",
+   "hésitante",
+   "caverneuse",
+   "balbutia",
+   "superflu",
+   "besace",
+   "scintillants",
+   "émerveillé",
+   "silhouette",
+   "proposition"
+  ],
+  "source": "Extrait du livret de fluence Tamallette P2. Wlodarczyk, I., Bielecki, J. (2016). Le trafiquant d’ombres, Des histoires qui filent la trouille. Éditions Amaterra."
+ },
+ "T2": {
+  "semaine": "9 au 13 novembre",
+  "theme": "BD : dialogues et journal",
+  "collection": "tamallette-p2",
+  "mots": [
+   "grenouille",
+   "pitreries",
+   "bestioles",
+   "fourrés",
+   "sorcières",
+   "Mélusine",
+   "écrivaine",
+   "origami",
+   "grimoire",
+   "enchanté"
+  ],
+  "source": "Transcription des dialogues et du journal de la BD. Arleston, Albert, Mini Luvin (2021). Le grimoire d’Elfie, pp. 32–34. Drake."
+ },
+ "T3": {
+  "semaine": "16 au 20 novembre",
+  "theme": "Tamallette · fluence P2",
+  "collection": "tamallette-p2",
+  "mots": [
+   "recommandations",
+   "yourte",
+   "gisaient",
+   "choulame",
+   "hirsute",
+   "tentacules",
+   "aiguisées",
+   "bétail",
+   "lasso",
+   "délivré"
+  ],
+  "source": "Extrait du livret de fluence Tamallette P2. Conte d’Asie."
+ },
+ "T4": {
+  "semaine": "23 au 27 novembre",
+  "theme": "Tamallette · fluence P2",
+  "collection": "tamallette-p2",
+  "mots": [
+   "parapets",
+   "jasmin",
+   "lilas",
+   "géraniums",
+   "pétales",
+   "corolles",
+   "tourne-disque",
+   "Eden",
+   "bouquets",
+   "foulards"
+  ],
+  "source": "Extrait du livret de fluence Tamallette P2. Paroles : Souchon, A. – Musique : Voulzy, L. (1992). Album : Caché derrière."
+ },
+ "T5": {
+  "semaine": "30 novembre au 4 décembre",
+  "theme": "Tamallette · fluence P2",
+  "collection": "tamallette-p2",
+  "mots": [
+   "menue",
+   "tulle",
+   "follet",
+   "effarouche",
+   "ulule",
+   "chaumière",
+   "clairière",
+   "bûcheron",
+   "tintinnabulante",
+   "fluette",
+   "charitable",
+   "écus"
+  ],
+  "source": "Extrait du livret de fluence Tamallette P2. Rivais, Y., Laclos, M. (2006). Les sorcières sont N. R. V. L’école des loisirs."
+ },
+ "T6": {
+  "semaine": "7 au 11 décembre",
+  "theme": "Tamallette · fluence P2",
+  "collection": "tamallette-p2",
+  "mots": [
+   "Persée",
+   "Gorgones",
+   "dégaina",
+   "empoigna",
+   "Athéna",
+   "Hadès",
+   "Méduse",
+   "immortelles",
+   "repaire",
+   "tanière",
+   "grouillaient",
+   "écailles"
+  ],
+  "source": "Extrait du livret de fluence Tamallette P2. Szaac, M. (2006). Le feuilleton d’Hermès. Bayard."
  }
 }

@@ -10,6 +10,10 @@ const Banc = (() => {
   const estMot = t => /[0-9A-Za-zÀ-ÖØ-öø-ÿœŒ]/.test(t);
   const nu = t => String(t).replace(/^[«“(\s ]+|[\s »”).,;:!?…]+$/g, ""); // le mot sans la ponctuation autour
   const ep = id => EPS.find(e=>e.id===id) || null;
+  const estTamallette = E => E && E.collection==="tamallette-p2";
+  const libelleEpisode = E => `${estTamallette(E) ? "Tamallette · texte" : "Épisode"} ${E.num}`;
+  const codeEpisode = id => String(id).replace(/^E/, "É");
+  const etapesEpisode = E => ["Les mots", E.audio ? "J'écoute" : "Je lis", "L'écho", "Le chœur", "Le défi", "Les progrès"];
   /* les mots du défi : toutes les pages du texte (sans le titre), dans l'ordre */
   function motsDefi(E){ const t = []; E.pages.slice(1).forEach((p,pi)=>p.toks.forEach((x,i)=>t.push({t:x[0], w:estMot(x[0]), pi, brk:i===0 && pi>0}))); return t; }
   const DUREE = () => /essai-rapide/.test(location.hash) ? 8 : 60;
@@ -147,23 +151,23 @@ const Banc = (() => {
   /* ---------- vues partagées : progrès, élèves ---------- */
   function vueProgres(box, compacte){
     const es = Donnees.essais(), eleves = Donnees.eleves();
-    box.innerHTML = `<h1 style="font-size:clamp(24px,3vw,40px)">Les progrès</h1><p class="lead">Le meilleur résultat de chaque élève au défi d'une minute, épisode par épisode (en mots lus correctement par minute).</p>
+    box.innerHTML = `<h1 style="font-size:clamp(24px,3vw,40px)">Les progrès</h1><p class="lead">Le meilleur résultat de chaque élève au défi d'une minute, texte par texte (en mots lus correctement par minute). É : feuilleton · T : Tamallette P2.</p>
       <div class="tablewrap card" style="margin-top:16px"><table class="t" id="tab"></table></div><div class="grid2" id="charts"></div>
       <details class="all card" id="tous"><summary>Tous les essais (${es.length})</summary><div class="tablewrap"><table class="t" id="tab2"></table></div></details>
       <div class="row start" style="margin-top:18px"><button class="btn" id="exp">Exporter une sauvegarde</button><label class="btn" for="imp">Importer une sauvegarde</label><input type="file" id="imp" accept="application/json,.json" hidden><span class="muted" id="ioinfo"></span></div>
       <p class="muted" style="margin-top:10px">Les résultats sont enregistrés sur cet appareil${ROLE==="ecran"?" et recopiés dans le téléphone relié":" et recopiés sur l'écran de la classe relié"}. La sauvegarde est un fichier à garder en lieu sûr (clé USB, Drive).</p>`;
     const epsVus = EPS.filter(e=>!compacte || es.some(r=>r.ep===e.id));
-    let h = `<thead><tr><th>Élève</th>${epsVus.map(e=>`<th class="n">É${e.num}</th>`).join("")}<th class="n">Objectif</th></tr></thead><tbody>`;
+    let h = `<thead><tr><th>Élève</th>${epsVus.map(e=>`<th class="n" title="${esc(libelleEpisode(e)+" — "+e.titre)}">${esc(codeEpisode(e.id))}</th>`).join("")}<th class="n">Objectif</th></tr></thead><tbody>`;
     eleves.forEach(st=>{ h += `<tr><td>${esc(st.nom)}</td>`+epsVus.map(e=>{ const rs = es.filter(r=>r.eleve===st.id && r.ep===e.id); return `<td class="n">${rs.length?Math.max(...rs.map(r=>r.mclm)):"—"}</td>`; }).join("")+`<td class="n">${st.objectif?esc(st.objectif):"—"}</td></tr>`; });
     box.querySelector("#tab").innerHTML = h+"</tbody>";
     eleves.forEach(st=>{
       const rs = es.filter(r=>r.eleve===st.id), c = el("div",{class:"card chart"});
-      c.innerHTML = `<h3 style="font-size:20px">${esc(st.nom)}</h3><p class="muted" style="margin:2px 0 6px">Tous les défis, dans l'ordre</p>`+courbe(rs.map(r=>({v:r.mclm, l:"É"+r.ep.slice(1)+"·"+r.essai})), +st.objectif||0, `Progrès de ${st.nom}`);
+      c.innerHTML = `<h3 style="font-size:20px">${esc(st.nom)}</h3><p class="muted" style="margin:2px 0 6px">Tous les défis, dans l'ordre</p>`+courbe(rs.map(r=>({v:r.mclm, l:codeEpisode(r.ep)+"·"+r.essai})), +st.objectif||0, `Progrès de ${st.nom}`);
       box.querySelector("#charts").appendChild(c);
     });
-    let h2 = `<thead><tr><th>Date</th><th>Élève</th><th>Épisode</th><th class="n">Essai</th><th class="n">Mots/min</th><th class="n">Erreurs</th><th></th></tr></thead><tbody>`;
+    let h2 = `<thead><tr><th>Date</th><th>Élève</th><th>Texte</th><th class="n">Essai</th><th class="n">Mots/min</th><th class="n">Erreurs</th><th></th></tr></thead><tbody>`;
     es.slice().reverse().forEach(r=>{ const d = new Date(r.date);
-      h2 += `<tr><td>${d.toLocaleDateString("fr-FR",{day:"numeric",month:"short"})}</td><td>${esc(Donnees.nom(r.eleve))}</td><td>É${esc(r.ep.slice(1))}</td><td class="n">${r.essai}</td><td class="n">${r.mclm}</td><td class="n">${r.erreurs}</td><td class="n"><button class="btn danger" data-suppr="${esc(r.id)}" style="min-height:40px">Supprimer</button></td></tr>`; });
+      h2 += `<tr><td>${d.toLocaleDateString("fr-FR",{day:"numeric",month:"short"})}</td><td>${esc(Donnees.nom(r.eleve))}</td><td>${esc(codeEpisode(r.ep))}</td><td class="n">${r.essai}</td><td class="n">${r.mclm}</td><td class="n">${r.erreurs}</td><td class="n"><button class="btn danger" data-suppr="${esc(r.id)}" style="min-height:40px">Supprimer</button></td></tr>`; });
     box.querySelector("#tab2").innerHTML = h2+"</tbody>";
     box.querySelector("#tab2").addEventListener("click", async e=>{ const b = e.target.closest("[data-suppr]"); if (!b) return;
       if (b.dataset.sur!=="1"){ b.dataset.sur = "1"; b.textContent = "Confirmer ?"; return; }
@@ -174,7 +178,7 @@ const Banc = (() => {
       catch(e){ info.textContent = e && e.code==="cancelled" ? "" : "La sauvegarde n'est pas possible ici."; } };
     box.querySelector("#imp").onchange = async e=>{ const f = e.target.files[0]; if (!f) return; const info = box.querySelector("#ioinfo");
       try { const ok = await Donnees.importe(JSON.parse(await f.text())); if (!ok) throw 0; vueProgres(box, compacte); box.querySelector("#ioinfo").textContent = "Sauvegarde importée."; }
-      catch(err){ info.textContent = "Ce fichier n'est pas une sauvegarde du banc des maîtres."; } };
+      catch(err){ info.textContent = "Ce fichier n'est pas une sauvegarde de Fluence."; } };
   }
   function vueEleves(box){
     const liste = Donnees.eleves().map(e=>Object.assign({}, e));
@@ -198,6 +202,6 @@ const Banc = (() => {
     if (ROLE==="tel"){ document.getElementById("app-tel").hidden = false; await Telephone.demarre(); }
     else { document.getElementById("app-ecran").hidden = false; await Ecran.demarre(); }
   }
-  return { DATA, EPS, ROLE, $, el, esc, estMot, nu, ep, motsDefi, DUREE, Donnees, Lien, calcule, bilan, carteResultat, motsDifficiles, courbe, vueProgres, vueEleves, bip, demarre };
+  return { DATA, EPS, ROLE, $, el, esc, estMot, nu, ep, estTamallette, libelleEpisode, etapesEpisode, motsDefi, DUREE, Donnees, Lien, calcule, bilan, carteResultat, motsDifficiles, courbe, vueProgres, vueEleves, bip, demarre };
 })();
 window.Banc = Banc;

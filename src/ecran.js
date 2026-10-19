@@ -13,8 +13,8 @@ const Ecran = (() => {
 
   function go(r){
     if (maison){
-      const E = r && r.name === "episode" && ep(r.id), s = r && r.step;
-      r = E && Number.isInteger(s) && s >= 0 && s <= 4 ? {name:"episode",id:E.id,step:!E.audio && (s===2 || s===3) ? 1:s} : {name:"home"};
+      const E = r && r.name === "episode" && ep(r.id);
+      r = E ? {name:"episode",id:E.id,step:4} : {name:"home"};
     }
     stopAudio(); route = r; render(); $("#main").scrollTop = 0;
     if (maison) window.scrollTo(0,0);
@@ -34,6 +34,7 @@ const Ecran = (() => {
 
   /* ---------- Accueil ---------- */
   function renderHome(){
+    if(maison){ if(optionsMaison.accueil) optionsMaison.accueil(view); return; }
     view.innerHTML = `<h1 style="font-size:clamp(28px,3.4vw,46px)">${maison ? "Un moment de lecture ensemble" : "Le feuilleton de la période 2"}</h1>
     <p class="lead">${maison ? "Choisissez un texte. Préparez les mots, écoutez la voix et entraînez-vous à lire. Un adulte peut ensuite accompagner le défi d’une minute." : "Sept enquêtes de Maya, Sami, Jules et Romy. Chaque semaine, un papier écrit à l'encre verte attend la bande sous le banc des maîtres."}</p>
     ${maison ? '<h2 class="collection">Le banc des maîtres</h2>' : ""}
@@ -56,6 +57,13 @@ const Ecran = (() => {
   function renderEpisode(){
     EP = ep(route.id);
     const step = route.step||0;
+    if(maison){
+      view.innerHTML=`<div class="ephead maison-entete"><button class="btn" id="back" type="button">Retour aux textes</button><h1>${esc(EP.titre)}</h1><button class="btn" id="maison-imprimer" type="button">Imprimer le texte</button></div><div class="panel" id="panel"></div>`;
+      $("#back").onclick=()=>go({name:"home"});
+      $("#maison-imprimer").onclick=()=>optionsMaison.imprime?.(EP);
+      cleanup=optionsMaison.defi?.($("#panel"),EP) || (()=>{});
+      return;
+    }
     view.innerHTML = `<div class="ephead"><button class="btn" id="back" aria-label="Retour aux textes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><h2>${esc(libelleEpisode(EP))} — ${esc(EP.titre)}</h2><nav class="steps" id="steps" aria-label="Étapes de la séance"></nav></div><div class="panel" id="panel"></div>`;
     $("#back").onclick = ()=>go({name:"home"});
     if (maison){
@@ -221,7 +229,7 @@ const Ecran = (() => {
   let Defi = null; // l'état du défi affiché, pour le téléphone et les messages reçus
   function stepDefi(P){
     const DUR = DUREE();
-    let who = null, state = "idle", t0 = 0, tick = null, errs = new Set(), last = -1, elapsed = 0, distant = false;
+    let who = null, state = "idle", t0 = 0, tick = null, errs = new Set(), last = -1, elapsed = 0, distant = false, resultatAffiche = null;
     const toks = motsDefi(EP);
     P.innerHTML = `<div class="defi"><div class="textbox"><div class="text" id="txt" lang="fr"></div></div>
      <div class="side">
@@ -237,8 +245,9 @@ const Ecran = (() => {
     const essaiNum = id => Donnees.essaisDe(id, EP.id).length;
     Donnees.eleves().forEach(s=>{ const b = el("button",{type:"button", "aria-pressed":"false", "data-eleve":s.id}); b.textContent = s.nom||"Élève";
       b.onclick = ()=>{ if (state==="run" || distant) return; choisit(s.id); reset(); }; $("#who").appendChild(b); });
-    function choisit(id){ who = id; $("#who").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed", String(x.dataset.eleve===id))); $("#go").disabled = false; $("#essai").textContent = `Essai n° ${essaiNum(id)+1} sur ce texte`; }
-    function reset(){ state = "idle"; errs.clear(); last = -1; spans.forEach(s=>s.className = "w"); $("#bar").style.width = "0"; $("#res").hidden = true; $("#hint").textContent = who ? "Appuie sur Départ quand l'élève est prêt." : conseil(); $("#go").textContent = "Départ"; $("#go").disabled = !who; $("#stop").hidden = true; publie(); }
+    function afficheEssai(){ const objectif=Donnees.objectif(who); $("#essai").textContent = who ? `Essai n° ${essaiNum(who)+1} sur ce texte`+(objectif===null ? "" : ` · Objectif : ${objectif} MCLM`) : ""; }
+    function choisit(id){ who = id; $("#who").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed", String(x.dataset.eleve===id))); $("#go").disabled = false; afficheEssai(); }
+    function reset(){ state = "idle"; resultatAffiche = null; afficheEssai(); errs.clear(); last = -1; spans.forEach(s=>s.className = "w"); $("#bar").style.width = "0"; $("#res").hidden = true; $("#hint").textContent = who ? "Appuie sur Départ quand l'élève est prêt." : conseil(); $("#go").textContent = "Départ"; $("#go").disabled = !who; $("#stop").hidden = true; publie(); }
     function tapWord(i){
       if (distant) return;
       if (state==="run"){ if (!toks[i].w) return; errs.has(i) ? errs.delete(i) : errs.add(i); spans[i].classList.toggle("err"); }
@@ -261,9 +270,14 @@ const Ecran = (() => {
       const ok = await Donnees.ajoute(r);
       montreResultat(r, b, ok);
       $("#hint").textContent = "Choisis un autre élève, ou appuie sur Recommencer.";
-      $("#essai").textContent = `Essai n° ${essaiNum(who)+1} sur ce texte`; publie();
+      afficheEssai(); publie();
     }
-    function montreResultat(r, b, ok){ $("#res").hidden = false; $("#res").innerHTML = carteResultat(r, b, Donnees.nom(r.eleve), ok); P.querySelector(".side").scrollTop = 0; }
+    function montreResultat(r, b, ok){ resultatAffiche={r,b,ok}; $("#res").hidden = false; $("#res").innerHTML = carteResultat(r, b, Donnees.nom(r.eleve), ok); P.querySelector(".side").scrollTop = 0; }
+    function actualiseObjectif(){
+      if (state==="run" || state==="pick") return;
+      afficheEssai();
+      if (state==="done" && resultatAffiche && !$("#res").hidden){ const {r,b,ok}=resultatAffiche; $("#res").innerHTML=carteResultat(r,b,Donnees.nom(r.eleve),ok); }
+    }
     /* le téléphone mène le défi : l'écran suit */
     function recoit(d){
       if (d.etat==="repos"){ distant = false; clearInterval(tick); reset(); return; }
@@ -274,9 +288,9 @@ const Ecran = (() => {
       else if (d.etat==="lecture"){ if (state!=="run"){ state = "run"; spans.forEach(s=>s.className = "w"); $("#res").hidden = true; lanceChrono(performance.now()-Math.max(0, Math.min(5000, d.depuis||0))); } $("#go").textContent = "En cours…"; $("#hint").textContent = `${Donnees.nom(d.eleve)} lit. La maîtresse note sur son téléphone.`; }
       else if (d.etat==="choix"){ if (state==="run"){ clearInterval(tick); bip(); } state = "pick"; $("#bar").style.width = "100%"; $("#hint").textContent = "Temps écoulé !"; }
       else if (d.etat==="fini" && d.resultat){ clearInterval(tick); state = "done"; $("#bar").style.width = Math.min(100, d.resultat.secondes/DUR*100)+"%"; montreFin(d.resultat.dernier, d.resultat.fautes||[]);
-        montreResultat(d.resultat, bilan(d.resultat), true); $("#go").textContent = "Recommencer"; $("#go").disabled = false; $("#hint").textContent = "Résultat enregistré sur le téléphone et ici."; distant = false; }
+        montreResultat(d.resultat, bilan(d.resultat), true); afficheEssai(); $("#go").textContent = "Recommencer"; $("#go").disabled = false; $("#hint").textContent = "Résultat enregistré sur le téléphone et ici."; distant = false; }
     }
-    function publie(){ Defi = {ep:EP.id, etat:state, eleve:who, local:!distant && (state==="run" || state==="pick"), recoit}; annonce(); }
+    function publie(){ Defi = {ep:EP.id, etat:state, eleve:who, local:!distant && (state==="run" || state==="pick"), recoit, actualiseObjectif}; annonce(); }
     publie();
     cleanup = ()=>{ clearInterval(tick); Defi = null; };
   }
@@ -289,7 +303,7 @@ const Ecran = (() => {
       const rs = Donnees.essaisDe(st.id, EP.id), c = el("div",{class:"card chart"});
       const durs = [...new Set(rs.flatMap(r=>Banc.motsDifficiles(r)))].slice(0,14);
       c.innerHTML = `<h3 style="font-size:20px">${esc(st.nom)}</h3><p class="muted" style="margin:2px 0 6px">${rs.length?`${rs.length} essai${rs.length>1?"s":""} sur ce texte`:"Aucun essai sur ce texte"}</p>`+
-        courbe(rs.map(r=>({v:r.mclm, l:"essai "+r.essai})), +st.objectif||0, `Progrès de ${st.nom}`)+
+        courbe(rs.map(r=>({v:r.mclm, l:"essai "+r.essai})), Donnees.objectif(st.id), `Progrès de ${st.nom}`)+
         (durs.length?`<div class="label" style="margin-top:8px">Mots à retravailler</div><div class="hard">${durs.map(m=>`<span>${esc(m)}</span>`).join("")}</div>`:"");
       box.appendChild(c);
     });
@@ -365,7 +379,7 @@ const Ecran = (() => {
 
   async function demarre(){
     if (maison) return demarreMaison(optionsMaison);
-    Donnees.surChange(q=>{ if (q==="classe" || q==="resultats"){ if (route.name==="students" && q==="classe" && !document.activeElement.closest("#f")) vueEleves(view); else if (route.name==="progress") vueProgres(view); else if (route.name==="episode" && route.step===5) renderEpisode(); else if (route.name==="episode" && route.step===4 && q==="classe" && !Defi?.etat?.match(/run|pick/)) renderEpisode(); } });
+    Donnees.surChange(q=>{ if (q==="classe" || q==="resultats"){ if (route.name==="students"){ if(q==="classe" && !document.activeElement?.closest("#f")) vueEleves(view); Banc.actualiseObjectifs(view); } else if (route.name==="progress") vueProgres(view); else if (route.name==="episode" && route.step===5) renderEpisode(); else if (route.name==="episode" && route.step===4){ if(q==="classe" && !Defi?.etat?.match(/run|pick/)) renderEpisode(); else if(q==="resultats") Defi?.actualiseObjectif?.(); } } });
     render();
     const room = await Lien.init();
     if (room){
@@ -383,8 +397,6 @@ const Ecran = (() => {
     document.title = "Fluence à la maison";
     $("#home-link span").textContent = "Fluence à la maison";
     document.querySelectorAll("#app-ecran [data-enseignant]").forEach(b=>b.hidden=true);
-    $("#maison-bilans").hidden = false;
-    $("#maison-bilans").onclick = ()=>{ go({name:"home"}); const h=$("#maison-historique"); if(h){h.scrollIntoView({block:"start"});h.focus({preventScroll:true});} };
     go({name:"home"});
   }
   return { demarre, demarreMaison, go, etat, route:()=>route };

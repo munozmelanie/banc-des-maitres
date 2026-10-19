@@ -105,7 +105,7 @@ const Banc = (() => {
         const d={};entetes.forEach((k,i)=>{d[k]=l[i];});return d;
       }));
     }
-    function estDefaut(liste){ return liste.length>0 && liste.every((e,i)=>e.id==="e"+(i+1) && e.nom==="Élève "+(i+1) && !e.objectif); }
+    function estDefaut(liste){ return liste.length>0 && liste.every((e,i)=>e.id==="e"+(i+1) && e.nom==="Élève "+(i+1) && String(e.objectif ?? "").trim()===""); }
     function fusion(existants, importes, options={}){
       const candidats = nettoie(importes).eleves, remplaceDefaut = !!options.remplaceDefaut && estDefaut(existants);
       const eleves = (remplaceDefaut ? [] : existants).map(e=>({...e}));
@@ -135,7 +135,7 @@ const Banc = (() => {
     /* sauvegarde de la première version (fichier « HORS LIGNE » de septembre, même navigateur) */
     function depuisV1(d){
       if (!d || !Array.isArray(d.students)) return null;
-      const cl = {eleves:d.students.map((s,i)=>({id:String(s.id||("e"+(i+1))), nom:String(s.name||("Élève "+(i+1))), objectif:String(s.goal||"").replace(/[^0-9]/g,"")})), maj:Date.now()};
+      const cl = {eleves:d.students.map((s,i)=>({id:String(s.id||("e"+(i+1))), nom:String(s.name||("Élève "+(i+1))), objectif:String(s.goal??"").replace(/[^0-9]/g,"")})), maj:Date.now()};
       const li = (Array.isArray(d.results) ? d.results : []).map(r=>({id:"v1-"+String(r.sid)+"-"+String(r.ep)+"-"+String(r.date), eleve:String(r.sid), ep:String(r.ep), date:String(r.date),
         mclm:+r.mclm||0, lus:+r.read||0, erreurs:+r.err||0, secondes:+r.secs||0}));
       return {classe:cl, resultats:{liste:li}, vitesse:+d.speed||0.8};
@@ -156,6 +156,18 @@ const Banc = (() => {
     }
     const valides = () => resultats.liste.filter(r=>!r.suppr && r.eleve && r.ep);
     const vivants = () => valides().filter(r=>r.origine!=="maison");
+    /* Un champ vide signifie automatique. Calcul pur : aucune écriture de classe,
+       aucun effet sur les essais ; les mêmes résultats donnent le même objectif. */
+    function objectifInfo(id, manuel){
+      const eleve = classe?.eleves.find(e=>e.id===id);
+      if (!eleve) return {valeur:null, mode:"attente", reference:null};
+      const saisie = String(manuel===undefined ? (eleve.objectif ?? "") : manuel).trim();
+      if (saisie!=="" && /^\d+$/.test(saisie) && Number.isSafeInteger(+saisie)) return {valeur:+saisie, mode:"manuel", reference:null};
+      const premier = valides().filter(r=>r.eleve===id && typeof r.id==="string" && ep(r.ep) && Number.isSafeInteger(r.mclm) && r.mclm>=0 && typeof r.date==="string" && Number.isFinite(Date.parse(r.date)))
+        .sort((a,b)=>Date.parse(a.date)-Date.parse(b.date) || (a.id<b.id ? -1 : a.id>b.id ? 1 : 0))[0];
+      if (!premier) return {valeur:null, mode:"attente", reference:null};
+      return {valeur:premier.mclm+Math.max(5,Math.ceil(premier.mclm/10)), mode:"automatique", reference:{id:premier.id,date:premier.date,mclm:premier.mclm}};
+    }
     /* les essais, avec leur numéro (par élève et par épisode, dans l'ordre des dates) */
     function essais(){
       const n = {};
@@ -169,7 +181,7 @@ const Banc = (() => {
         return true;
       } catch(e){ return false; }
     }
-    return { init,
+    return { init, objectifInfo, objectif:id=>objectifInfo(id).valeur,
       eleves:()=>classe.eleves, eleve:id=>classe.eleves.find(e=>e.id===id)||null,
       nom:id=>{ const e = classe.eleves.find(x=>x.id===id); return e ? e.nom : "Élève"; },
       async enregistreEleves(liste){ const nouvelle = {eleves:liste, maj:Date.now()}; try { await docs.c.set(nouvelle); classe = nouvelle; signale("classe"); return true; } catch(e){ return false; } },
@@ -237,11 +249,11 @@ const Banc = (() => {
     return res;
   }
   function carteResultat(r, b, nomEleve, ok){
-    const objectif = (Donnees.eleve(r.eleve)||{}).objectif;
+    const cible = Donnees.objectifInfo(r.eleve), objectif = cible.valeur;
     const durs = motsDifficiles(r);
     return `<div class="label">${esc(nomEleve)} · essai ${b.essai}</div><div class="big-num">${r.mclm}</div><div class="muted">mots lus correctement par minute</div>
       ${b.nouveau?`<div class="stamp">Nouveau record !</div>`:(b.premier?`<div class="stamp">Premier essai !</div>`:"")}
-      <dl class="res"><dt>Mots lus</dt><dd>${r.lus}</dd><dt>Erreurs</dt><dd>${r.erreurs}</dd><dt>Temps</dt><dd>${r.secondes} s</dd>${b.precedent!==null?`<dt>Essai précédent</dt><dd>${b.precedent}</dd>`:""}${b.record!==null?`<dt>Record avant</dt><dd>${b.record}</dd>`:""}${objectif?`<dt>Objectif</dt><dd>${esc(objectif)}</dd>`:""}</dl>
+      <dl class="res"><dt>Mots lus</dt><dd>${r.lus}</dd><dt>Erreurs</dt><dd>${r.erreurs}</dd><dt>Temps</dt><dd>${r.secondes} s</dd>${b.precedent!==null?`<dt>Essai précédent</dt><dd>${b.precedent}</dd>`:""}${b.record!==null?`<dt>Record avant</dt><dd>${b.record}</dd>`:""}${objectif!==null?`<dt>Objectif${cible.mode==="automatique"?" automatique":""}</dt><dd>${esc(objectif)}</dd>`:""}</dl>
       ${durs.length?`<div class="label" style="margin-top:10px">Mots à retravailler</div><div class="hard">${durs.map(m=>`<span>${esc(m)}</span>`).join("")}</div>`:""}
       ${ok===false?`<p class="muted" style="margin:10px 0 0">Impossible d'enregistrer sur cet appareil : note le résultat.</p>`:""}`;
   }
@@ -254,7 +266,7 @@ const Banc = (() => {
     const y = v => T+(H-T-B)*(1-v/maxV);
     let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(titre)}">`;
     [0, Math.round(maxV/2/10)*10, Math.round(maxV*0.9/10)*10].forEach(v=>{ s += `<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-width="1"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end">${v}</text>`; });
-    if (objectif) s += `<line x1="${L}" x2="${W-R}" y1="${y(objectif)}" y2="${y(objectif)}" stroke="var(--wood)" stroke-width="2" stroke-dasharray="6 5"/><text x="${W-R}" y="${y(objectif)-6}" text-anchor="end" style="fill:var(--wood)">objectif ${objectif}</text>`;
+    if (Number.isFinite(objectif) && objectif>=0) s += `<line x1="${L}" x2="${W-R}" y1="${y(objectif)}" y2="${y(objectif)}" stroke="var(--wood)" stroke-width="2" stroke-dasharray="6 5"/><text x="${W-R}" y="${y(objectif)-6}" text-anchor="end" style="fill:var(--wood)">objectif ${objectif}</text>`;
     if (points.length){
       s += `<polyline fill="none" stroke="var(--green)" stroke-width="3" stroke-linejoin="round" points="${points.map((p,i)=>x(i)+","+y(p.v)).join(" ")}"/>`;
       const best = Math.max(...points.map(p=>p.v)), dense = points.length>9;
@@ -275,11 +287,11 @@ const Banc = (() => {
       <p class="muted" style="margin-top:10px">Les résultats sont enregistrés sur cet appareil${ROLE==="ecran"?" et recopiés dans le téléphone relié":" et recopiés sur l'écran de la classe relié"}. La sauvegarde est un fichier à garder en lieu sûr (clé USB, Drive).</p>`;
     const epsVus = EPS.filter(e=>!compacte || es.some(r=>r.ep===e.id));
     let h = `<thead><tr><th>Élève</th>${epsVus.map(e=>`<th class="n" title="${esc(libelleEpisode(e)+" — "+e.titre)}">${esc(codeEpisode(e.id))}</th>`).join("")}<th class="n">Objectif</th></tr></thead><tbody>`;
-    eleves.forEach(st=>{ h += `<tr><td>${esc(st.nom)}</td>`+epsVus.map(e=>{ const rs = es.filter(r=>r.eleve===st.id && r.ep===e.id); return `<td class="n">${rs.length?Math.max(...rs.map(r=>r.mclm)):"—"}</td>`; }).join("")+`<td class="n">${st.objectif?esc(st.objectif):"—"}</td></tr>`; });
+    eleves.forEach(st=>{ h += `<tr><td>${esc(st.nom)}</td>`+epsVus.map(e=>{ const rs = es.filter(r=>r.eleve===st.id && r.ep===e.id); return `<td class="n">${rs.length?Math.max(...rs.map(r=>r.mclm)):"—"}</td>`; }).join("")+`<td class="n">${Donnees.objectif(st.id)===null?"—":esc(Donnees.objectif(st.id))}</td></tr>`; });
     box.querySelector("#tab").innerHTML = h+"</tbody>";
     eleves.forEach(st=>{
       const rs = es.filter(r=>r.eleve===st.id), c = el("div",{class:"card chart"});
-      c.innerHTML = `<h3 style="font-size:20px">${esc(st.nom)}</h3><p class="muted" style="margin:2px 0 6px">Tous les défis, dans l'ordre</p>`+courbe(rs.map(r=>({v:r.mclm, l:codeEpisode(r.ep)+"·"+r.essai})), +st.objectif||0, `Progrès de ${st.nom}`);
+      c.innerHTML = `<h3 style="font-size:20px">${esc(st.nom)}</h3><p class="muted" style="margin:2px 0 6px">Tous les défis, dans l'ordre</p>`+courbe(rs.map(r=>({v:r.mclm, l:codeEpisode(r.ep)+"·"+r.essai})), Donnees.objectif(st.id), `Progrès de ${st.nom}`);
       box.querySelector("#charts").appendChild(c);
     });
     let h2 = `<thead><tr><th>Date</th><th>Élève</th><th>Texte</th><th class="n">Essai</th><th class="n">Mots/min</th><th class="n">Erreurs</th><th></th></tr></thead><tbody>`;
@@ -298,26 +310,36 @@ const Banc = (() => {
       catch(err){ info.textContent = "Ce fichier n'est pas une sauvegarde de Fluence."; } };
     EnvoiMaison.ajouteBouton(box);
   }
+  function actualiseObjectifs(box){
+    box.querySelectorAll("[data-objectif-info]").forEach(info=>{
+      const champ=box.querySelector("#"+info.dataset.champ), cible=Donnees.objectifInfo(info.dataset.objectifInfo,champ.value);
+      info.textContent=champ.value.trim()!=="" ? "Objectif manuel" : cible.valeur===null ? "Après la première lecture" : `Automatique : ${cible.valeur} MCLM`;
+      info.title=cible.reference ? `Première lecture valide : ${cible.reference.mclm} MCLM, le ${new Date(cible.reference.date).toLocaleDateString("fr-FR")}` : "";
+      champ.placeholder=cible.mode==="automatique" ? `Auto : ${cible.valeur}` : "Automatique";
+    });
+  }
   function vueEleves(box){
     /* Une copie reçue du téléphone ne doit pas effacer une prévisualisation en cours. */
     if (box.querySelector("#import-classe-apercu:not([hidden])")) return;
     const liste = Donnees.eleves().map(e=>Object.assign({}, e));
     const originaux = new Map(liste.map(e=>[e.id,{...e}]));
-    box.innerHTML = `<h1 style="font-size:clamp(24px,3vw,40px)">Les élèves de la classe</h1><p class="lead">Tape le prénom de chaque élève et, si tu veux, son objectif en mots par minute. Les prénoms sont enregistrés dans tes appareils et échangés par une liaison chiffrée ; ils ne sont pas publiés.</p>
+    box.innerHTML = `<h1 style="font-size:clamp(24px,3vw,40px)">Les élèves de la classe</h1><p class="lead">Tape le prénom de chaque élève. Laisse son objectif vide pour le calcul automatique, ou saisis une valeur manuelle. Les prénoms sont enregistrés dans tes appareils et échangés par une liaison chiffrée ; ils ne sont pas publiés.</p>
       <div class="row start" style="margin-top:16px"><button class="btn" id="import-classe-choisir" type="button">Importer une liste de classe</button><input type="file" id="import-classe-file" accept=".csv,.txt,.tsv,.json,text/csv,text/plain,application/json" hidden></div>
       <p class="muted" style="margin:8px 0 0">CSV, TXT ou JSON, jusqu'à 100 élèves et 1 Mo. Le fichier est lu sur cet appareil. Tu pourras vérifier la liste avant de l'enregistrer.</p>
       <p id="import-classe-info" role="status" style="margin:8px 0 0"></p>
       <form class="card" id="import-classe-apercu" hidden autocomplete="off" style="margin-top:16px"><h2 style="font-size:24px">Vérifier la liste à importer</h2><p id="import-classe-compte" class="muted"></p>
         <p class="muted">Corrige les noms si besoin ; efface un nom pour l'écarter. Les élèves déjà présents conservent leur identifiant, leur objectif et leurs résultats. Pour distinguer deux élèves de même prénom, ajoute leur nom.</p>
         <div class="form" id="import-classe-champs"></div><div class="row start" style="margin-top:16px"><button class="btn primary" id="import-classe-confirme" type="submit">Importer et enregistrer</button><button class="btn" id="import-classe-annule" type="button">Annuler</button></div></form>
-      <form class="form" id="f" autocomplete="off"></form><div class="row start" style="margin-top:16px"><button class="btn primary" id="sv" type="button">Enregistrer</button><button class="btn" id="add" type="button">Ajouter un élève</button><span class="saved" id="ok" role="status"></span></div>`;
+      <p class="muted" style="margin-top:14px">Objectif automatique : première lecture valide + 10 %, avec au moins 5 MCLM de plus. Si cette lecture est supprimée, la suivante devient la référence. Tu peux modifier l’objectif à tout moment.</p><form class="form" id="f" autocomplete="off"></form><div class="row start" style="margin-top:16px"><button class="btn primary" id="sv" type="button">Enregistrer</button><button class="btn" id="add" type="button">Ajouter un élève</button><span class="saved" id="ok" role="status"></span></div>`;
     const f = box.querySelector("#f");
     box.querySelector("#import-classe-choisir").onclick=()=>box.querySelector("#import-classe-file").click();
     f.onsubmit = e=>e.preventDefault();
     const lit = () => { const suivants=liste.map((s,i)=>({nom:ImportClasse.valideNom(f.querySelector("#n"+i).value) || `Élève ${i+1}`,objectif:ImportClasse.valideObjectif(f.querySelector("#g"+i).value)})); suivants.forEach((s,i)=>Object.assign(liste[i],s)); };
     const dessine = () => { f.innerHTML = ""; liste.forEach((s,i)=>{ f.appendChild(el("label",{for:"n"+i, class:"label"}, `Élève ${i+1}`));
       const n = el("input",{id:"n"+i, "aria-label":`Prénom de l'élève ${i+1}`, maxlength:"80", autocapitalize:"words", spellcheck:"false"}); n.value = s.nom; f.appendChild(n);
-      const g = el("input",{id:"g"+i, class:"goal", inputmode:"numeric", maxlength:"3", placeholder:"objectif (mots/min)", "aria-label":`Objectif de l'élève ${i+1}`}); g.value = s.objectif||""; f.appendChild(g); }); };
+      const zone=el("div",{class:"goal",style:"min-width:0"}), g = el("input",{id:"g"+i, inputmode:"numeric", maxlength:"3", placeholder:"Automatique", "aria-label":`Objectif de l'élève ${i+1}`, "aria-describedby":"objectif-info-"+i}); g.value = s.objectif ?? "";
+      const info=el("small",{id:"objectif-info-"+i,class:"muted","data-objectif-info":s.id,"data-champ":"g"+i,style:"display:block;margin-top:4px;line-height:1.3"});
+      zone.appendChild(g);zone.appendChild(info);f.appendChild(zone);g.oninput=()=>actualiseObjectifs(box); }); actualiseObjectifs(box); };
     dessine();
     box.querySelector("#sv").onclick = async ()=>{ try { box.querySelector("#ok").textContent = await Donnees.enregistreEleves(baseActuelle()) ? "Enregistré." : "Impossible d'enregistrer sur cet appareil."; } catch(e){ box.querySelector("#ok").textContent=e.message; } };
     box.querySelector("#add").onclick = ()=>{ try { lit(); if (liste.length>=ImportClasse.MAX_ELEVES){ box.querySelector("#ok").textContent="La classe contient déjà 100 élèves."; return; } liste.push({id:"e"+Plateforme.rid(4), nom:`Élève ${liste.length+1}`, objectif:""}); dessine(); f.querySelector("#n"+(liste.length-1)).select(); } catch(e){ box.querySelector("#ok").textContent=e.message; } };
@@ -377,6 +399,6 @@ const Banc = (() => {
     else { document.getElementById("app-ecran").hidden = false; await Ecran.demarre(); }
     await MaisonCloud.init(); EnvoiMaison.recoitLien();
   }
-  return { DATA, EPS, ROLE, $, el, esc, estMot, nu, ep, estTamallette, libelleEpisode, etapesEpisode, motsDefi, DUREE, ImportClasse, Donnees, Lien, calcule, bilan, carteResultat, motsDifficiles, courbe, vueProgres, vueEleves, bip, demarre };
+  return { DATA, EPS, ROLE, $, el, esc, estMot, nu, ep, estTamallette, libelleEpisode, etapesEpisode, motsDefi, DUREE, ImportClasse, Donnees, Lien, calcule, bilan, carteResultat, motsDifficiles, courbe, vueProgres, vueEleves, actualiseObjectifs, bip, demarre };
 })();
 window.Banc = Banc;

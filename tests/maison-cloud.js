@@ -55,7 +55,7 @@ function installe(o){
     await c.addInitScript(installe,{config,mode,api:API,cle:CLE,queue:QUEUE,acces:ACCES,recu:RECU,expiree,permis,attendUser,userRefuse});
     const p=await c.newPage();p.on("pageerror",e=>erreurs.push(e.message));
     await p.route("**/*",r=>{if(r.request().url().startsWith(S.base))return r.continue();requêtesExtérieures.push(r.request().url());return r.abort();});
-    await p.goto(S.base+"?relais=local#"+(fragment??(enseignante?"ecran":"parents"+(token?"&famille="+token:"")+"&prenom=Test%20Famille")));await p.waitForSelector("[data-ep=T3]");
+    await p.goto(S.base+"?relais=local#"+(fragment??(enseignante?"ecran":"parents"+(token?"&famille="+token:"")+"&prenom=Test%20Famille")));await p.waitForSelector("[data-ep=E1]");
     await p.evaluate(()=>MaisonCloud.init());return p;
   }
   const état=(p,id)=>p.evaluate(id=>MaisonCloud.etat(id),id);
@@ -86,12 +86,12 @@ function installe(o){
     const horsLigne=await ouvre({mode:"reseau"}),attente=await bilan(horsLigne,"test-cloud-reprise");
     await horsLigne.evaluate(r=>MaisonCloud.envoie(r),attente);
     vrai((await état(horsLigne,attente.id))?.etat!=="recu"&&await horsLigne.evaluate(([k,id])=>(localStorage.getItem(k)||"").includes(id),[QUEUE,attente.id]),"une coupure réseau conserve le bilan en attente durable");
-    await horsLigne.reload();await horsLigne.waitForSelector("[data-ep=T3]");await horsLigne.evaluate(()=>MaisonCloud.init());
+    await horsLigne.reload();await horsLigne.waitForSelector("[data-ep=E1]");await horsLigne.evaluate(()=>MaisonCloud.init());
     vrai((await état(horsLigne,attente.id))?.etat!=="recu"&&!!(await état(horsLigne,attente.id)),"l'état en attente est relu après fermeture/rechargement");
     await horsLigne.evaluate(()=>{__cloudTest.mode="ok";});await horsLigne.evaluate(r=>MaisonCloud.envoie(r),attente);await attend(horsLigne,id=>MaisonCloud.etat(id)?.etat==="recu",attente.id);
     vrai(await horsLigne.evaluate(id=>__cloudTest.requetes.every(q=>q.body.paquet.bilan.id===id),attente.id),"le réessai garde l'identifiant original pour éviter les doublons");
     const fratrie=await ouvre({mode:"reseau"}),a=await bilan(fratrie,"test-cloud-frere-a");await fratrie.evaluate(r=>MaisonCloud.envoie(r),a);
-    await fratrie.goto(S.base+"?relais=local#parents&famille="+TOKEN_B+"&prenom=Test%20Deux");await fratrie.waitForSelector("[data-ep=T3]");await fratrie.evaluate(()=>{__cloudTest.mode="ok";});
+    await fratrie.goto(S.base+"?relais=local#parents&famille="+TOKEN_B+"&prenom=Test%20Deux");await fratrie.waitForSelector("[data-ep=E1]");await fratrie.evaluate(()=>{__cloudTest.mode="ok";});
     await fratrie.evaluate(r=>MaisonCloud.envoie(r),a);const autre=await bilan(fratrie,"test-cloud-frere-b");await fratrie.evaluate(r=>MaisonCloud.envoie(r),autre);
     vrai(await fratrie.evaluate(([a,b])=>{const rs=__cloudTest.requetes.filter(r=>r.url.endsWith("/fluence-bilan"));return rs.find(r=>r.body.paquet.bilan.id==="test-cloud-frere-a")?.body.token===a&&rs.find(r=>r.body.paquet.bilan.id==="test-cloud-frere-b")?.body.token===b;},[TOKEN_A,TOKEN_B]),"deux enfants sur le même téléphone : chaque bilan garde le jeton familial de sa création");
 

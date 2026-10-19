@@ -254,6 +254,15 @@ html[data-role="parents"] .flash{min-height:260px}
 html[data-role="parents"] .flash .word{font-size:clamp(36px,8vw,76px)}
 html[data-role="parents"] .eps{grid-template-columns:repeat(auto-fit,minmax(min(250px,100%),1fr))}
 html[data-role="parents"] .step{padding:0 10px}
+.maison-categories{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:20px 0}
+.maison-choix-categorie{min-height:64px;padding:12px;font-size:clamp(16px,2vw,21px);line-height:1.3}
+.maison-choix-categorie[aria-pressed="true"]{background:var(--green-soft);border-color:var(--green);color:var(--ink)}
+.maison-attente{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.maison-liste-textes{display:grid;gap:10px}
+.maison-choix-texte{width:100%;min-height:60px;justify-content:flex-start;text-align:left;padding:14px 18px;font-size:18px;line-height:1.35}
+.maison-entete h1{font-size:clamp(24px,3vw,36px);line-height:1.2;flex:1 1 360px;margin:0}
+.maison-bilan-precedent{margin:0 0 16px}
+.maison-bilan-precedent summary{cursor:pointer;padding:12px 0;font-weight:700}
 .maison-stockage{margin:0 16px 12px;padding:10px 14px;border-radius:12px;background:var(--err-soft);color:var(--err)}
 .maison-identite{display:grid;gap:8px;max-width:520px}
 .maison-identite input{width:100%;min-height:48px;border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--paper)}
@@ -298,7 +307,6 @@ html[data-role="parents"] .step{padding:0 10px}
     <button class="btn" data-go="progress" data-enseignant>Progrès</button>
     <button class="btn" id="b-tel" data-enseignant title="Relier le téléphone de la maîtresse"><span class="dot" id="b-tel-dot"></span><span id="b-tel-txt">Relier le téléphone</span></button>
     <button class="btn" id="fs" data-enseignant title="Plein écran" aria-label="Plein écran"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
-    <button class="btn" id="maison-bilans" hidden>Mes bilans à la maison</button>
   </div>
   <p class="maison-stockage" id="maison-stockage" role="status" hidden></p>
   <main id="main"><div class="wrap view" id="view"></div></main>

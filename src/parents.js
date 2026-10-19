@@ -1,10 +1,10 @@
-/* Lecture familiale : aucun accès à la classe ni à la liaison de l'enseignante. */
+/* Défis à la maison : aucun accès à la classe ni à la liaison de l'enseignante. */
 "use strict";
 const Parents = (() => {
   const { $, el, esc, motsDefi, calcule, motsDifficiles, bip } = Banc;
   const CLE = "fluence-parents-v1";
   let donnees = {version:1, prenom:"", vitesse:0.8, historique:[], profils:{}}, lectureImpossible = false, erreurStockage = "";
-  let stopCloud = null, contexte = "", tokenSession = "", ecoutesInstallees = false;
+  let stopCloud = null, contexte = "", tokenSession = "", ecoutesInstallees = false, categorie = "entrainement";
   const tokenLien = ()=>{const t=new URLSearchParams(location.hash.slice(1)).get("famille");return /^[a-f0-9]{64}$/.test(t||"")?t:"";};
   const profil = ()=>contexte ? (donnees.profils[contexte] ||= {prenom:"",vitesse:0.8}) : donnees;
   const copieBilan = r=>{const {contexte, ...bilan}=r;return {...bilan,fautes:r.fautes.slice()};};
@@ -15,9 +15,15 @@ const Parents = (() => {
     if(!info || !bouton)return;
     bouton.hidden=!e || !["attente","erreur"].includes(e.etat);
     info.classList.toggle("saved",e?.etat==="recu");
-    info.textContent=e ? (e.etat==="recu" ? "Bilan reçu dans Fluence par l’enseignante." : e.message || "Bilan en attente de transmission. Vous pouvez réessayer.") : "La réception directe dans Fluence nécessite le lien personnel fourni par l’enseignante. Ce bilan reste disponible sur cet appareil.";
+    info.textContent=e ? (e.etat==="recu" ? "Reçu par l’enseignante." : e.message || "Bilan en attente de transmission. Vous pouvez réessayer.") : "Pour un envoi direct, utilisez le lien personnel de l’enseignante. Vous pouvez aussi partager ce bilan.";
   }
-  function actualiseCartesCloud(){document.querySelectorAll("[data-maison-bilan]").forEach(actualiseCloud);}
+  const enAttente=()=>donnees.historique.filter(r=>(r.contexte||"")===contexte && ["attente","erreur"].includes(etatCloud(r.id)?.etat));
+  function actualiseAttente(){
+    const panneau=$("#maison-attente");if(!panneau)return;
+    const n=enAttente().length;panneau.hidden=!n;
+    panneau.querySelector("span").textContent=n===1 ? "Un bilan attend d’être envoyé." : `${n} bilans attendent d’être envoyés.`;
+  }
+  function actualiseCartesCloud(){document.querySelectorAll("[data-maison-bilan]").forEach(actualiseCloud);actualiseAttente();}
   async function transmet(r,c){
     const info=c?.querySelector("[data-cloud-info]"), bouton=c?.querySelector("[data-cloud-reessayer]");
     if(bouton)bouton.disabled=true;
@@ -73,16 +79,16 @@ const Parents = (() => {
     const c = el("article", {class:"card maison-bilan","data-maison-bilan":r.id});
     const date = new Date(r.date).toLocaleString("fr-FR",{dateStyle:"short",timeStyle:"short"});
     const durs = motsDifficiles(r);
-    c.innerHTML = `<div class="label">Entraînement à la maison · ${esc(date)}</div>
+    c.innerHTML = `<div class="label">Résultat · ${esc(date)}</div>
       <h3>${esc(r.prenom)} — ${esc(r.titre)}</h3>
       <div class="big-num">${r.mclm}</div><div class="muted">mots lus correctement par minute</div>
       <dl class="res"><dt>Mots lus</dt><dd>${r.lus}</dd><dt>Erreurs</dt><dd>${r.erreurs}</dd><dt>Temps</dt><dd>${r.secondes} s</dd></dl>
       ${durs.length ? `<p class="label">Mots à retravailler</p><div class="hard">${durs.map(m=>`<span>${esc(m)}</span>`).join("")}</div>` : ""}
-      <p class="muted">Lecture accompagnée par un adulte à la maison.</p>
       <p data-cloud-info role="status"></p><button type="button" class="btn primary" data-cloud-reessayer hidden>Réessayer l’envoi</button>
-      <div class="row start"><button type="button" class="btn primary" data-envoi-maison>Envoyer le bilan</button></div>
+      <div class="row start"><button type="button" class="btn" data-envoi-maison>Partager le bilan</button></div>
       <p data-envoi-info role="status"></p>`;
     const bouton = c.querySelector("[data-envoi-maison]"), info = c.querySelector("[data-envoi-info]");
+    const automatique=!!window.MaisonCloud?.parentActif?.();bouton.hidden=automatique;bouton.parentElement.hidden=automatique;info.hidden=automatique;
     c.querySelector("[data-cloud-reessayer]").onclick=()=>{if(etatCloud(r.id))transmet(r,c);};
     actualiseCloud(c);
     bouton.onclick = async ()=>{
@@ -101,25 +107,33 @@ const Parents = (() => {
     return c;
   }
   function accueil(view){
-    const aide = el("p",{class:"lead"},"Pour le défi, vous pouvez imprimer le texte : l’enfant lit la feuille et l’adulte note les erreurs sur son téléphone. La lecture à l’écran reste possible.");
-    view.querySelector(".lead").after(aide);
-    const h = el("section", {id:"maison-historique",class:"maison-historique",tabindex:"-1","aria-labelledby":"maison-historique-titre"});
-    h.innerHTML = `<h2 id="maison-historique-titre">Mes bilans à la maison</h2><p class="muted">Ces entraînements sont conservés sur cet appareil. Avec le lien personnel de l’enseignante, le bilan est transmis directement dans Fluence à la fin du défi.</p>`;
-    const historique=donnees.historique.filter(r=>(r.contexte||"")===contexte);
-    if (!historique.length) h.appendChild(el("p",{},"Aucun bilan pour l’instant. Choisissez un texte, puis « Le défi »."));
-    historique.slice().reverse().forEach(r=>h.appendChild(carte(r)));
-    view.appendChild(h); afficheStockage();
+    view.innerHTML='<h1>Choisissez un texte</h1><nav class="maison-categories" aria-label="Catégories de textes"></nav><div id="maison-attente" class="card maison-attente" hidden><span role="status"></span><button type="button" class="btn" id="maison-reessayer">Réessayer l’envoi</button></div><section class="maison-categorie" id="maison-textes"><div class="maison-liste-textes"></div></section>';
+    const categories=view.querySelector(".maison-categories"), liste=view.querySelector(".maison-liste-textes");
+    [["entrainement","Textes d’entraînement"],["periode","Textes de la période"]].forEach(([id,titre])=>{
+      const bouton=el("button",{class:"btn maison-choix-categorie",id:"maison-categorie-"+id,type:"button","data-categorie":id,"aria-pressed":String(categorie===id),"aria-controls":"maison-textes"});bouton.textContent=titre;
+      bouton.onclick=()=>{categorie=id;accueil(view);view.querySelector("#maison-categorie-"+id).focus();};categories.appendChild(bouton);
+    });
+    view.querySelector("#maison-textes").setAttribute("aria-labelledby","maison-categorie-"+categorie);
+    Banc.EPS.filter(E=>!!Banc.estTamallette(E)===(categorie==="periode")).forEach(E=>{
+      const bouton=el("button",{class:"btn maison-choix-texte",type:"button","data-ep":E.id});bouton.textContent=E.titre;
+      bouton.onclick=()=>Ecran.go({name:"episode",id:E.id,step:4});liste.appendChild(bouton);
+    });
+    const reessayer=view.querySelector("#maison-reessayer");reessayer.onclick=async()=>{reessayer.disabled=true;try{for(const r of enAttente())await transmet(r,null);}finally{reessayer.disabled=false;actualiseAttente();}};
+    actualiseAttente();afficheStockage();
   }
   function defi(P,E){
     const duree = Banc.DUREE(), mots = motsDefi(E), fautes = new Set(), contexteDefi=contexte;
     let etat = "pret", depart = 0, ecoule = 0, timer = null, prenom = "";
-    P.innerHTML = `<p class="lead">L’enfant lit à voix haute sur la feuille imprimée ou à l’écran. L’adulte suit le texte sur son téléphone et touche les mots mal lus, puis le dernier mot lu au signal. Un deuxième toucher retire une erreur.</p>
+    P.innerHTML = `<p class="lead">L’enfant lit. Touchez les mots mal lus.</p>
       <div class="maison-identite"><label for="maison-prenom">Prénom de l’enfant</label><input id="maison-prenom" autocomplete="off" autocapitalize="words" maxlength="80" value="${esc(profil().prenom)}"><p id="maison-prenom-erreur" class="maison-erreur" role="status" hidden></p></div>
       <div class="maison-pilotage"><div class="chrono"><div><strong class="big-num" id="maison-chrono">${duree}</strong> secondes</div>
       <div class="row"><button class="btn primary" id="maison-depart" type="button">Démarrer</button><button class="btn" id="maison-fini" type="button" hidden>Lecture terminée</button></div></div>
-      <p id="maison-consigne" role="status">Préparez-vous, puis démarrez le chronomètre.</p></div>
+      <p id="maison-consigne" role="status">Démarrez quand l’enfant est prêt.</p></div>
       <div id="maison-resultat" tabindex="-1" hidden></div><div class="maison-texte"><div class="text" id="maison-texte" lang="fr"></div></div>`;
     const champ = P.querySelector("#maison-prenom"), erreur = P.querySelector("#maison-prenom-erreur"), bouton = P.querySelector("#maison-depart"), fini = P.querySelector("#maison-fini"), chrono = P.querySelector("#maison-chrono"), consigne = P.querySelector("#maison-consigne"), texte = P.querySelector("#maison-texte"), resultat = P.querySelector("#maison-resultat"), spans = [];
+    // Un seul résultat replié par texte, avec sa transmission, sans liste sur l'accueil.
+    const precedent=donnees.historique.filter(r=>(r.contexte||"")===contexte && r.ep===E.id).slice().reverse()[0];
+    if(precedent){const detail=el("details",{id:"maison-bilan-precedent",class:"maison-bilan-precedent"});detail.appendChild(el("summary",{},"Dernier résultat"));detail.appendChild(carte(precedent));resultat.after(detail);}
     mots.forEach((mot,i)=>{
       if (mot.brk) texte.appendChild(el("br"));
       const span = el("span",{class:"w","data-index":String(i)}); span.textContent = mot.t;
@@ -140,7 +154,7 @@ const Parents = (() => {
       if (etat !== "lecture") return;
       clearInterval(timer); timer=null; ecoule=Math.max(1,Math.min(duree,s)); etat="dernier";
       chrono.textContent=String(Math.max(0,Math.ceil(duree-ecoule))); fini.hidden=true; bouton.disabled=true;
-      consigne.textContent="C’est terminé ! Touchez le dernier mot lu par l’enfant."; bip();
+      consigne.textContent="Touchez le dernier mot lu."; bip();
     }
     function touche(i){
       actualise();
@@ -157,9 +171,10 @@ const Parents = (() => {
       const r = {...mesures,formatVersion:1,origine:"maison",contexte:contexteDefi,prenom, titre:E.titre};
       donnees.historique.push(r); sauve();
       spans.forEach((s,i)=>{s.classList.toggle("after",i>dernier);s.classList.toggle("last",i===dernier);s.classList.toggle("err",r.fautes.includes(i));s.removeAttribute("aria-pressed");s.removeAttribute("role");s.removeAttribute("tabindex");});
+      P.querySelector("#maison-bilan-precedent")?.remove();
       resultat.hidden=false; resultat.replaceChildren(carte(r));
       if(tokenLien()===tokenSession && window.MaisonCloud?.parentActif?.())transmet(r,resultat.querySelector(".maison-bilan"));
-      consigne.textContent="Entraînement terminé. Vous pouvez envoyer le bilan ou recommencer.";
+      consigne.textContent="Défi terminé.";
       bouton.disabled=false; bouton.textContent="Recommencer";
       resultat.scrollIntoView({block:"start"}); resultat.focus({preventScroll:true});
     }
@@ -169,7 +184,7 @@ const Parents = (() => {
       try {prenom=validePrenom(champ.value);} catch(e){erreur.hidden=false;erreur.textContent=e.message;champ.focus();return;}
       erreur.hidden=true; profil().prenom=prenom; sauve(); champ.value=prenom; champ.disabled=true;
       etat="lecture"; depart=performance.now(); bouton.disabled=true; fini.hidden=false;
-      consigne.textContent="L’enfant lit. Touchez les mots mal lus. S’il finit le texte, choisissez « Lecture terminée ».";
+      consigne.textContent="Touchez les mots mal lus. Un deuxième toucher annule.";
       bip(); Plateforme.eveille(true); timer=setInterval(actualise,100); actualise();
     };
     fini.onclick = ()=>termineTemps((performance.now()-depart)/1000);
@@ -207,6 +222,7 @@ const Parents = (() => {
     }
     const prenomDuLien = window.EnvoiMaison?.prenomLien?.();
     if (prenomDuLien){ try { profil().prenom=validePrenom(prenomDuLien); } catch(e){} }
+    await window.MaisonCloud?.init?.(); // Relire la file avant de montrer les éventuels envois en attente.
     Ecran.demarreMaison({accueil,defi,imprime,vitesse:()=>profil().vitesse,fixeVitesse:v=>{if([0.6,0.8,1].includes(v)){profil().vitesse=v;sauve();}}});
     if(stopCloud)stopCloud();stopCloud=window.MaisonCloud?.surChange?.(actualiseCartesCloud)||null;
     if(!ecoutesInstallees){ecoutesInstallees=true;

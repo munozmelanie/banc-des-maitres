@@ -140,7 +140,7 @@ const Telephone = (() => {
     if (D.etat==="choix"){
       h += `<div class="card"><label class="label" for="t-ep">Texte</label><select class="sel" id="t-ep" style="margin-top:6px">${[false,true].map(t=>{ const textes = EPS.filter(x=>!!estTamallette(x)===t); return textes.length ? `<optgroup label="${t?"Tamallette · période 2":"Le feuilleton"}">${textes.map(x=>`<option value="${x.id}"${x.id===X.id?" selected":""}>${esc(libelleEpisode(x))} — ${esc(x.titre)}</option>`).join("")}</optgroup>` : ""; }).join("")}</select>
         <div class="label" style="margin-top:14px">Qui lit ?</div><div class="who" id="t-who" style="margin-top:8px">${Donnees.eleves().map(s=>`<button type="button" data-eleve="${esc(s.id)}" aria-pressed="${s.id===D.eleve?"true":"false"}">${esc(s.nom)}</button>`).join("")}</div>
-        <p class="muted" id="t-essai" style="margin:8px 0 0">${D.eleve ? `Essai n° ${Donnees.essaisDe(D.eleve, X.id).length+1} sur ce texte` : ""}</p>
+        <p class="muted" id="t-essai" style="margin:8px 0 0">${D.eleve ? `Essai n° ${Donnees.essaisDe(D.eleve, X.id).length+1} sur ce texte`+(Donnees.objectif(D.eleve)===null ? "" : ` · Objectif : ${Donnees.objectif(D.eleve)} MCLM`) : ""}</p>
         ${ecranOccupe ? `<p class="hint">Un défi est en cours sur l'écran de la classe.</p>` : ""}
         <div class="tele"><button class="btn primary" id="t-go"${D.eleve && !ecranOccupe ? "" : " disabled"}>Départ</button></div>
         <p class="muted" style="margin:6px 0 0">${Lien.relie() ? "Le texte s'affiche sur l'écran de la classe ; touche ici les mots mal lus." : "Sans écran relié : l'élève lit sur le texte imprimé ou au tableau."} ${DUR} secondes.</p></div>`;
@@ -204,7 +204,7 @@ const Telephone = (() => {
 
   async function demarre(){
     rend(); majLien();
-    Donnees.surChange(q=>{ if (onglet==="progres" && q==="resultats") rend(); else if (onglet==="eleves" && q==="classe" && !(document.activeElement && document.activeElement.closest("#f"))) rend(); else if (onglet==="defi" && q==="classe" && D.etat==="choix") rend(); });
+    Donnees.surChange(q=>{ if (onglet==="progres" && (q==="resultats" || q==="classe")) rend(); else if (onglet==="eleves"){ if(q==="classe" && !document.activeElement?.closest("#f")) rend(); Banc.actualiseObjectifs(main); } else if (onglet==="defi" && (q==="classe" || q==="resultats") && (D.etat==="choix" || D.etat==="fini")) rend(); });
     const room = await Lien.init();
     /* l'adresse garde le lien : « Sur l'écran d'accueil » (iPhone) emporte ainsi la liaison dans l'icône */
     if (L.code() && !location.hash.includes("lien="+L.code())) history.replaceState(null, "", location.pathname+location.search+"#lien="+L.code()+"&tel");

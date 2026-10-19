@@ -6,14 +6,15 @@
   "scripts": {
     "build": "python3 outils/build.py",
     "hors-ligne": "python3 outils/build.py --hors-ligne",
-    "test": "python3 outils/build.py && python3 -B tests/voix.py && node tests/concurrence-resultats.js && node tests/import-classe.js && node tests/app.js && node tests/vitesse.js --chromium && node tests/parents.js && node tests/envoi-maison.js && node tests/maison-cloud.js && node tests/impression.js && node tests/parents-cloud-ui.js",
+    "test": "python3 outils/build.py && python3 -B tests/voix.py && node tests/concurrence-resultats.js && node tests/import-classe.js && node tests/objectifs.js && node tests/objectifs-ui.js && node tests/app.js && node tests/vitesse.js --chromium && node tests/parents.js && node tests/envoi-maison.js && node tests/maison-cloud.js && node tests/impression.js && node tests/parents-cloud-ui.js",
     "voix": "python3 outils/voix.py",
     "images": "python3 outils/images.py",
     "sync": "python3 outils/build.py && npx cap sync",
     "test:classe": "python3 outils/build.py && node tests/import-classe.js",
     "test:vitesse": "python3 outils/build.py && node tests/vitesse.js",
     "test:parents": "python3 outils/build.py && node tests/parents.js && node tests/envoi-maison.js && node tests/maison-cloud.js && node tests/impression.js && node tests/parents-cloud-ui.js",
-    "test:backend": "npm --prefix supabase/tests test"
+    "test:backend": "npm --prefix supabase/tests test",
+    "test:objectifs": "python3 outils/build.py && node tests/objectifs.js && node tests/objectifs-ui.js"
   },
   "dependencies": {
     "@capacitor-community/keep-awake": "^8.0.1",

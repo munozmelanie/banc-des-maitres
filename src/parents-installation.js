@@ -49,7 +49,7 @@ const ParentsInstallation = (() => {
     d.querySelector("img").src=document.querySelector("#home-link img")?.src||"icones/icone-192.png";
     const etapes=d.querySelector("#maison-installation-etapes"),titre=d.querySelector("#maison-installation-mode"),liste=etapes.querySelector("ol"),aide=d.querySelector("#maison-installation-aide");
     const apple=ios();
-    titre.textContent=apple?"Sur iPhone ou iPad":"Sur Android";
+    titre.textContent=apple?"Tutoriel animé sur iPhone ou iPad":"Tutoriel animé sur Android";
     const instructions=apple?[
       "Dans Safari, touchez le menu de la page, puis Partager (le carré avec une flèche vers le haut).",
       "Faites défiler le menu, puis touchez « Sur l’écran d’accueil ».",

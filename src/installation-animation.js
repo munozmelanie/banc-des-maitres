@@ -25,11 +25,11 @@ const InstallationAnimation = (() => {
     let etape=0,timer=null,vivant=true,imageCourante=null,joue=!reduction?.matches&&!document.hidden;
     const box=document.createElement("div");box.className="installation-animation";box.dataset.installationAnimation=systeme;box.dataset.frameCount=captures.length;
     box.innerHTML=`<figure class="animation-apercu" data-animation-preview>
-      <figcaption class="animation-demo-titre">Démonstration · ${systeme==="ios"?"Safari sur iPhone":"Chrome sur Android"}</figcaption>
+      <figcaption class="animation-demo-titre"><strong>Tutoriel animé</strong><span>${systeme==="ios"?"Safari sur iPhone":"Chrome sur Android"}</span></figcaption>
+      <p class="animation-reproduire">Regardez, puis reproduisez les gestes sur votre téléphone.</p>
       <div class="animation-capture" aria-hidden="true"></div>
       <p class="animation-erreur" role="status" hidden>Cette capture ne s’est pas chargée. Vous pouvez consulter les étapes écrites ci-dessous.</p>
       <div class="animation-legende"><span class="animation-numero"></span><p data-animation-caption></p></div>
-      <p class="animation-reproduire">Reproduisez ces gestes dans votre navigateur.</p>
     </figure>
     <div class="animation-commandes"><button class="btn" type="button" data-animation-prev aria-label="Étape précédente">←</button><button class="btn" type="button" data-animation-play></button><button class="btn" type="button" data-animation-next aria-label="Étape suivante">→</button></div>
     <div class="animation-etapes" aria-label="Choisir une étape"></div>`;

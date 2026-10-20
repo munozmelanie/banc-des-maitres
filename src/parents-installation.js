@@ -1,7 +1,7 @@
 /* Guide local pour ajouter l’accès personnel à l’écran d’accueil. */
 "use strict";
 const ParentsInstallation = (() => {
-  let contexte="", lienSession="", dialogue=null, retourFocus=null, vu=false;
+  let contexte="", lienSession="", dialogue=null, retourFocus=null, vu=false, arreteAnimation=null;
   const cle=()=>"fluence-installation-parents-v1:"+contexte;
   const lienPersonnel=()=>{
     const p=new URLSearchParams(location.hash.slice(1)),t=p.get("famille");
@@ -18,6 +18,7 @@ const ParentsInstallation = (() => {
   }
   function ferme({memoriser=true}={}){
     if(memoriser&&autorise())memorise();
+    arreteAnimation?.();arreteAnimation=null;
     if(dialogue){const ancien=dialogue;dialogue=null;ancien.close();ancien.remove();}
     if(retourFocus?.isConnected)retourFocus.focus({preventScroll:true});
     retourFocus=null;
@@ -35,7 +36,9 @@ const ParentsInstallation = (() => {
       <p class="maison-installation-prive">Ce lien et cette icône sont personnels. Gardez-les pour votre famille.</p>
       <button class="btn primary" type="button" id="maison-installer">Ajouter à l’écran d’accueil</button>
       <section id="maison-installation-etapes" aria-labelledby="maison-installation-mode" hidden>
-        <h2 id="maison-installation-mode" tabindex="-1"></h2><ol></ol>
+        <h2 id="maison-installation-mode" tabindex="-1"></h2>
+        <div id="maison-installation-animation"></div>
+        <details class="maison-installation-ecrit"><summary>Voir les étapes écrites</summary><ol></ol></details>
         <p class="muted" id="maison-installation-aide"></p>
         <button class="btn" type="button" id="maison-installation-copier">Copier mon lien personnel</button>
         <p id="maison-installation-message" role="status"></p>
@@ -48,17 +51,21 @@ const ParentsInstallation = (() => {
     const apple=ios();
     titre.textContent=apple?"Sur iPhone ou iPad":"Sur Android";
     const instructions=apple?[
-      "Dans Safari, ouvrez le menu Partager (le carré avec une flèche vers le haut).",
-      "Choisissez « Sur l’écran d’accueil ».",
-      "Activez « Ouvrir comme app web » si cette option apparaît, puis touchez « Ajouter »."
+      "Dans Safari, touchez le menu de la page, puis Partager (le carré avec une flèche vers le haut).",
+      "Faites défiler le menu, puis touchez « Sur l’écran d’accueil ».",
+      "Vérifiez que « Ouvrir comme app web » est activé si cette option apparaît, puis touchez « Ajouter »."
     ]:[
       "Ouvrez le menu de Chrome (les trois points).",
-      "Choisissez « Installer et créer un raccourci », puis « Créer un raccourci » si ce choix apparaît.",
-      "Gardez l’adresse personnelle de cette page, puis confirmez « Ajouter »."
+      "Choisissez « Ajouter à l’écran d’accueil ». Si Chrome propose « Installer et créer un raccourci », choisissez ensuite « Créer un raccourci ».",
+      "Touchez « Ajouter », puis confirmez l’ajout à l’écran d’accueil (parfois « Add to home screen »). Gardez l’adresse personnelle de cette page."
     ];
     instructions.forEach(texte=>{const li=document.createElement("li");li.textContent=texte;liste.appendChild(li);});
-    aide.textContent=apple?"Depuis une messagerie, ouvrez ce même lien personnel dans Safari. L’ajout se termine dans le menu du téléphone.":"Selon la version, le menu s’appelle « Ajouter à l’écran d’accueil ». Depuis une messagerie, ouvrez ce même lien personnel dans Chrome. Le raccourci peut ouvrir Chrome.";
-    const montreEtapes=()=>{etapes.hidden=false;d.classList.add("maison-installation-guide");d.setAttribute("aria-labelledby","maison-installation-mode");d.querySelector("#maison-installer").hidden=true;titre.focus({preventScroll:true});d.scrollTop=0;};
+    aide.textContent=apple?"Selon Safari, Partager peut être directement visible. Depuis une messagerie, ouvrez ce même lien dans Safari.":"Les libellés varient selon Chrome. Depuis une messagerie, ouvrez ce même lien dans Chrome. Le raccourci peut ouvrir Chrome.";
+    const montreEtapes=()=>{
+      etapes.hidden=false;d.classList.add("maison-installation-guide");d.setAttribute("aria-labelledby","maison-installation-mode");d.querySelector("#maison-installer").hidden=true;
+      if(!arreteAnimation)arreteAnimation=window.InstallationAnimation?.monte(d.querySelector("#maison-installation-animation"),{systeme:apple?"ios":"android"})||null;
+      titre.focus({preventScroll:true});d.scrollTop=0;
+    };
     d.querySelector("#maison-installer").onclick=montreEtapes;
     d.querySelector("#maison-installation-copier").onclick=async()=>{
       if(!autorise())return;

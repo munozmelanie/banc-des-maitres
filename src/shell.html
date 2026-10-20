@@ -518,6 +518,33 @@ html[data-role="parents"] .step{padding:0 10px}
 .maison-installation #maison-installation-message{padding:10px 12px;border-radius:10px;background:var(--echo);overflow-wrap:anywhere}
 .maison-installation-note{font-size:15px;text-align:center;color:var(--ink-soft);margin:0}
 .maison-guide-installation{display:block;max-width:100%;min-height:44px;padding:8px 0;border:0;background:none;text-decoration:underline;text-underline-offset:3px;text-align:left;font:inherit;font-size:15px;color:var(--ink-soft);cursor:pointer}
+.maison-installation-ecrit{margin-top:16px;border-top:1px solid var(--line);padding-top:6px}
+.maison-installation-ecrit summary{padding:10px 0;min-height:44px;cursor:pointer;font-weight:700}
+.installation-animation{margin:16px 0 0;background:var(--paper);overflow:hidden}
+.animation-apercu{margin:0}
+.animation-demo-titre{text-align:center;color:var(--ink-soft);font-size:14px;font-weight:700;margin:0 0 12px}
+.animation-capture{position:relative;width:100%;margin:0;background:var(--paper)}
+.animation-capture>img{display:block;width:100%;height:auto;max-width:none;margin:0}
+.animation-repere{pointer-events:none;position:absolute;width:0;height:0;z-index:1}
+.animation-anneau{pointer-events:none;position:absolute;width:32px;height:32px;left:-16px;top:-16px;border:3px solid #e4a01b;border-radius:50%;box-shadow:0 0 0 1px #fff;background:rgb(255 224 145 / .2);animation:installation-touche 1.75s ease-out infinite}
+.animation-capture .animation-doigt{pointer-events:none;position:absolute;left:-10px;top:-1px;width:29px;height:36px;filter:drop-shadow(0 1px 1px #526174);animation:installation-doigt 1.75s ease-in-out infinite}
+.animation-repere-gauche .animation-doigt{left:-19px;scale:-1 1}
+.animation-repere-verification .animation-anneau{width:54px;left:-27px;border-radius:18px;background:transparent;animation:none}
+.installation-animation[data-loaded=false] .animation-repere{visibility:hidden}
+.animation-erreur{padding:10px 12px;background:var(--echo);border-radius:10px;font-size:15px}
+.animation-legende{display:flex;align-items:flex-start;gap:10px;margin:14px 0 0;min-height:66px;font-size:16px;font-weight:700;line-height:1.35}
+.animation-numero{display:grid;place-items:center;flex:none;min-width:40px;height:32px;border-radius:9px;background:var(--green-soft);color:var(--green);font-size:14px}
+.animation-legende p{margin:2px 0 0}
+.animation-reproduire{font-size:13px;color:var(--ink-soft);text-align:center;margin:4px 0 12px}
+.animation-commandes{display:grid;grid-template-columns:44px 1fr 44px;gap:7px}
+.maison-installation .animation-commandes .btn{width:100%;min-width:0;min-height:44px;padding:8px 5px;font-size:14px}
+.animation-etapes{display:flex;justify-content:center;gap:5px;margin-top:7px}
+.animation-etape{display:grid;place-items:center;width:44px;min-height:44px;border:0;border-radius:9px;background:none;color:var(--ink-soft);font:inherit;font-size:14px;cursor:pointer}
+.animation-etape[aria-current=step]{background:var(--green-soft);color:var(--green);font-weight:700}
+.installation-animation[data-playing=false] .animation-doigt,.installation-animation[data-playing=false] .animation-anneau{animation-play-state:paused}
+@keyframes installation-touche{0%,20%{transform:scale(.8);opacity:.35}55%{transform:scale(1.2);opacity:1}100%{transform:scale(1.4);opacity:.25}}
+@keyframes installation-doigt{0%,100%{transform:translate(2px,6px)}45%,65%{transform:translate(0,0)}}
+@media(prefers-reduced-motion:reduce){.animation-doigt,.animation-anneau{animation:none!important}}
 @media print{.maison-installation,.maison-guide-installation{display:none!important}}
 </style>
 </head>

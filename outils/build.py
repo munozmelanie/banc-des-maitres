@@ -62,7 +62,7 @@ def donnees():
 
 
 POLICES = [("Andika", "400", "normal", "andika-400-normal"), ("Andika", "700", "normal", "andika-700-normal"), ("Grandstander", "100 900", "normal", "grandstander")]
-SCRIPTS = ["maison-cloud-config.js", "plateforme.js", "commun.js", "ecran.js", "telephone.js", "parents-progres.js", "parents-installation.js", "parents.js", "envoi-maison.js", "maison-cloud.js"]
+SCRIPTS = ["maison-cloud-config.js", "plateforme.js", "commun.js", "ecran.js", "telephone.js", "parents-progres.js", "installation-animation.js", "parents-installation.js", "parents.js", "envoi-maison.js", "maison-cloud.js"]
 VENDOR = ["nostr-lite.js", "mqtt.min.js", "qrcode.js"]
 
 
@@ -97,12 +97,18 @@ def page(eps, web, en_ligne, media=None):
             for p in e["pages"]:
                 if p["img"]: p["img"] = media(p["img"])
     js = lambda s: s.replace("</script", "<\\/script")
+    def script(nom):
+        contenu = lire(S / nom)
+        if media and nom == "installation-animation.js":
+            contenu = re.sub(r'([\"\'])(img/installation-(?:ios|android)-[0-9]+\.png)\1',
+                             lambda m: json.dumps(media(m.group(2))), contenu)
+        return js(contenu)
     donnees = "window.__BANC=" + json.dumps(data, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/") + ";\nwindow.BANC_WEB=" + json.dumps(web) + ";"
     if en_ligne:
         scripts = "".join(f'<script src="vendor/{v}"></script>\n' for v in VENDOR)
     else:
         scripts = "".join(f"<script>\n{js(lire(S / 'vendor' / v))}\n</script>\n" for v in VENDOR)
-    scripts += f"<script>\n{donnees}\n</script>\n" + "".join(f"<script>\n{js(lire(S / f))}\n</script>\n" for f in SCRIPTS) + "<script>Banc.demarre();</script>\n"
+    scripts += f"<script>\n{donnees}\n</script>\n" + "".join(f"<script>\n{script(f)}\n</script>\n" for f in SCRIPTS) + "<script>Banc.demarre();</script>\n"
     logo = media("icones/icone-192.png") if media else "icones/icone-192.png?v=2"
     return lire(S / "shell.html").replace("__TETE__", tete).replace("__LOGO__", logo).replace("__POLICES__", ff).replace("__SCRIPTS__", scripts)
 

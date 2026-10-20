@@ -2483,7 +2483,8 @@ const ParentsInstallation = (() => {
       "Touchez « Ajouter », puis confirmez l’ajout à l’écran d’accueil (parfois « Add to home screen »). Gardez l’adresse personnelle de cette page."
     ];
     instructions.forEach(texte=>{const li=document.createElement("li");li.textContent=texte;liste.appendChild(li);});
-    aide.textContent=apple?"Selon Safari, Partager peut être directement visible. Depuis une messagerie, ouvrez ce même lien dans Safari.":"Les libellés varient selon Chrome. Depuis une messagerie, ouvrez ce même lien dans Chrome. Le raccourci peut ouvrir Chrome.";
+    aide.textContent=apple?"":"Les libellés varient selon Chrome. Depuis une messagerie, ouvrez ce même lien dans Chrome. Le raccourci peut ouvrir Chrome.";
+    aide.hidden=apple;
     const montreEtapes=()=>{
       etapes.hidden=false;d.classList.add("maison-installation-guide");d.setAttribute("aria-labelledby","maison-installation-mode");d.querySelector("#maison-installer").hidden=true;
       if(!arreteAnimation)arreteAnimation=window.InstallationAnimation?.monte(d.querySelector("#maison-installation-animation"),{systeme:apple?"ios":"android"})||null;

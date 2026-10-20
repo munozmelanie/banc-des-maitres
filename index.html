@@ -609,6 +609,120 @@ window.BANC_MAISON = {
 
 </script>
 <script>
+/* Accès conservés sur Android : aucun secret dans le manifest envoyé à WebAPK.
+   Ce module précède Plateforme, qui fixe le rôle dès son chargement. */
+"use strict";
+const ParentsAcces = (() => {
+  const CLE="fluence-parents-acces-v1", MAX=20;
+  const QR="Rouvrez le QR code ou le lien personnel transmis par l’enseignante.";
+  const natif=()=>{try{return !!window.Capacitor?.isNativePlatform?.();}catch(e){return true;}};
+  const android=()=>/Android/i.test(navigator.userAgent)&&["https:","http:"].includes(location.protocol)&&!natif();
+  const parametres=()=>new URLSearchParams(location.hash.slice(1));
+  const parent=p=>p.getAll("parents").length===1&&p.get("parents")==="";
+  const prenom=v=>{
+    if(typeof v!=="string")throw Error();
+    const s=v.normalize("NFC").trim().replace(/\s+/g," ");
+    if(s.length>80||/[<>\x00-\x1f\x7f]/.test(s))throw Error();
+    return s;
+  };
+  function lien(p=parametres()){
+    if(!parent(p)||p.getAll("famille").length!==1||!/^[a-f0-9]{64}$/.test(p.get("famille")||"")||p.getAll("prenom").length>1||["tel","ecran","bilan","access_token","refresh_token"].some(k=>p.has(k)))return null;
+    try{return {token:p.get("famille"),prenom:prenom(p.get("prenom")||"")};}catch(e){return null;}
+  }
+  function lit(){
+    const texte=localStorage.getItem(CLE);if(texte===null)return [];
+    if(texte.length>16000)throw Error();
+    const d=JSON.parse(texte);
+    if(!d||d.version!==1||!Array.isArray(d.acces)||d.acces.length>MAX)throw Error();
+    const vus=new Set();
+    return d.acces.map(a=>{
+      if(!a||typeof a!=="object"||Array.isArray(a)||Object.keys(a).some(k=>!["token","prenom"].includes(k))||typeof a.token!=="string"||!/^[a-f0-9]{64}$/.test(a.token)||vus.has(a.token))throw Error();
+      vus.add(a.token);return {token:a.token,prenom:prenom(a.prenom)};
+    });
+  }
+  function fragment(a){
+    const p=new URLSearchParams();p.set("parents","");p.set("famille",a.token);
+    if(a.prenom)p.set("prenom",a.prenom);
+    return "#"+p.toString();
+  }
+  function restaure(a){history.replaceState(null,"",location.pathname+location.search+fragment(a));}
+  function memorise(){
+    if(!android())return {ok:false,message:""};
+    const a=lien();
+    if(!a)return {ok:false,message:"Ce lien personnel est incomplet. "+QR};
+    try{
+      const acces=lit(),i=acces.findIndex(x=>x.token===a.token);
+      if(i<0){if(acces.length>=MAX)throw Error();acces.push(a);}else acces[i]=a;
+      const texte=JSON.stringify({version:1,acces});
+      localStorage.setItem(CLE,texte);
+      if(localStorage.getItem(CLE)!==texte)throw Error();
+      return {ok:true,message:"Cet accès est conservé sur ce téléphone."};
+    }catch(e){return {ok:false,message:"Cet accès ne peut pas être conservé sur ce téléphone. "+QR+" Cela ne modifie pas les lectures déjà enregistrées."};}
+  }
+
+  let choix=null;
+  if(android()){
+    const p=parametres();
+    // Le manifest public est commun à toutes les familles, même si le lien reçu
+    // contient un prénom ou un secret. Le manifest iPhone/enseignante reste intact.
+    if(/[#&]parents\b/.test(location.hash)){
+      const manifest=document.querySelector('link[rel="manifest"]');
+      if(manifest)manifest.setAttribute("href","parents.webmanifest");
+    }
+    const personnel=lien(p);
+    if(personnel)memorise();
+    if(/[#&]parents\b/.test(location.hash)&&p.has("app")&&!personnel){
+      const lancement=parent(p)&&p.getAll("app").length===1&&p.get("app")==="1"&&[...p.keys()].length===2;
+      if(!lancement)choix={acces:[],erreur:"L’adresse d’ouverture est incomplète. "+QR};
+      else{
+        try{
+          const acces=lit();
+          if(acces.length===1)restaure(acces[0]);
+          else choix={acces,erreur:acces.length?"":QR};
+        }catch(e){choix={acces:[],erreur:"Les accès de ce téléphone ne peuvent pas être relus. "+QR};}
+      }
+    }
+  }
+  function afficheChoix(view){
+    if(!choix||!android()||!/[#&]parents\b/.test(location.hash)||!view)return false;
+    document.getElementById("app-tel").hidden=true;
+    const app=document.getElementById("app-ecran");app.hidden=false;
+    app.querySelector(".bar").hidden=true;
+    document.title="Fluence à la maison";
+    const section=document.createElement("section");section.className="card";section.id="maison-choix-acces";
+    const titre=document.createElement("h1");titre.tabIndex=-1;
+    titre.textContent=choix.acces.length?"Quel enfant ouvre Fluence ?":"Ouvrir l’accès de votre enfant";
+    section.appendChild(titre);
+    const aide=document.createElement("p");aide.id="maison-choix-info";aide.setAttribute("role","status");
+    aide.textContent=choix.erreur||"Choisissez l’enfant pour retrouver ses textes et ses progrès.";
+    section.appendChild(aide);
+    choix.acces.forEach((a,i)=>{
+      const bouton=document.createElement("button");bouton.type="button";bouton.className="btn primary";
+      bouton.dataset.accesChoix=String(i);bouton.textContent=a.prenom||"Accès "+(i+1);
+      bouton.style.cssText="display:flex;width:100%;margin-top:12px";
+      bouton.onclick=()=>{
+        // Un autre onglet peut avoir modifié le stockage depuis l'ouverture.
+        try{
+          const courant=lit().find(x=>x.token===a.token);
+          if(!courant)throw Error();
+          restaure(courant);location.reload();
+        }catch(e){aide.textContent="Cet accès ne peut pas être rouvert. "+QR;}
+      };
+      section.appendChild(bouton);
+    });
+    const note=document.createElement("p");note.className="muted";
+    note.textContent="Les lectures déjà enregistrées sur ce téléphone sont conservées.";
+    section.appendChild(note);view.replaceChildren(section);titre.focus({preventScroll:true});
+    // Un nouveau QR/lien peut arriver dans cette même fenêtre, avant Parents.
+    window.addEventListener("hashchange",()=>location.reload(),{once:true});
+    return true;
+  }
+  return {memorise,afficheChoix};
+})();
+window.ParentsAcces=ParentsAcces;
+
+</script>
+<script>
 /* ---------- Le banc des maîtres : sauvegarde sur l'appareil et liaison écran de la classe ↔ téléphone ----------
    Repris de la version autonome du Bateau-école (src/autonome/plateforme.js), même interface que window.claude.use() :
    - db : documents enregistrés sur l'appareil (Preferences dans l'appli du téléphone, localStorage sinon) ;
@@ -1587,7 +1701,7 @@ const Banc = (() => {
 
   async function demarre(){
     window.addEventListener("afterprint",()=>{delete document.documentElement.dataset.impression;});
-    if (ROLE==="parents"){ await MaisonCloud.init(); await Parents.demarre(); return; }
+    if (ROLE==="parents"){ await Parents.demarre(); return; }
     await Donnees.init();
     if (ROLE==="tel"){ document.getElementById("app-tel").hidden = false; await Telephone.demarre(); }
     else { document.getElementById("app-ecran").hidden = false; await Ecran.demarre(); }
@@ -2361,16 +2475,16 @@ const InstallationAnimation = (() => {
       {src:"img/installation-ios-5.png",legende:"Touchez Ajouter.",x:85,y:10.9}
     ],
     android:[
-      {src:"img/installation-android-1.png",legende:"Ouvrez le menu de Chrome (⋮).",x:93.89,y:9.15},
-      {src:"img/installation-android-2.png",legende:"Touchez Ajouter à l’écran d’accueil.",x:68.52,y:82.91},
-      {src:"img/installation-android-3.png",legende:"Dans Créer un raccourci, touchez Ajouter.",x:82.04,y:60.60},
-      {src:"img/installation-android-4.png",legende:"Touchez « Add to home screen » (Ajouter à l’écran d’accueil).",x:77.04,y:93.59}
+      {src:"img/installation-android-1.png",legende:"Ouvrez le menu ⋮ de Chrome, en haut à droite.",x:93.7,y:7.85},
+      {src:"img/installation-android-2.png",legende:"Faites défiler le menu, puis touchez « Installer et créer un raccourci ».",x:90,y:71.7},
+      {src:"img/installation-android-3.png",legende:"Choisissez « Installer », le premier choix.",x:85.7,y:79.5},
+      {src:"img/installation-android-4.png",legende:"Confirmez en touchant « Installer ».",x:81.9,y:60.45}
     ]
   };
   function monte(hote,{systeme="ios"}={}){
     systeme=systeme==="android"?"android":"ios";
     const captures=etapes[systeme],reduction=window.matchMedia?.("(prefers-reduced-motion: reduce)");
-    const [largeur,hauteur]=systeme==="ios"?[1320,2868]:[1080,2340];
+    const [largeur,hauteur]=systeme==="ios"?[1320,2868]:[1080,2400];
     let etape=0,timer=null,vivant=true,imageCourante=null,joue=!reduction?.matches&&!document.hidden;
     const box=document.createElement("div");box.className="installation-animation";box.dataset.installationAnimation=systeme;box.dataset.frameCount=captures.length;
     box.innerHTML=`<figure class="animation-apercu" data-animation-preview>
@@ -2463,6 +2577,7 @@ const ParentsInstallation = (() => {
         <div id="maison-installation-animation"></div>
         <details class="maison-installation-ecrit"><summary>Voir les étapes écrites</summary><ol></ol></details>
         <p class="muted" id="maison-installation-aide"></p>
+        <p id="maison-installation-acces" role="status" hidden></p>
         <button class="btn" type="button" id="maison-installation-copier">Copier mon lien personnel</button>
         <p id="maison-installation-message" role="status"></p>
       </section>
@@ -2478,14 +2593,18 @@ const ParentsInstallation = (() => {
       "Faites défiler le menu, puis touchez « Sur l’écran d’accueil ».",
       "Vérifiez que « Ouvrir comme app web » est activé si cette option apparaît, puis touchez « Ajouter »."
     ]:[
-      "Ouvrez le menu de Chrome (les trois points).",
-      "Choisissez « Ajouter à l’écran d’accueil ». Si Chrome propose « Installer et créer un raccourci », choisissez ensuite « Créer un raccourci ».",
-      "Touchez « Ajouter », puis confirmez l’ajout à l’écran d’accueil (parfois « Add to home screen »). Gardez l’adresse personnelle de cette page."
+      "Ouvrez le menu ⋮ de Chrome, en haut à droite.",
+      "Faites défiler jusqu’à « Installer et créer un raccourci », puis choisissez « Installer » (le premier choix).",
+      "Dans « Installer l’application », confirmez « Installer »."
     ];
     instructions.forEach(texte=>{const li=document.createElement("li");li.textContent=texte;liste.appendChild(li);});
-    aide.textContent=apple?"":"Les libellés varient selon Chrome. Depuis une messagerie, ouvrez ce même lien dans Chrome. Le raccourci peut ouvrir Chrome.";
+    aide.textContent=apple?"":"Les libellés varient selon Chrome. Depuis une messagerie, ouvrez ce même lien dans Chrome.";
     aide.hidden=apple;
     const montreEtapes=()=>{
+      if(!apple&&!Plateforme.NATIF){
+        const acces=window.ParentsAcces?.memorise?.(),info=d.querySelector("#maison-installation-acces");
+        info.textContent=acces?.message||"";info.hidden=!info.textContent;
+      }
       etapes.hidden=false;d.classList.add("maison-installation-guide");d.setAttribute("aria-labelledby","maison-installation-mode");d.querySelector("#maison-installer").hidden=true;
       if(!arreteAnimation)arreteAnimation=window.InstallationAnimation?.monte(d.querySelector("#maison-installation-animation"),{systeme:apple?"ios":"android"})||null;
       titre.focus({preventScroll:true});d.scrollTop=0;
@@ -2833,6 +2952,7 @@ const Parents = (() => {
   function imprime(E){Banc.imprimeTexte(E);}
   async function demarre(){
     if (Banc.ROLE !== "parents") return;
+    if(window.ParentsAcces?.afficheChoix($("#view")))return;
     charge();
     tokenSession=tokenLien();contexte="";apercu=false;
     if(tokenSession){

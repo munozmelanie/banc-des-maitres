@@ -40,6 +40,7 @@ const ParentsInstallation = (() => {
         <div id="maison-installation-animation"></div>
         <details class="maison-installation-ecrit"><summary>Voir les étapes écrites</summary><ol></ol></details>
         <p class="muted" id="maison-installation-aide"></p>
+        <p id="maison-installation-acces" role="status" hidden></p>
         <button class="btn" type="button" id="maison-installation-copier">Copier mon lien personnel</button>
         <p id="maison-installation-message" role="status"></p>
       </section>
@@ -55,14 +56,18 @@ const ParentsInstallation = (() => {
       "Faites défiler le menu, puis touchez « Sur l’écran d’accueil ».",
       "Vérifiez que « Ouvrir comme app web » est activé si cette option apparaît, puis touchez « Ajouter »."
     ]:[
-      "Ouvrez le menu de Chrome (les trois points).",
-      "Choisissez « Ajouter à l’écran d’accueil ». Si Chrome propose « Installer et créer un raccourci », choisissez ensuite « Créer un raccourci ».",
-      "Touchez « Ajouter », puis confirmez l’ajout à l’écran d’accueil (parfois « Add to home screen »). Gardez l’adresse personnelle de cette page."
+      "Ouvrez le menu ⋮ de Chrome, en haut à droite.",
+      "Faites défiler jusqu’à « Installer et créer un raccourci », puis choisissez « Installer » (le premier choix).",
+      "Dans « Installer l’application », confirmez « Installer »."
     ];
     instructions.forEach(texte=>{const li=document.createElement("li");li.textContent=texte;liste.appendChild(li);});
-    aide.textContent=apple?"":"Les libellés varient selon Chrome. Depuis une messagerie, ouvrez ce même lien dans Chrome. Le raccourci peut ouvrir Chrome.";
+    aide.textContent=apple?"":"Les libellés varient selon Chrome. Depuis une messagerie, ouvrez ce même lien dans Chrome.";
     aide.hidden=apple;
     const montreEtapes=()=>{
+      if(!apple&&!Plateforme.NATIF){
+        const acces=window.ParentsAcces?.memorise?.(),info=d.querySelector("#maison-installation-acces");
+        info.textContent=acces?.message||"";info.hidden=!info.textContent;
+      }
       etapes.hidden=false;d.classList.add("maison-installation-guide");d.setAttribute("aria-labelledby","maison-installation-mode");d.querySelector("#maison-installer").hidden=true;
       if(!arreteAnimation)arreteAnimation=window.InstallationAnimation?.monte(d.querySelector("#maison-installation-animation"),{systeme:apple?"ios":"android"})||null;
       titre.focus({preventScroll:true});d.scrollTop=0;

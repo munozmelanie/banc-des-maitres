@@ -12,16 +12,16 @@ const InstallationAnimation = (() => {
       {src:"img/installation-ios-5.png",legende:"Touchez Ajouter.",x:85,y:10.9}
     ],
     android:[
-      {src:"img/installation-android-1.png",legende:"Ouvrez le menu de Chrome (⋮).",x:93.89,y:9.15},
-      {src:"img/installation-android-2.png",legende:"Touchez Ajouter à l’écran d’accueil.",x:68.52,y:82.91},
-      {src:"img/installation-android-3.png",legende:"Dans Créer un raccourci, touchez Ajouter.",x:82.04,y:60.60},
-      {src:"img/installation-android-4.png",legende:"Touchez « Add to home screen » (Ajouter à l’écran d’accueil).",x:77.04,y:93.59}
+      {src:"img/installation-android-1.png",legende:"Ouvrez le menu ⋮ de Chrome, en haut à droite.",x:93.7,y:7.85},
+      {src:"img/installation-android-2.png",legende:"Faites défiler le menu, puis touchez « Installer et créer un raccourci ».",x:90,y:71.7},
+      {src:"img/installation-android-3.png",legende:"Choisissez « Installer », le premier choix.",x:85.7,y:79.5},
+      {src:"img/installation-android-4.png",legende:"Confirmez en touchant « Installer ».",x:81.9,y:60.45}
     ]
   };
   function monte(hote,{systeme="ios"}={}){
     systeme=systeme==="android"?"android":"ios";
     const captures=etapes[systeme],reduction=window.matchMedia?.("(prefers-reduced-motion: reduce)");
-    const [largeur,hauteur]=systeme==="ios"?[1320,2868]:[1080,2340];
+    const [largeur,hauteur]=systeme==="ios"?[1320,2868]:[1080,2400];
     let etape=0,timer=null,vivant=true,imageCourante=null,joue=!reduction?.matches&&!document.hidden;
     const box=document.createElement("div");box.className="installation-animation";box.dataset.installationAnimation=systeme;box.dataset.frameCount=captures.length;
     box.innerHTML=`<figure class="animation-apercu" data-animation-preview>

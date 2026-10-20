@@ -304,6 +304,7 @@ const Parents = (() => {
   function imprime(E){Banc.imprimeTexte(E);}
   async function demarre(){
     if (Banc.ROLE !== "parents") return;
+    if(window.ParentsAcces?.afficheChoix($("#view")))return;
     charge();
     tokenSession=tokenLien();contexte="";apercu=false;
     if(tokenSession){

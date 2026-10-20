@@ -62,7 +62,7 @@ def donnees():
 
 
 POLICES = [("Andika", "400", "normal", "andika-400-normal"), ("Andika", "700", "normal", "andika-700-normal"), ("Grandstander", "100 900", "normal", "grandstander")]
-SCRIPTS = ["maison-cloud-config.js", "plateforme.js", "commun.js", "ecran.js", "telephone.js", "parents-progres.js", "installation-animation.js", "parents-installation.js", "parents.js", "envoi-maison.js", "maison-cloud.js"]
+SCRIPTS = ["maison-cloud-config.js", "parents-acces.js", "plateforme.js", "commun.js", "ecran.js", "telephone.js", "parents-progres.js", "installation-animation.js", "parents-installation.js", "parents.js", "envoi-maison.js", "maison-cloud.js"]
 VENDOR = ["nostr-lite.js", "mqtt.min.js", "qrcode.js"]
 
 
@@ -127,6 +127,11 @@ def main():
         "background_color": "#F2F4EF", "theme_color": "#1D7F48",
         "icons": [{"src": "icones/icone-192.png", "sizes": "192x192", "type": "image/png"}, {"src": "icones/icone-512.png", "sizes": "512x512", "type": "image/png"},
                   {"src": "icones/icone-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}]}, ensure_ascii=False, indent=1), encoding="utf-8")
+    # Une seule identité publique pour toutes les familles Android. L'accès
+    # personnel reste dans le stockage du téléphone, jamais dans le WebAPK.
+    parents = json.loads((W / "manifest.webmanifest").read_text(encoding="utf-8"))
+    parents.update(id="./parents-app", start_url="./#parents&app=1", scope="./")
+    (W / "parents.webmanifest").write_text(json.dumps(parents, ensure_ascii=False, indent=1), encoding="utf-8")
     (W / ".nojekyll").write_text("")
     for l in rapport: print(l)
     taille = sum(f.stat().st_size for f in W.rglob("*") if f.is_file())

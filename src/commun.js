@@ -582,7 +582,7 @@ const Banc = (() => {
 
   async function demarre(){
     window.addEventListener("afterprint",()=>{delete document.documentElement.dataset.impression;});
-    if (ROLE==="parents"){ await MaisonCloud.init(); await Parents.demarre(); return; }
+    if (ROLE==="parents"){ await Parents.demarre(); return; }
     await Donnees.init();
     if (ROLE==="tel"){ document.getElementById("app-tel").hidden = false; await Telephone.demarre(); }
     else { document.getElementById("app-ecran").hidden = false; await Ecran.demarre(); }

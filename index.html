@@ -523,6 +523,33 @@ html[data-role="parents"] .step{padding:0 10px}
 .maison-installation #maison-installation-message{padding:10px 12px;border-radius:10px;background:var(--echo);overflow-wrap:anywhere}
 .maison-installation-note{font-size:15px;text-align:center;color:var(--ink-soft);margin:0}
 .maison-guide-installation{display:block;max-width:100%;min-height:44px;padding:8px 0;border:0;background:none;text-decoration:underline;text-underline-offset:3px;text-align:left;font:inherit;font-size:15px;color:var(--ink-soft);cursor:pointer}
+.maison-installation-ecrit{margin-top:16px;border-top:1px solid var(--line);padding-top:6px}
+.maison-installation-ecrit summary{padding:10px 0;min-height:44px;cursor:pointer;font-weight:700}
+.installation-animation{margin:16px 0 0;background:var(--paper);overflow:hidden}
+.animation-apercu{margin:0}
+.animation-demo-titre{text-align:center;color:var(--ink-soft);font-size:14px;font-weight:700;margin:0 0 12px}
+.animation-capture{position:relative;width:100%;margin:0;background:var(--paper)}
+.animation-capture>img{display:block;width:100%;height:auto;max-width:none;margin:0}
+.animation-repere{pointer-events:none;position:absolute;width:0;height:0;z-index:1}
+.animation-anneau{pointer-events:none;position:absolute;width:32px;height:32px;left:-16px;top:-16px;border:3px solid #e4a01b;border-radius:50%;box-shadow:0 0 0 1px #fff;background:rgb(255 224 145 / .2);animation:installation-touche 1.75s ease-out infinite}
+.animation-capture .animation-doigt{pointer-events:none;position:absolute;left:-10px;top:-1px;width:29px;height:36px;filter:drop-shadow(0 1px 1px #526174);animation:installation-doigt 1.75s ease-in-out infinite}
+.animation-repere-gauche .animation-doigt{left:-19px;scale:-1 1}
+.animation-repere-verification .animation-anneau{width:54px;left:-27px;border-radius:18px;background:transparent;animation:none}
+.installation-animation[data-loaded=false] .animation-repere{visibility:hidden}
+.animation-erreur{padding:10px 12px;background:var(--echo);border-radius:10px;font-size:15px}
+.animation-legende{display:flex;align-items:flex-start;gap:10px;margin:14px 0 0;min-height:66px;font-size:16px;font-weight:700;line-height:1.35}
+.animation-numero{display:grid;place-items:center;flex:none;min-width:40px;height:32px;border-radius:9px;background:var(--green-soft);color:var(--green);font-size:14px}
+.animation-legende p{margin:2px 0 0}
+.animation-reproduire{font-size:13px;color:var(--ink-soft);text-align:center;margin:4px 0 12px}
+.animation-commandes{display:grid;grid-template-columns:44px 1fr 44px;gap:7px}
+.maison-installation .animation-commandes .btn{width:100%;min-width:0;min-height:44px;padding:8px 5px;font-size:14px}
+.animation-etapes{display:flex;justify-content:center;gap:5px;margin-top:7px}
+.animation-etape{display:grid;place-items:center;width:44px;min-height:44px;border:0;border-radius:9px;background:none;color:var(--ink-soft);font:inherit;font-size:14px;cursor:pointer}
+.animation-etape[aria-current=step]{background:var(--green-soft);color:var(--green);font-weight:700}
+.installation-animation[data-playing=false] .animation-doigt,.installation-animation[data-playing=false] .animation-anneau{animation-play-state:paused}
+@keyframes installation-touche{0%,20%{transform:scale(.8);opacity:.35}55%{transform:scale(1.2);opacity:1}100%{transform:scale(1.4);opacity:.25}}
+@keyframes installation-doigt{0%,100%{transform:translate(2px,6px)}45%,65%{transform:translate(0,0)}}
+@media(prefers-reduced-motion:reduce){.animation-doigt,.animation-anneau{animation:none!important}}
 @media print{.maison-installation,.maison-guide-installation{display:none!important}}
 </style>
 </head>
@@ -2315,10 +2342,84 @@ window.ParentsProgres=ParentsProgres;
 
 </script>
 <script>
+/* Captures réelles : le repère indique où toucher dans son propre navigateur. */
+"use strict";
+const InstallationAnimation = (() => {
+  const doigt='<svg class="animation-doigt" viewBox="0 0 32 40" aria-hidden="true"><path d="M10 20V6a3 3 0 0 1 6 0v10-2a3 3 0 0 1 6 0v3a3 3 0 0 1 5 2v7c0 5-3 10-8 10h-2c-3 0-5-2-7-4L4 24a3 3 0 0 1 5-3l1 1Z" fill="#fff" stroke="#25364B" stroke-width="1.7" stroke-linejoin="round"/></svg>';
+  // Coordonnées en pourcentage de la capture entière, relevées sur les vrais pixels.
+  const etapes={
+    ios:[
+      {src:"img/installation-ios-1.png",legende:"Touchez le menu de la page.",x:26,y:94},
+      {src:"img/installation-ios-2.png",legende:"Touchez Partager.",x:66,y:54.05},
+      {src:"img/installation-ios-3.png",legende:"Faites défiler le menu, puis touchez « Sur l’écran d’accueil ».",x:80,y:74.5},
+      {src:"img/installation-ios-4.png",legende:"Laissez « Ouvrir comme app web » activé.",x:88,y:32.6,verifie:true},
+      {src:"img/installation-ios-5.png",legende:"Touchez Ajouter.",x:85,y:10.9}
+    ],
+    android:[
+      {src:"img/installation-android-1.png",legende:"Ouvrez le menu de Chrome (⋮).",x:93.89,y:9.15},
+      {src:"img/installation-android-2.png",legende:"Touchez Ajouter à l’écran d’accueil.",x:68.52,y:82.91},
+      {src:"img/installation-android-3.png",legende:"Dans Créer un raccourci, touchez Ajouter.",x:82.04,y:60.60},
+      {src:"img/installation-android-4.png",legende:"Touchez « Add to home screen » (Ajouter à l’écran d’accueil).",x:77.04,y:93.59}
+    ]
+  };
+  function monte(hote,{systeme="ios"}={}){
+    systeme=systeme==="android"?"android":"ios";
+    const captures=etapes[systeme],reduction=window.matchMedia?.("(prefers-reduced-motion: reduce)");
+    const [largeur,hauteur]=systeme==="ios"?[1320,2868]:[1080,2340];
+    let etape=0,timer=null,vivant=true,imageCourante=null,joue=!reduction?.matches&&!document.hidden;
+    const box=document.createElement("div");box.className="installation-animation";box.dataset.installationAnimation=systeme;box.dataset.frameCount=captures.length;
+    box.innerHTML=`<figure class="animation-apercu" data-animation-preview>
+      <figcaption class="animation-demo-titre">Démonstration · ${systeme==="ios"?"Safari sur iPhone":"Chrome sur Android"}</figcaption>
+      <div class="animation-capture" aria-hidden="true"></div>
+      <p class="animation-erreur" role="status" hidden>Cette capture ne s’est pas chargée. Vous pouvez consulter les étapes écrites ci-dessous.</p>
+      <div class="animation-legende"><span class="animation-numero"></span><p data-animation-caption></p></div>
+      <p class="animation-reproduire">Reproduisez ces gestes dans votre navigateur.</p>
+    </figure>
+    <div class="animation-commandes"><button class="btn" type="button" data-animation-prev aria-label="Étape précédente">←</button><button class="btn" type="button" data-animation-play></button><button class="btn" type="button" data-animation-next aria-label="Étape suivante">→</button></div>
+    <div class="animation-etapes" aria-label="Choisir une étape"></div>`;
+    const ecran=box.querySelector(".animation-capture"),erreur=box.querySelector(".animation-erreur"),caption=box.querySelector("[data-animation-caption]"),numero=box.querySelector(".animation-numero"),play=box.querySelector("[data-animation-play]"),choix=box.querySelector(".animation-etapes");
+    const arreteTimer=()=>{clearTimeout(timer);timer=null;};
+    function programme(){arreteTimer();if(vivant&&joue&&!document.hidden&&box.isConnected&&imageCourante?.complete&&imageCourante.naturalWidth>0)timer=setTimeout(()=>{timer=null;etape=(etape+1)%captures.length;dessine();},3500);}
+    function dessine(){
+      if(!vivant)return;
+      arreteTimer();
+      box.dataset.frame=etape;box.dataset.playing=String(joue);
+      box.dataset.loaded="false";erreur.hidden=true;
+      const capture=captures[etape];
+      const cible=Number.isFinite(capture.x)&&Number.isFinite(capture.y);
+      ecran.innerHTML=cible?`<span class="animation-repere${capture.x>80?" animation-repere-gauche":""}${capture.verifie?" animation-repere-verification":""}" data-animation-target style="left:${capture.x}%;top:${capture.y}%"><span class="animation-anneau"></span>${capture.verifie?"":doigt}</span>`:"";
+      const img=document.createElement("img");imageCourante=img;img.alt="";img.draggable=false;img.width=largeur;img.height=hauteur;
+      let chargee=false;
+      const prete=()=>{if(chargee||!vivant||imageCourante!==img||!img.isConnected||!img.complete||!img.naturalWidth)return;chargee=true;box.dataset.loaded="true";programme();};
+      img.onload=prete;
+      img.onerror=()=>{if(!vivant||imageCourante!==img)return;pause();erreur.hidden=false;};
+      ecran.prepend(img);img.src=capture.src;
+      caption.textContent=capture.legende;numero.textContent=`${etape+1}/${captures.length}`;
+      play.textContent=joue?"Pause":"Lire l’animation";play.setAttribute("aria-label",joue?"Mettre l’animation en pause":"Lire l’animation");
+      choix.querySelectorAll("button").forEach((b,i)=>b.setAttribute("aria-current",i===etape?"step":"false"));
+      prete();
+    }
+    function pause(){if(!vivant)return;joue=false;arreteTimer();box.dataset.playing="false";play.textContent="Lire l’animation";play.setAttribute("aria-label","Lire l’animation");}
+    function va(i){if(!vivant)return;joue=false;etape=(i+captures.length)%captures.length;dessine();}
+    captures.forEach((capture,i)=>{const b=document.createElement("button");b.type="button";b.className="animation-etape";b.dataset.animationStep=i;b.textContent=i+1;b.setAttribute("aria-label",`Étape ${i+1} : ${capture.legende}`);b.onclick=()=>va(i);choix.appendChild(b);});
+    box.querySelector("[data-animation-prev]").onclick=()=>va(etape-1);
+    box.querySelector("[data-animation-next]").onclick=()=>va(etape+1);
+    play.onclick=()=>{if(joue)pause();else if(!document.hidden){joue=true;dessine();}};
+    const visibilite=()=>{if(document.hidden)pause();},reduit=()=>{if(reduction?.matches)pause();};
+    document.addEventListener("visibilitychange",visibilite);window.addEventListener("pagehide",pause);window.addEventListener("hashchange",pause);reduction?.addEventListener?.("change",reduit);
+    hote.appendChild(box);dessine();
+    return ()=>{vivant=false;joue=false;imageCourante=null;arreteTimer();box.dataset.playing="false";document.removeEventListener("visibilitychange",visibilite);window.removeEventListener("pagehide",pause);window.removeEventListener("hashchange",pause);reduction?.removeEventListener?.("change",reduit);box.remove();};
+  }
+  return {monte};
+})();
+window.InstallationAnimation=InstallationAnimation;
+
+</script>
+<script>
 /* Guide local pour ajouter l’accès personnel à l’écran d’accueil. */
 "use strict";
 const ParentsInstallation = (() => {
-  let contexte="", lienSession="", dialogue=null, retourFocus=null, vu=false;
+  let contexte="", lienSession="", dialogue=null, retourFocus=null, vu=false, arreteAnimation=null;
   const cle=()=>"fluence-installation-parents-v1:"+contexte;
   const lienPersonnel=()=>{
     const p=new URLSearchParams(location.hash.slice(1)),t=p.get("famille");
@@ -2335,6 +2436,7 @@ const ParentsInstallation = (() => {
   }
   function ferme({memoriser=true}={}){
     if(memoriser&&autorise())memorise();
+    arreteAnimation?.();arreteAnimation=null;
     if(dialogue){const ancien=dialogue;dialogue=null;ancien.close();ancien.remove();}
     if(retourFocus?.isConnected)retourFocus.focus({preventScroll:true});
     retourFocus=null;
@@ -2352,7 +2454,9 @@ const ParentsInstallation = (() => {
       <p class="maison-installation-prive">Ce lien et cette icône sont personnels. Gardez-les pour votre famille.</p>
       <button class="btn primary" type="button" id="maison-installer">Ajouter à l’écran d’accueil</button>
       <section id="maison-installation-etapes" aria-labelledby="maison-installation-mode" hidden>
-        <h2 id="maison-installation-mode" tabindex="-1"></h2><ol></ol>
+        <h2 id="maison-installation-mode" tabindex="-1"></h2>
+        <div id="maison-installation-animation"></div>
+        <details class="maison-installation-ecrit"><summary>Voir les étapes écrites</summary><ol></ol></details>
         <p class="muted" id="maison-installation-aide"></p>
         <button class="btn" type="button" id="maison-installation-copier">Copier mon lien personnel</button>
         <p id="maison-installation-message" role="status"></p>
@@ -2365,17 +2469,21 @@ const ParentsInstallation = (() => {
     const apple=ios();
     titre.textContent=apple?"Sur iPhone ou iPad":"Sur Android";
     const instructions=apple?[
-      "Dans Safari, ouvrez le menu Partager (le carré avec une flèche vers le haut).",
-      "Choisissez « Sur l’écran d’accueil ».",
-      "Activez « Ouvrir comme app web » si cette option apparaît, puis touchez « Ajouter »."
+      "Dans Safari, touchez le menu de la page, puis Partager (le carré avec une flèche vers le haut).",
+      "Faites défiler le menu, puis touchez « Sur l’écran d’accueil ».",
+      "Vérifiez que « Ouvrir comme app web » est activé si cette option apparaît, puis touchez « Ajouter »."
     ]:[
       "Ouvrez le menu de Chrome (les trois points).",
-      "Choisissez « Installer et créer un raccourci », puis « Créer un raccourci » si ce choix apparaît.",
-      "Gardez l’adresse personnelle de cette page, puis confirmez « Ajouter »."
+      "Choisissez « Ajouter à l’écran d’accueil ». Si Chrome propose « Installer et créer un raccourci », choisissez ensuite « Créer un raccourci ».",
+      "Touchez « Ajouter », puis confirmez l’ajout à l’écran d’accueil (parfois « Add to home screen »). Gardez l’adresse personnelle de cette page."
     ];
     instructions.forEach(texte=>{const li=document.createElement("li");li.textContent=texte;liste.appendChild(li);});
-    aide.textContent=apple?"Depuis une messagerie, ouvrez ce même lien personnel dans Safari. L’ajout se termine dans le menu du téléphone.":"Selon la version, le menu s’appelle « Ajouter à l’écran d’accueil ». Depuis une messagerie, ouvrez ce même lien personnel dans Chrome. Le raccourci peut ouvrir Chrome.";
-    const montreEtapes=()=>{etapes.hidden=false;d.classList.add("maison-installation-guide");d.setAttribute("aria-labelledby","maison-installation-mode");d.querySelector("#maison-installer").hidden=true;titre.focus({preventScroll:true});d.scrollTop=0;};
+    aide.textContent=apple?"Selon Safari, Partager peut être directement visible. Depuis une messagerie, ouvrez ce même lien dans Safari.":"Les libellés varient selon Chrome. Depuis une messagerie, ouvrez ce même lien dans Chrome. Le raccourci peut ouvrir Chrome.";
+    const montreEtapes=()=>{
+      etapes.hidden=false;d.classList.add("maison-installation-guide");d.setAttribute("aria-labelledby","maison-installation-mode");d.querySelector("#maison-installer").hidden=true;
+      if(!arreteAnimation)arreteAnimation=window.InstallationAnimation?.monte(d.querySelector("#maison-installation-animation"),{systeme:apple?"ios":"android"})||null;
+      titre.focus({preventScroll:true});d.scrollTop=0;
+    };
     d.querySelector("#maison-installer").onclick=montreEtapes;
     d.querySelector("#maison-installation-copier").onclick=async()=>{
       if(!autorise())return;
